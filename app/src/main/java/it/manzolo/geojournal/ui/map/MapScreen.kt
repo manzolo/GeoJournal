@@ -1,5 +1,6 @@
 package it.manzolo.geojournal.ui.map
 
+import android.Manifest
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -9,6 +10,7 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
+import android.location.LocationManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -33,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.components.PointBottomSheet
@@ -43,6 +48,7 @@ import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MapScreen(
     navController: NavController,
@@ -50,6 +56,7 @@ fun MapScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
@@ -79,7 +86,13 @@ fun MapScreen(
 
         // FAB posizione utente
         SmallFloatingActionButton(
-            onClick = { /* Fase 3: implementare richiesta posizione GPS */ },
+            onClick = {
+                if (locationPermission.status.isGranted) {
+                    centerMapOnUserLocation(context, mapView)
+                } else {
+                    locationPermission.launchPermissionRequest()
+                }
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 88.dp),
@@ -89,6 +102,13 @@ fun MapScreen(
                 imageVector = Icons.Filled.MyLocation,
                 contentDescription = stringResource(R.string.map_my_location)
             )
+        }
+
+        // Centra automaticamente dopo permesso concesso
+        LaunchedEffect(locationPermission.status.isGranted) {
+            if (locationPermission.status.isGranted) {
+                centerMapOnUserLocation(context, mapView)
+            }
         }
 
         // FAB aggiungi punto
@@ -122,6 +142,18 @@ fun MapScreen(
             )
         }
     }
+}
+
+private fun centerMapOnUserLocation(context: Context, mapView: MapView) {
+    try {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+        location?.let {
+            mapView.controller.animateTo(OsmGeoPoint(it.latitude, it.longitude))
+        }
+    } catch (_: SecurityException) { /* permesso revocato */ }
 }
 
 private fun updateMapMarkers(
