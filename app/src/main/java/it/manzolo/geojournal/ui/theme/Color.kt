@@ -44,3 +44,4 @@ val OnSurfaceVariantDark = Color(0xFFC2C8BA)
 // Errori
 val ErrorRed = Color(0xFFBA1A1A)
 val ErrorRedContainer = Color(0xFFFFDAD6)
+val ErrorRedContainerDark = Color(0xFF93000A)
