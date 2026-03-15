@@ -36,7 +36,8 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = OnSurfaceVariantDark,
     error = ErrorRed,
     onError = WarmCream,
-    errorContainer = ErrorRedContainer,
+    errorContainer = ErrorRedContainerDark,
+    onErrorContainer = ErrorRedContainer,
 )
 
 private val LightColorScheme = lightColorScheme(
