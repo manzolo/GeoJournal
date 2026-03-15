@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -59,10 +60,13 @@ class CalendarViewModel @Inject constructor(
     ) { month, reminders, visits, selectedDay, allPoints ->
         val pointTitles = allPoints.associate { it.id to it.title }
 
+        val zone = ZoneId.systemDefault()
+        fun Long.toLocalDate(): LocalDate = Instant.ofEpochMilli(this).atZone(zone).toLocalDate()
+
         // Calcola le date "effettive" di ogni reminder nel mese corrente
         fun Reminder.occurrenceDaysInMonth(month: YearMonth): List<LocalDate> {
-            val startOrig = LocalDate.ofEpochDay(startDate / 86400000)
-            val endOrig = endDate?.let { LocalDate.ofEpochDay(it / 86400000) }
+            val startOrig = startDate.toLocalDate()
+            val endOrig = endDate?.toLocalDate()
 
             // Per i ricorrenti annuali: sposta anno al mese visualizzato
             val start = if (type == it.manzolo.geojournal.domain.model.ReminderType.ANNUAL_RECURRING)
@@ -80,8 +84,8 @@ class CalendarViewModel @Inject constructor(
         }
 
         fun Reminder.matchesDay(day: LocalDate): Boolean {
-            val startOrig = LocalDate.ofEpochDay(startDate / 86400000)
-            val endOrig = endDate?.let { LocalDate.ofEpochDay(it / 86400000) }
+            val startOrig = startDate.toLocalDate()
+            val endOrig = endDate?.toLocalDate()
             val start = if (type == it.manzolo.geojournal.domain.model.ReminderType.ANNUAL_RECURRING)
                 startOrig.withYear(day.year) else startOrig
             val end = if (type == it.manzolo.geojournal.domain.model.ReminderType.ANNUAL_RECURRING)
@@ -94,7 +98,7 @@ class CalendarViewModel @Inject constructor(
             .toSet()
 
         val visitDays = visits.map { v ->
-            LocalDate.ofEpochDay(v.visitedAt / 86400000)
+            v.visitedAt.toLocalDate()
         }.toSet()
 
         val remindersForDay = selectedDay?.let { day ->
@@ -102,9 +106,7 @@ class CalendarViewModel @Inject constructor(
         } ?: emptyList()
 
         val visitsForDay = selectedDay?.let { day ->
-            visits.filter { v ->
-                LocalDate.ofEpochDay(v.visitedAt / 86400000) == day
-            }
+            visits.filter { v -> v.visitedAt.toLocalDate() == day }
         } ?: emptyList()
 
         CalendarUiState(
