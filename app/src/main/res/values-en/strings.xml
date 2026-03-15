@@ -1,0 +1,62 @@
+<resources>
+    <string name="app_name">GeoJournal</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_map">Map</string>
+    <string name="nav_list">List</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Map Screen -->
+    <string name="map_add_point">Add point</string>
+    <string name="map_my_location">My location</string>
+    <string name="map_loading">Loading map…</string>
+
+    <!-- Point Details -->
+    <string name="point_edit">Edit</string>
+    <string name="point_detail">Detail</string>
+    <string name="point_delete">Delete</string>
+    <string name="point_share">Share</string>
+
+    <!-- Add/Edit -->
+    <string name="add_point_title">New point</string>
+    <string name="edit_point_title">Edit point</string>
+    <string name="field_title">Title</string>
+    <string name="field_description">Description</string>
+    <string name="field_tags">Tags</string>
+    <string name="field_emoji">Emoji</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+
+    <!-- Permissions -->
+    <string name="permission_location_rationale">GeoJournal needs location access to save your special places on the map.</string>
+    <string name="permission_camera_rationale">Camera access is needed to take photos of your places and add them to your journal.</string>
+    <string name="permission_denied_message">Permission denied. You can enable it in the app settings.</string>
+    <string name="action_open_settings">Open settings</string>
+
+    <!-- Auth -->
+    <string name="login_title">Welcome to GeoJournal</string>
+    <string name="login_subtitle">Sign in to sync your journals across all devices</string>
+    <string name="login_with_google">Sign in with Google</string>
+    <string name="login_with_email">Sign in with email</string>
+    <string name="logout">Sign out</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_upgrade_pro">Upgrade to Pro</string>
+    <string name="profile_pro_features">Unlimited points, backup and much more</string>
+    <string name="profile_free_limit">You have reached the 5-point limit of the free plan</string>
+
+    <!-- Errors -->
+    <string name="error_generic">An error occurred. Please try again.</string>
+    <string name="error_network">No internet connection.</string>
+
+    <!-- Empty states -->
+    <string name="empty_map_title">No points on the map</string>
+    <string name="empty_map_subtitle">Tap the + button to add your first special place!</string>
+    <string name="empty_list_title">Your journal is empty</string>
+    <string name="empty_list_subtitle">Start exploring and saving the places you love 🗺️</string>
+
+    <!-- Firebase placeholder notice -->
+    <string name="firebase_not_configured">Firebase not configured. Add google-services.json to enable sync.</string>
+</resources>

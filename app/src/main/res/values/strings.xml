@@ -1,0 +1,62 @@
+<resources>
+    <string name="app_name">GeoJournal</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_map">Mappa</string>
+    <string name="nav_list">Lista</string>
+    <string name="nav_calendar">Calendario</string>
+    <string name="nav_profile">Profilo</string>
+
+    <!-- Map Screen -->
+    <string name="map_add_point">Aggiungi punto</string>
+    <string name="map_my_location">La mia posizione</string>
+    <string name="map_loading">Caricamento mappa…</string>
+
+    <!-- Point Details -->
+    <string name="point_edit">Modifica</string>
+    <string name="point_detail">Dettaglio</string>
+    <string name="point_delete">Elimina</string>
+    <string name="point_share">Condividi</string>
+
+    <!-- Add/Edit -->
+    <string name="add_point_title">Nuovo punto</string>
+    <string name="edit_point_title">Modifica punto</string>
+    <string name="field_title">Titolo</string>
+    <string name="field_description">Descrizione</string>
+    <string name="field_tags">Tag</string>
+    <string name="field_emoji">Emoji</string>
+    <string name="action_save">Salva</string>
+    <string name="action_cancel">Annulla</string>
+
+    <!-- Permissions -->
+    <string name="permission_location_rationale">GeoJournal ha bisogno della posizione per salvare i tuoi luoghi speciali sulla mappa.</string>
+    <string name="permission_camera_rationale">La fotocamera serve per scattare foto dei tuoi luoghi e aggiungerle al diario.</string>
+    <string name="permission_denied_message">Permesso negato. Puoi abilitarlo nelle impostazioni dell\'app.</string>
+    <string name="action_open_settings">Apri impostazioni</string>
+
+    <!-- Auth -->
+    <string name="login_title">Benvenuto in GeoJournal</string>
+    <string name="login_subtitle">Accedi per sincronizzare i tuoi diari su tutti i dispositivi</string>
+    <string name="login_with_google">Accedi con Google</string>
+    <string name="login_with_email">Accedi con email</string>
+    <string name="logout">Esci</string>
+
+    <!-- Profile -->
+    <string name="profile_title">Profilo</string>
+    <string name="profile_upgrade_pro">Passa a Pro</string>
+    <string name="profile_pro_features">Punti illimitati, backup e molto altro</string>
+    <string name="profile_free_limit">Hai raggiunto il limite di 5 punti del piano gratuito</string>
+
+    <!-- Errors -->
+    <string name="error_generic">Si è verificato un errore. Riprova.</string>
+    <string name="error_network">Nessuna connessione internet.</string>
+
+    <!-- Empty states -->
+    <string name="empty_map_title">Nessun punto sulla mappa</string>
+    <string name="empty_map_subtitle">Tocca il pulsante + per aggiungere il tuo primo luogo speciale!</string>
+    <string name="empty_list_title">Il tuo diario è vuoto</string>
+    <string name="empty_list_subtitle">Inizia ad esplorare e a salvare i posti che ami 🗺️</string>
+
+    <!-- Firebase placeholder notice -->
+    <string name="firebase_not_configured">Firebase non configurato. Aggiungi google-services.json per abilitare la sincronizzazione.</string>
+</resources>
