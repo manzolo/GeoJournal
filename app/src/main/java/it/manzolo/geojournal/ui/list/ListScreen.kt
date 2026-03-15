@@ -319,13 +319,7 @@ private fun Date.toDisplayDate(): String =
     SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(this)
 
 private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double) {
-    try {
-        navController.getBackStackEntry(Routes.Map.route)
-            .savedStateHandle.apply {
-                set("focusLat", lat.toFloat())
-                set("focusLon", lon.toFloat())
-            }
-    } catch (_: Exception) { /* Map non in back stack */ }
+    it.manzolo.geojournal.ui.map.MapViewModel.FocusRequest.send(lat, lon)
     navController.navigate(Routes.Map.route) {
         popUpTo(Routes.Map.route) { inclusive = false }
         launchSingleTop = true
