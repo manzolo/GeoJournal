@@ -35,12 +35,14 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,12 +76,16 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.Reminder
+import it.manzolo.geojournal.domain.model.ReminderType
+import it.manzolo.geojournal.domain.model.VisitLogEntry
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 private val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ITALIAN)
@@ -128,6 +134,11 @@ fun PointDetailScreen(
 
             uiState.point != null -> PointDetailContent(
                 point = uiState.point!!,
+                visitLogs = uiState.visitLogs,
+                reminders = uiState.reminders,
+                onLogVisitToday = viewModel::logVisitToday,
+                onDeleteVisitLog = viewModel::deleteVisitLog,
+                onDeleteReminder = viewModel::deleteReminder,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -136,7 +147,15 @@ fun PointDetailScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PointDetailContent(point: GeoPoint, modifier: Modifier = Modifier) {
+private fun PointDetailContent(
+    point: GeoPoint,
+    visitLogs: List<VisitLogEntry>,
+    reminders: List<Reminder>,
+    onLogVisitToday: () -> Unit,
+    onDeleteVisitLog: (VisitLogEntry) -> Unit,
+    onDeleteReminder: (Reminder) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var selectedPhoto by remember { mutableStateOf<String?>(null) }
 
     selectedPhoto?.let { url ->
@@ -225,6 +244,88 @@ private fun PointDetailContent(point: GeoPoint, modifier: Modifier = Modifier) {
             }
         }
 
+        // Promemoria
+        if (reminders.isNotEmpty()) {
+            HorizontalDivider()
+            val reminderDateFormat = remember { SimpleDateFormat("d MMM", Locale.ITALIAN) }
+            Text(
+                text = "Promemoria (${reminders.size})",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            reminders.forEach { reminder ->
+                val dateStr = when (reminder.type) {
+                    ReminderType.DATE_RANGE -> reminder.endDate?.let {
+                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
+                    } ?: reminderDateFormat.format(Date(reminder.startDate))
+                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
+                    ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🔔", modifier = Modifier.padding(end = 8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(reminder.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(dateStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    IconButton(onClick = { onDeleteReminder(reminder) }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        // Registro visite
+        HorizontalDivider()
+        val visitDateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ITALIAN) }
+        Text(
+            text = "Registro visite (${visitLogs.size})",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(4.dp))
+        if (visitLogs.isNotEmpty()) {
+            visitLogs.forEach { visit ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f))
+                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            visitDateFormat.format(Date(visit.visitedAt)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (visit.note.isNotBlank()) {
+                            Text(visit.note, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    IconButton(onClick = { onDeleteVisitLog(visit) }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        OutlinedButton(onClick = onLogVisitToday, modifier = Modifier.fillMaxWidth()) {
+            Text("📍  Sono stato qui oggi")
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -271,78 +372,33 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 contentScale = ContentScale.Fit
             )
 
-            // 2. Tasto Chiudi (In alto a destra)
-            IconButton(
-                onClick = onDismiss,
+            // Barra superiore: share + salva a sinistra, chiudi a destra
+            Row(
                 modifier = Modifier
-                    .statusBarsPadding()
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-            ) {
-                Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
-            }
-
-            // 3. Barra azioni (In basso)
-            Surface(
-                color = Color.Black.copy(alpha = 0.7f),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .navigationBarsPadding()
-                        .padding(bottom = 16.dp) // Padding extra di sicurezza
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ActionIconButton(
-                            icon = Icons.Filled.Share,
-                            label = "Condividi",
-                            onClick = { scope.launch { sharePhoto(context, url) } }
-                        )
-
-                        ActionIconButton(
-                            icon = Icons.Filled.FileDownload,
-                            label = "Salva",
-                            onClick = { scope.launch { saveToGallery(context, url) } }
-                        )
+                Row {
+                    IconButton(onClick = { scope.launch { sharePhoto(context, url) } }) {
+                        Icon(Icons.Filled.Share, contentDescription = "Condividi", tint = Color.White)
                     }
+                    IconButton(onClick = { scope.launch { saveToGallery(context, url) } }) {
+                        Icon(Icons.Filled.FileDownload, contentDescription = "Salva in galleria", tint = Color.White)
+                    }
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
                 }
             }
         }
     }
 }
 
-@Composable
-private fun ActionIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .padding(12.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = label,
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
 
 private suspend fun loadBitmap(context: android.content.Context, url: String): android.graphics.Bitmap? {
     val request = ImageRequest.Builder(context)
