@@ -3,8 +3,11 @@ package it.manzolo.geojournal.ui.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import it.manzolo.geojournal.ui.addedit.AddEditScreen
 import it.manzolo.geojournal.ui.auth.AuthScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
 import it.manzolo.geojournal.ui.list.ListScreen
@@ -42,6 +45,12 @@ fun AppNavGraph(
         }
         composable(Routes.Profile.route) {
             ProfileScreen(navController = navController)
+        }
+        composable(
+            route = Routes.AddEditPoint.route,
+            arguments = listOf(navArgument("pointId") { type = NavType.StringType })
+        ) {
+            AddEditScreen(navController = navController)
         }
     }
 }
