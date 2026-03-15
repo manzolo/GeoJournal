@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            GeoJournalTheme {
+            val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
+            GeoJournalTheme(darkTheme = isDarkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
 
                 startDestination?.let { dest ->

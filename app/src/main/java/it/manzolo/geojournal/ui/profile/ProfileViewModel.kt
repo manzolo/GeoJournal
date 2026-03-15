@@ -20,6 +20,7 @@ data class ProfileUiState(
     val isGuest: Boolean = false,
     val isPro: Boolean = false,
     val isLoggedIn: Boolean = false,
+    val isDarkTheme: Boolean = false,
     val navigateToLogin: Boolean = false
 )
 
@@ -44,7 +45,8 @@ class ProfileViewModel @Inject constructor(
                     photoUrl = user?.photoUrl?.toString(),
                     isGuest = prefs.isGuest,
                     isPro = prefs.isPro,
-                    isLoggedIn = user != null
+                    isLoggedIn = user != null,
+                    isDarkTheme = prefs.isDarkTheme
                 )
             }.collect { state ->
                 _uiState.update { state }
@@ -59,6 +61,10 @@ class ProfileViewModel @Inject constructor(
             userPrefs.setIsGuest(false)
             _uiState.update { it.copy(navigateToLogin = true) }
         }
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        viewModelScope.launch { userPrefs.setDarkTheme(isDark) }
     }
 
     fun onNavigated() {
