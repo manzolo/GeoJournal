@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import it.manzolo.geojournal.ui.auth.AuthScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
 import it.manzolo.geojournal.ui.list.ListScreen
 import it.manzolo.geojournal.ui.map.MapScreen
@@ -13,13 +14,23 @@ import it.manzolo.geojournal.ui.profile.ProfileScreen
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
+    startDestination: String,
     modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
-        startDestination = Routes.Map.route,
+        startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(Routes.Login.route) {
+            AuthScreen(
+                onNavigateToMain = {
+                    navController.navigate(Routes.Map.route) {
+                        popUpTo(Routes.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Routes.Map.route) {
             MapScreen(navController = navController)
         }
