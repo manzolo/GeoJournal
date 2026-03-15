@@ -341,10 +341,7 @@ fun AddEditScreen(
                     (uiState.latitude != 0.0 || uiState.longitude != 0.0)) {
                     IconButton(
                         onClick = {
-                            navController.navigate(
-                                it.manzolo.geojournal.ui.navigation.Routes.Map
-                                    .focusRoute(uiState.latitude, uiState.longitude)
-                            )
+                            navigateToMapFocus(navController, uiState.latitude, uiState.longitude)
                         }
                     ) {
                         Icon(Icons.Filled.Map, contentDescription = "Vedi sulla mappa",
@@ -448,6 +445,22 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+// ─── Navigazione verso la mappa con focus ────────────────────────────────────
+
+private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double) {
+    try {
+        navController.getBackStackEntry(it.manzolo.geojournal.ui.navigation.Routes.Map.route)
+            .savedStateHandle.apply {
+                set("focusLat", lat.toFloat())
+                set("focusLon", lon.toFloat())
+            }
+    } catch (_: Exception) { /* Map non in back stack */ }
+    navController.navigate(it.manzolo.geojournal.ui.navigation.Routes.Map.route) {
+        popUpTo(it.manzolo.geojournal.ui.navigation.Routes.Map.route) { inclusive = false }
+        launchSingleTop = true
     }
 }
 
