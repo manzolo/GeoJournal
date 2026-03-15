@@ -1,6 +1,8 @@
 package it.manzolo.geojournal.ui.list
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -59,12 +63,46 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ListScreen(navController: NavController) {
     val viewModel: ListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showSortMenu by remember { mutableStateOf(false) }
+    var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
+
+    // Menu contestuale (tap lungo)
+    contextMenuPoint?.let { point ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { contextMenuPoint = null },
+            title = { Text("${point.emoji} ${point.title}") },
+            text = {
+                Column {
+                    DropdownMenuItem(
+                        text = { Text("Vedi sulla mappa") },
+                        leadingIcon = { Icon(Icons.Filled.Map, null) },
+                        onClick = {
+                            contextMenuPoint = null
+                            navController.navigate(Routes.Map.focusRoute(point.latitude, point.longitude))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Modifica") },
+                        leadingIcon = { Icon(Icons.Filled.Edit, null) },
+                        onClick = {
+                            contextMenuPoint = null
+                            navController.navigate(Routes.AddEditPoint.createRoute(point.id))
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { contextMenuPoint = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -155,7 +193,8 @@ fun ListScreen(navController: NavController) {
                         items(state.points, key = { it.id }) { point ->
                             GeoPointCard(
                                 point = point,
-                                onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) }
+                                onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
+                                onLongClick = { contextMenuPoint = point }
                             )
                         }
                     }
@@ -165,12 +204,13 @@ fun ListScreen(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit) {
+private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

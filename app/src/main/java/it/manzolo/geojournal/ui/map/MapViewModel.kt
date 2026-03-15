@@ -1,5 +1,6 @@
 package it.manzolo.geojournal.ui.map
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,12 +23,15 @@ data class MapUiState(
     val userLongitude: Double = 9.1859243,
     val zoomLevel: Double = 13.0,
     val isBottomSheetVisible: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /** Coordinate one-shot per centrare la mappa al primo frame, poi viene azzerato */
+    val focusTarget: Pair<Double, Double>? = null
 )
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val repository: GeoPointRepository
+    private val repository: GeoPointRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -36,6 +40,12 @@ class MapViewModel @Inject constructor(
     init {
         observePoints()
         seedSampleDataIfEmpty()
+        // Focus one-shot da navigazione (es. "Vedi sulla mappa" da AddEdit)
+        val focusLat = savedStateHandle.get<Float>("focusLat")?.toDouble() ?: 0.0
+        val focusLon = savedStateHandle.get<Float>("focusLon")?.toDouble() ?: 0.0
+        if (focusLat != 0.0 || focusLon != 0.0) {
+            _uiState.update { it.copy(focusTarget = Pair(focusLat, focusLon)) }
+        }
     }
 
     private fun observePoints() {
@@ -67,6 +77,8 @@ class MapViewModel @Inject constructor(
     fun onMapMoved(lat: Double, lon: Double, zoom: Double) {
         _uiState.update { it.copy(userLatitude = lat, userLongitude = lon, zoomLevel = zoom) }
     }
+
+    fun clearFocusTarget() = _uiState.update { it.copy(focusTarget = null) }
 
     companion object {
         private val now = Date()

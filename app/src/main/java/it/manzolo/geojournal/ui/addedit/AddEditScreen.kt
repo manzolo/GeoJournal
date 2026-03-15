@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -335,6 +336,22 @@ fun AddEditScreen(
                     }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
+                // Vedi sulla mappa (solo in edit mode con coordinate valide)
+                if (viewModel.isEditMode &&
+                    (uiState.latitude != 0.0 || uiState.longitude != 0.0)) {
+                    IconButton(
+                        onClick = {
+                            navController.navigate(
+                                it.manzolo.geojournal.ui.navigation.Routes.Map
+                                    .focusRoute(uiState.latitude, uiState.longitude)
+                            )
+                        }
+                    ) {
+                        Icon(Icons.Filled.Map, contentDescription = "Vedi sulla mappa",
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
                 OutlinedButton(
                     onClick = {
                         if (locationPermission.status.isGranted) showGpsPreview = true

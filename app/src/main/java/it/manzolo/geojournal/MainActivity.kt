@@ -71,13 +71,21 @@ class MainActivity : ComponentActivity() {
 }
 
 private data class BottomNavItem(
+    /** Route registrata nel NavGraph — usata per il match "selected" */
     val route: String,
     val labelRes: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
+    /** URL di navigazione effettivo (può differire per route con query params opzionali) */
+    val navRoute: String = route,
 )
 
 private val bottomNavItems = listOf(
-    BottomNavItem(Routes.Map.route, R.string.nav_map, Icons.Filled.Map),
+    BottomNavItem(
+        route = Routes.Map.route,
+        navRoute = Routes.Map.navRoute,
+        labelRes = R.string.nav_map,
+        icon = Icons.Filled.Map
+    ),
     BottomNavItem(Routes.List.route, R.string.nav_list, Icons.AutoMirrored.Filled.List),
     BottomNavItem(Routes.Calendar.route, R.string.nav_calendar, Icons.Filled.CalendarMonth),
     BottomNavItem(Routes.Profile.route, R.string.nav_profile, Icons.Filled.Person),
@@ -95,7 +103,7 @@ private fun GeoJournalBottomNav(navController: NavController) {
                 label = { Text(stringResource(item.labelRes)) },
                 selected = currentRoute == item.route,
                 onClick = {
-                    navController.navigate(item.route) {
+                    navController.navigate(item.navRoute) {
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true
                         }
