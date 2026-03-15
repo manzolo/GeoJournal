@@ -12,4 +12,8 @@
     <files-path
         name="internal_files"
         path="." />
+    <!-- Cache interna (per condivisione file temporanei) -->
+    <cache-path
+        name="internal_cache"
+        path="." />
 </paths>
