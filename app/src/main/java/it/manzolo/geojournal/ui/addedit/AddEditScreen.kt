@@ -67,6 +67,7 @@ import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.launch
 
 private val EMOJI_LIST = listOf(
     "📍", "🗺️", "🏔️", "🌊", "🌳", "🏠", "🏰", "🍕", "☕", "🍷",
@@ -87,6 +88,7 @@ fun AddEditScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
@@ -333,7 +335,11 @@ fun AddEditScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             OutlinedButton(
-                onClick = { /* TODO: Fase foto */ },
+                onClick = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Funzione foto disponibile prossimamente")
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null,

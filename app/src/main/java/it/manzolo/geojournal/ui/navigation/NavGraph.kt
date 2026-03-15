@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import it.manzolo.geojournal.ui.addedit.AddEditScreen
 import it.manzolo.geojournal.ui.auth.AuthScreen
+import it.manzolo.geojournal.ui.detail.PointDetailScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
 import it.manzolo.geojournal.ui.list.ListScreen
 import it.manzolo.geojournal.ui.map.MapScreen
@@ -51,6 +52,12 @@ fun AppNavGraph(
             arguments = listOf(navArgument("pointId") { type = NavType.StringType })
         ) {
             AddEditScreen(navController = navController)
+        }
+        composable(
+            route = Routes.PointDetail.route,
+            arguments = listOf(navArgument("pointId") { type = NavType.StringType })
+        ) {
+            PointDetailScreen(navController = navController)
         }
     }
 }
