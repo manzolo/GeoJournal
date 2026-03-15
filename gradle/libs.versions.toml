@@ -23,6 +23,7 @@ workManager = "2.10.0"
 accompanistPermissions = "0.36.0"
 coroutines = "1.8.1"
 googleServicesAuthVersion = "21.2.0"
+googleServicesLocationVersion = "21.3.0"
 googleServicesPlugin = "4.4.2"
 crashlyticsPlugin = "3.0.2"
 
@@ -88,6 +89,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 
 # Google Play Services
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "googleServicesAuthVersion" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googleServicesLocationVersion" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
