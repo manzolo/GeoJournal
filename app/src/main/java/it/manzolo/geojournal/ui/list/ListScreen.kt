@@ -83,7 +83,7 @@ fun ListScreen(navController: NavController) {
                         leadingIcon = { Icon(Icons.Filled.Map, null) },
                         onClick = {
                             contextMenuPoint = null
-                            navController.navigate(Routes.Map.focusRoute(point.latitude, point.longitude))
+                            navigateToMapFocus(navController, point.latitude, point.longitude)
                         }
                     )
                     DropdownMenuItem(
@@ -317,3 +317,17 @@ private fun EmptyState(hasFilters: Boolean) {
 
 private fun Date.toDisplayDate(): String =
     SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(this)
+
+private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double) {
+    try {
+        navController.getBackStackEntry(Routes.Map.route)
+            .savedStateHandle.apply {
+                set("focusLat", lat.toFloat())
+                set("focusLon", lon.toFloat())
+            }
+    } catch (_: Exception) { /* Map non in back stack */ }
+    navController.navigate(Routes.Map.route) {
+        popUpTo(Routes.Map.route) { inclusive = false }
+        launchSingleTop = true
+    }
+}

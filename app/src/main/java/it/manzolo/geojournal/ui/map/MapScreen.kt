@@ -74,8 +74,10 @@ fun MapScreen(
     }
 
     DisposableEffect(Unit) {
+        mapView.onResume()
         onDispose {
             mapView.overlays.clear()
+            mapView.onPause()
             mapView.onDetach()
         }
     }
@@ -86,11 +88,12 @@ fun MapScreen(
         }
     }
 
-    // Focus one-shot: centra la mappa sul punto quando si naviga da AddEdit
+    // Focus one-shot: centra la mappa sul punto richiesto da un altro schermo
     LaunchedEffect(uiState.focusTarget) {
         uiState.focusTarget?.let { (lat, lon) ->
             mapView.controller.setZoom(17.0)
-            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+            mapView.controller.setCenter(OsmGeoPoint(lat, lon))
+            mapView.invalidate()
             viewModel.clearFocusTarget()
         }
     }

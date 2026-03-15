@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -31,7 +32,7 @@ data class MapUiState(
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val repository: GeoPointRepository,
-    savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -40,11 +41,26 @@ class MapViewModel @Inject constructor(
     init {
         observePoints()
         seedSampleDataIfEmpty()
-        // Focus one-shot da navigazione (es. "Vedi sulla mappa" da AddEdit)
-        val focusLat = savedStateHandle.get<Float>("focusLat")?.toDouble() ?: 0.0
-        val focusLon = savedStateHandle.get<Float>("focusLon")?.toDouble() ?: 0.0
-        if (focusLat != 0.0 || focusLon != 0.0) {
-            _uiState.update { it.copy(focusTarget = Pair(focusLat, focusLon)) }
+        observeFocusRequests()
+    }
+
+    /**
+     * Osserva focusLat/focusLon nel SavedStateHandle.
+     * Vengono scritti da altri schermi prima di navigare back alla mappa
+     * (tramite navController.getBackStackEntry(Routes.Map.route).savedStateHandle).
+     */
+    private fun observeFocusRequests() {
+        viewModelScope.launch {
+            savedStateHandle.getStateFlow("focusLat", 0f)
+                .combine(savedStateHandle.getStateFlow("focusLon", 0f)) { lat, lon -> lat to lon }
+                .collect { (lat, lon) ->
+                    if (lat != 0f || lon != 0f) {
+                        _uiState.update { it.copy(focusTarget = Pair(lat.toDouble(), lon.toDouble())) }
+                        // Reset: evita che il focus si ritrighi al prossimo recompose
+                        savedStateHandle["focusLat"] = 0f
+                        savedStateHandle["focusLon"] = 0f
+                    }
+                }
         }
     }
 
