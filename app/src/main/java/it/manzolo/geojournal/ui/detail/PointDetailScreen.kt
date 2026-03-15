@@ -54,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -269,7 +271,10 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
             // Chiudi (in alto a destra)
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(8.dp)
             ) {
                 Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
             }
@@ -280,6 +285,7 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .background(Color.Black.copy(alpha = 0.55f))
+                    .navigationBarsPadding()
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
