@@ -18,6 +18,7 @@ data class UserPreferences(
     val isDarkTheme: Boolean = false,
     val isPro: Boolean = false,
     val userId: String = "",
+    val isGuest: Boolean = false,
     val lastSyncTimestamp: Long = 0L
 )
 
@@ -29,6 +30,7 @@ class UserPreferencesRepository @Inject constructor(
         val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
         val IS_PRO = booleanPreferencesKey("is_pro")
         val USER_ID = stringPreferencesKey("user_id")
+        val IS_GUEST = booleanPreferencesKey("is_guest")
         val LAST_SYNC = longPreferencesKey("last_sync_timestamp")
     }
 
@@ -42,6 +44,7 @@ class UserPreferencesRepository @Inject constructor(
                 isDarkTheme = prefs[Keys.IS_DARK_THEME] ?: false,
                 isPro = prefs[Keys.IS_PRO] ?: false,
                 userId = prefs[Keys.USER_ID] ?: "",
+                isGuest = prefs[Keys.IS_GUEST] ?: false,
                 lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L
             )
         }
@@ -56,6 +59,10 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setUserId(userId: String) {
         dataStore.edit { it[Keys.USER_ID] = userId }
+    }
+
+    suspend fun setIsGuest(isGuest: Boolean) {
+        dataStore.edit { it[Keys.IS_GUEST] = isGuest }
     }
 
     suspend fun setLastSync(timestamp: Long) {
