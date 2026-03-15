@@ -63,13 +63,21 @@ fun MapScreen(
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
+            // Disabilita i controlli built-in di OSMDroid: causano l'icona ☰
+            // che sfora sulle schermate sovrastanti (AndroidView non è Compose)
+            zoomController.setVisibility(
+                org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
+            )
             controller.setZoom(13.0)
             controller.setCenter(OsmGeoPoint(45.4654219, 9.1859243))
         }
     }
 
     DisposableEffect(Unit) {
-        onDispose { mapView.onDetach() }
+        onDispose {
+            mapView.overlays.clear()
+            mapView.onDetach()
+        }
     }
 
     LaunchedEffect(uiState.points) {
