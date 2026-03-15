@@ -29,6 +29,9 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
 
+      - name: Remove local Java home from gradle.properties
+        run: sed -i '/^org.gradle.java.home/d' gradle.properties
+
       - name: Determine version name
         id: version
         run: |
