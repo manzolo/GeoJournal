@@ -9,8 +9,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
+import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +40,9 @@ data class AddEditUiState(
     val isDeleted: Boolean = false,
     val error: String? = null,
     val showEmojiPicker: Boolean = false,
-    val showDeleteConfirm: Boolean = false
+    val showDeleteConfirm: Boolean = false,
+    val reminders: List<Reminder> = emptyList(),
+    val showReminderSheet: Boolean = false
 )
 
 @HiltViewModel
@@ -47,6 +52,8 @@ class AddEditViewModel @Inject constructor(
     private val userPrefs: UserPreferencesRepository,
     private val auth: FirebaseAuth,
     private val storage: FirebaseStorage,
+    private val reminderRepository: ReminderRepository,
+    private val scheduler: ReminderScheduler,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
@@ -54,6 +61,7 @@ class AddEditViewModel @Inject constructor(
 
     private val pointId: String = savedStateHandle.get<String>("pointId") ?: "new"
     val isEditMode: Boolean = pointId != "new"
+    fun getPointIdForReminder(): String = existingId
 
     private val _uiState = MutableStateFlow(AddEditUiState())
     val uiState: StateFlow<AddEditUiState> = _uiState.asStateFlow()
@@ -87,6 +95,10 @@ class AddEditViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = "Punto non trovato") }
             }
         }
+        viewModelScope.launch {
+            reminderRepository.observeByGeoPointId(pointId)
+                .collect { list -> _uiState.update { it.copy(reminders = list) } }
+        }
     }
 
     fun updateTitle(value: String) = _uiState.update { it.copy(title = value) }
@@ -109,6 +121,32 @@ class AddEditViewModel @Inject constructor(
     fun addPhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris + uri) }
     fun removePhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris - uri) }
 
+    fun toggleReminderSheet() = _uiState.update { it.copy(showReminderSheet = !it.showReminderSheet) }
+
+    fun addReminder(reminder: Reminder) {
+        val r = reminder.copy(geoPointId = existingId)
+        if (isEditMode) {
+            viewModelScope.launch {
+                reminderRepository.save(r)
+                scheduler.scheduleReminder(r)
+            }
+        } else {
+            // Nuovo punto: teniamo i reminder in stato locale, li salviamo insieme al punto
+            _uiState.update { it.copy(reminders = it.reminders + r) }
+        }
+    }
+
+    fun deleteReminder(reminder: Reminder) {
+        if (isEditMode) {
+            viewModelScope.launch {
+                reminderRepository.delete(reminder)
+                scheduler.cancelReminder(reminder)
+            }
+        } else {
+            _uiState.update { it.copy(reminders = it.reminders - reminder) }
+        }
+    }
+
     fun save() {
         val state = _uiState.value
         if (state.title.isBlank()) {
@@ -118,10 +156,9 @@ class AddEditViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val prefs = userPrefs.preferences.first()
-            val resolvedId = if (isEditMode) existingId else UUID.randomUUID().toString()
-            val resolvedPhotos = resolvePhotos(state.photoUris, resolvedId)
+            val resolvedPhotos = resolvePhotos(state.photoUris, existingId)
             val point = GeoPoint(
-                id = resolvedId,
+                id = existingId,
                 title = state.title.trim(),
                 description = state.description.trim(),
                 emoji = state.emoji,
@@ -134,6 +171,13 @@ class AddEditViewModel @Inject constructor(
                 ownerId = prefs.userId
             )
             repository.save(point)
+            // Salva i reminder pendenti (solo nuovo modo, edit mode li salva subito)
+            if (!isEditMode) {
+                state.reminders.forEach { r ->
+                    reminderRepository.save(r)
+                    scheduler.scheduleReminder(r)
+                }
+            }
             _uiState.update { it.copy(isLoading = false, isSaved = true) }
         }
     }

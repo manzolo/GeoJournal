@@ -66,6 +66,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,7 +98,14 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import it.manzolo.geojournal.domain.model.Reminder
+import it.manzolo.geojournal.domain.model.ReminderType
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
 
 private val EMOJI_LIST = listOf(
     "📍", "🗺️", "🏔️", "🌊", "🌳", "🏠", "🏰", "🍕", "☕", "🍷",
@@ -443,8 +451,63 @@ fun AddEditScreen(
                 Text("Aggiungi foto")
             }
 
+            // --- Promemoria ---
+            run {
+                Text("Promemoria", style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (uiState.reminders.isNotEmpty()) {
+                    val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        uiState.reminders.forEach { reminder ->
+                            val dateStr = when (reminder.type) {
+                                ReminderType.DATE_RANGE -> reminder.endDate?.let {
+                                    "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
+                                } ?: reminderDateFormat.format(Date(reminder.startDate))
+                                ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
+                                ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
+                            }
+                            InputChip(
+                                selected = false,
+                                onClick = {},
+                                label = { Text("🔔 ${reminder.title} · $dateStr") },
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = { viewModel.deleteReminder(reminder) },
+                                        modifier = Modifier.size(18.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi",
+                                            modifier = Modifier.size(14.dp))
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = viewModel::toggleReminderSheet,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Aggiungi promemoria")
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    // --- Add Reminder Dialog ---
+    if (uiState.showReminderSheet) {
+        AddReminderDialog(
+            geoPointId = viewModel.getPointIdForReminder(),
+            defaultTitle = uiState.title,
+            onConfirm = { reminder ->
+                viewModel.addReminder(reminder)
+                viewModel.toggleReminderSheet()
+            },
+            onDismiss = viewModel::toggleReminderSheet
+        )
     }
 }
 
@@ -588,6 +651,116 @@ private fun GpsPreviewDialog(
             }
         }
     }
+}
+
+// ─── Add Reminder Dialog ──────────────────────────────────────────────────────
+
+@Composable
+private fun AddReminderDialog(
+    geoPointId: String,
+    defaultTitle: String,
+    onConfirm: (Reminder) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf(defaultTitle) }
+    var selectedType by remember { mutableStateOf(ReminderType.SINGLE) }
+    // startDate as millis — default to today
+    val todayMillis = remember { Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }.timeInMillis }
+    var startDateMillis by remember { mutableLongStateOf(todayMillis) }
+    var endDateMillis by remember { mutableLongStateOf(todayMillis + 86400000L * 7) }
+    val dateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Aggiungi promemoria") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Title field
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Titolo promemoria") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Type selector
+                Text("Tipo", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { selectedType = ReminderType.SINGLE },
+                        colors = if (selectedType == ReminderType.SINGLE)
+                            androidx.compose.material3.ButtonDefaults.buttonColors()
+                        else
+                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+                    ) { Text("Una volta") }
+                    Button(
+                        onClick = { selectedType = ReminderType.ANNUAL_RECURRING },
+                        colors = if (selectedType == ReminderType.ANNUAL_RECURRING)
+                            androidx.compose.material3.ButtonDefaults.buttonColors()
+                        else
+                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+                    ) { Text("Ogni anno") }
+                    Button(
+                        onClick = { selectedType = ReminderType.DATE_RANGE },
+                        colors = if (selectedType == ReminderType.DATE_RANGE)
+                            androidx.compose.material3.ButtonDefaults.buttonColors()
+                        else
+                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
+                    ) { Text("Periodo") }
+                }
+
+                // Date picker — simplified: show current and allow increment/decrement days
+                Text("Data inizio", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { startDateMillis -= 86400000L }) { Text("‹") }
+                    Text(dateFormat.format(Date(startDateMillis)),
+                        style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { startDateMillis += 86400000L }) { Text("›") }
+                }
+
+                if (selectedType == ReminderType.DATE_RANGE) {
+                    Text("Data fine", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { if (endDateMillis > startDateMillis + 86400000L) endDateMillis -= 86400000L }) { Text("‹") }
+                        Text(dateFormat.format(Date(endDateMillis)),
+                            style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { endDateMillis += 86400000L }) { Text("›") }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        onConfirm(
+                            Reminder(
+                                id = UUID.randomUUID().toString(),
+                                geoPointId = geoPointId,
+                                title = title.trim(),
+                                startDate = startDateMillis,
+                                endDate = if (selectedType == ReminderType.DATE_RANGE) endDateMillis else null,
+                                type = selectedType
+                            )
+                        )
+                    }
+                },
+                enabled = title.isNotBlank()
+            ) { Text("Aggiungi") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annulla") }
+        }
+    )
 }
 
 // ─── Emoji Picker ─────────────────────────────────────────────────────────────

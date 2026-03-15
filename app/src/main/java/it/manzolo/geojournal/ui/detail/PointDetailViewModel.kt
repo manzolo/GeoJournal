@@ -5,7 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.Reminder
+import it.manzolo.geojournal.domain.model.VisitLogEntry
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
+import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,12 +20,16 @@ import javax.inject.Inject
 data class PointDetailUiState(
     val point: GeoPoint? = null,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val visitLogs: List<VisitLogEntry> = emptyList(),
+    val reminders: List<Reminder> = emptyList()
 )
 
 @HiltViewModel
 class PointDetailViewModel @Inject constructor(
     private val repository: GeoPointRepository,
+    private val visitLogRepository: VisitLogRepository,
+    private val reminderRepository: ReminderRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -42,5 +50,27 @@ class PointDetailViewModel @Inject constructor(
                 else it.copy(isLoading = false, error = "Punto non trovato")
             }
         }
+        viewModelScope.launch {
+            visitLogRepository.observeByGeoPointId(pointId).collect { logs ->
+                _uiState.update { it.copy(visitLogs = logs) }
+            }
+        }
+        viewModelScope.launch {
+            reminderRepository.observeByGeoPointId(pointId).collect { list ->
+                _uiState.update { it.copy(reminders = list) }
+            }
+        }
+    }
+
+    fun logVisitToday(note: String = "") {
+        viewModelScope.launch { visitLogRepository.logVisit(pointId, note) }
+    }
+
+    fun deleteVisitLog(entry: VisitLogEntry) {
+        viewModelScope.launch { visitLogRepository.delete(entry) }
+    }
+
+    fun deleteReminder(reminder: Reminder) {
+        viewModelScope.launch { reminderRepository.delete(reminder) }
     }
 }

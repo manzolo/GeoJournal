@@ -70,6 +70,18 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="YOUR_MAPS_API_KEY_HERE" />
 
+        <!-- ReminderBroadcastReceiver: boot + alarm fire -->
+        <receiver
+            android:name=".data.notification.ReminderBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="it.manzolo.geojournal.REMINDER_FIRE" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

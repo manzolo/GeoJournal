@@ -30,7 +30,8 @@ class GeoPointRepositoryImpl @Inject constructor(
     override suspend fun count(): Int = dao.count()
 
     override suspend fun save(point: GeoPoint) {
-        dao.insert(point.toEntity())
+        val entity = point.toEntity()
+        if (dao.getById(point.id) != null) dao.update(entity) else dao.insert(entity)
         syncPointToFirestore(point)
     }
 
