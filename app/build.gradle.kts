@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "it.manzolo.geojournal"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "it.manzolo.geojournal"
@@ -39,12 +39,22 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-Xjvm-default=all",
+            "-Xbackend-threads=0" // Usa tutti i core della CPU per la compilazione Kotlin
+        )
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = false // Disabilita se non usi valori dinamici in res (es. API keys in resValues)
     }
+}
+
+ksp {
+    arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
 }
 
 dependencies {
