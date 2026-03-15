@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navOptions
 import it.manzolo.geojournal.ui.addedit.AddEditScreen
 import it.manzolo.geojournal.ui.auth.AuthScreen
 import it.manzolo.geojournal.ui.detail.PointDetailScreen
@@ -35,7 +36,13 @@ fun AppNavGraph(
                 }
             )
         }
-        composable(Routes.Map.route) {
+        composable(
+            route = Routes.Map.route,
+            arguments = listOf(
+                navArgument("focusLat") { type = NavType.FloatType; defaultValue = 0f },
+                navArgument("focusLon") { type = NavType.FloatType; defaultValue = 0f }
+            )
+        ) {
             MapScreen(navController = navController)
         }
         composable(Routes.List.route) {

@@ -86,6 +86,15 @@ fun MapScreen(
         }
     }
 
+    // Focus one-shot: centra la mappa sul punto quando si naviga da AddEdit
+    LaunchedEffect(uiState.focusTarget) {
+        uiState.focusTarget?.let { (lat, lon) ->
+            mapView.controller.setZoom(17.0)
+            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+            viewModel.clearFocusTarget()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { mapView },
