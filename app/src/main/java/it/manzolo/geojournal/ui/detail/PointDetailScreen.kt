@@ -16,14 +16,16 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -54,8 +57,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -245,7 +246,8 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = true,
-            dismissOnClickOutside = false
+            dismissOnClickOutside = false,
+            decorFitsSystemWindows = false
         )
     ) {
         Box(
@@ -253,6 +255,7 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
+            // 1. Immagine (Layer Inferiore)
             AsyncImage(
                 model = if (url.startsWith("/")) File(url) else url,
                 contentDescription = null,
@@ -268,43 +271,76 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 contentScale = ContentScale.Fit
             )
 
-            // Chiudi (in alto a destra)
+            // 2. Tasto Chiudi (In alto a destra)
             IconButton(
                 onClick = onDismiss,
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(8.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
             ) {
                 Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
             }
 
-            // Azioni in basso
-            Row(
+            // 3. Barra azioni (In basso)
+            Surface(
+                color = Color.Black.copy(alpha = 0.7f),
                 modifier = Modifier
-                    .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .navigationBarsPadding()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxWidth()
             ) {
-                // Condividi
-                IconButton(onClick = {
-                    scope.launch { sharePhoto(context, url) }
-                }) {
-                    Icon(Icons.Filled.Share, contentDescription = "Condividi", tint = Color.White)
-                }
+                Column(
+                    modifier = Modifier
+                        .navigationBarsPadding()
+                        .padding(bottom = 16.dp) // Padding extra di sicurezza
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ActionIconButton(
+                            icon = Icons.Filled.Share,
+                            label = "Condividi",
+                            onClick = { scope.launch { sharePhoto(context, url) } }
+                        )
 
-                // Salva in galleria
-                IconButton(onClick = {
-                    scope.launch { saveToGallery(context, url) }
-                }) {
-                    Icon(Icons.Filled.FileDownload, contentDescription = "Salva in galleria", tint = Color.White)
+                        ActionIconButton(
+                            icon = Icons.Filled.FileDownload,
+                            label = "Salva",
+                            onClick = { scope.launch { saveToGallery(context, url) } }
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ActionIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(12.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
