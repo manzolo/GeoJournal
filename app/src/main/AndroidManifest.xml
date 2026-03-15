@@ -70,6 +70,18 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="YOUR_MAPS_API_KEY_HERE" />
 
+        <!-- Rimuove WorkManagerInitializer: necessario con on-demand init (Configuration.Provider) -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <!-- ReminderBroadcastReceiver: boot + alarm fire -->
         <receiver
             android:name=".data.notification.ReminderBroadcastReceiver"
