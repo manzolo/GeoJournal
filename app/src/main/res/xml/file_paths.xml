@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Foto scattate con la fotocamera (cache interna) -->
+    <external-cache-path
+        name="camera_photos"
+        path="." />
+    <!-- Foto dalla galleria (storage esterno) -->
+    <external-files-path
+        name="external_files"
+        path="." />
+    <!-- File interni (backup, export) -->
+    <files-path
+        name="internal_files"
+        path="." />
+</paths>
