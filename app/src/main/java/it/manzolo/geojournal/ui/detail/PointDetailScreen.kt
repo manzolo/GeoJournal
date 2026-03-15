@@ -1,6 +1,14 @@
 package it.manzolo.geojournal.ui.detail
 
+import android.content.ContentValues
+import android.content.Intent
+import android.os.Build
+import android.provider.MediaStore
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,22 +45,36 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.navigation.Routes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -112,30 +136,11 @@ fun PointDetailScreen(
 private fun PointDetailContent(point: GeoPoint, modifier: Modifier = Modifier) {
     var selectedPhoto by remember { mutableStateOf<String?>(null) }
 
-    // Fullscreen photo viewer
     selectedPhoto?.let { url ->
-        Dialog(onDismissRequest = { selectedPhoto = null }) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                AsyncImage(
-                    model = if (url.startsWith("/")) File(url) else url,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-                IconButton(
-                    onClick = { selectedPhoto = null },
-                    modifier = Modifier.align(Alignment.TopEnd)
-                ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Chiudi",
-                        tint = Color.White)
-                }
-            }
-        }
+        PhotoViewerDialog(
+            url = url,
+            onDismiss = { selectedPhoto = null }
+        )
     }
 
     Column(
@@ -218,6 +223,149 @@ private fun PointDetailContent(point: GeoPoint, modifier: Modifier = Modifier) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+        scale = (scale * zoomChange).coerceIn(1f, 5f)
+        offset = if (scale > 1f) offset + panChange else Offset.Zero
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            AsyncImage(
+                model = if (url.startsWith("/")) File(url) else url,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .transformable(transformState)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        translationX = offset.x
+                        translationY = offset.y
+                    },
+                contentScale = ContentScale.Fit
+            )
+
+            // Chiudi (in alto a destra)
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
+            }
+
+            // Azioni in basso
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Condividi
+                IconButton(onClick = {
+                    scope.launch { sharePhoto(context, url) }
+                }) {
+                    Icon(Icons.Filled.Share, contentDescription = "Condividi", tint = Color.White)
+                }
+
+                // Salva in galleria
+                IconButton(onClick = {
+                    scope.launch { saveToGallery(context, url) }
+                }) {
+                    Icon(Icons.Filled.FileDownload, contentDescription = "Salva in galleria", tint = Color.White)
+                }
+            }
+        }
+    }
+}
+
+private suspend fun loadBitmap(context: android.content.Context, url: String): android.graphics.Bitmap? {
+    val request = ImageRequest.Builder(context)
+        .data(if (url.startsWith("/")) File(url) else url)
+        .allowHardware(false)
+        .build()
+    val result = context.imageLoader.execute(request)
+    return (result as? SuccessResult)?.drawable?.toBitmap()
+}
+
+private suspend fun sharePhoto(context: android.content.Context, url: String) {
+    val bitmap = loadBitmap(context, url) ?: run {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Impossibile caricare la foto", Toast.LENGTH_SHORT).show()
+        }
+        return
+    }
+    val cacheFile = withContext(Dispatchers.IO) {
+        val file = File(context.cacheDir, "share_${System.currentTimeMillis()}.jpg")
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, it) }
+        file
+    }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", cacheFile)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "image/jpeg"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    withContext(Dispatchers.Main) {
+        context.startActivity(Intent.createChooser(intent, "Condividi foto"))
+    }
+}
+
+private suspend fun saveToGallery(context: android.content.Context, url: String) {
+    val bitmap = loadBitmap(context, url) ?: run {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Impossibile caricare la foto", Toast.LENGTH_SHORT).show()
+        }
+        return
+    }
+    withContext(Dispatchers.IO) {
+        val filename = "GeoJournal_${System.currentTimeMillis()}.jpg"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GeoJournal")
+            }
+            val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            uri?.let {
+                context.contentResolver.openOutputStream(it)
+                    ?.use { out -> bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, out) }
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            val dir = android.os.Environment
+                .getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
+            val geoJournalDir = File(dir, "GeoJournal").also { it.mkdirs() }
+            val file = File(geoJournalDir, filename)
+            file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, it) }
+            android.media.MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
+        }
+    }
+    withContext(Dispatchers.Main) {
+        Toast.makeText(context, "Foto salvata in galleria", Toast.LENGTH_SHORT).show()
     }
 }
 
