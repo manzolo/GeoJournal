@@ -20,13 +20,17 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -68,8 +72,10 @@ import java.util.Locale
 fun ListScreen(navController: NavController) {
     val viewModel: ListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
     var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
+    var deleteConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
 
     // Menu contestuale (tap lungo)
     contextMenuPoint?.let { point ->
@@ -87,6 +93,15 @@ fun ListScreen(navController: NavController) {
                         }
                     )
                     DropdownMenuItem(
+                        text = { Text("Apri in Google Maps") },
+                        leadingIcon = { Icon(Icons.Filled.LocationOn, null) },
+                        onClick = {
+                            contextMenuPoint = null
+                            val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
+                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                        }
+                    )
+                    DropdownMenuItem(
                         text = { Text("Modifica") },
                         leadingIcon = { Icon(Icons.Filled.Edit, null) },
                         onClick = {
@@ -94,10 +109,42 @@ fun ListScreen(navController: NavController) {
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            contextMenuPoint = null
+                            deleteConfirmPoint = point
+                        }
+                    )
                 }
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { contextMenuPoint = null }) {
+                    Text("Annulla")
+                }
+            }
+        )
+    }
+
+    // Dialog conferma eliminazione
+    deleteConfirmPoint?.let { point ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deleteConfirmPoint = null },
+            title = { Text("Elimina punto") },
+            text = { Text("Vuoi eliminare \"${point.title}\"? L'operazione non è reversibile.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        viewModel.deletePoint(point)
+                        deleteConfirmPoint = null
+                    }
+                ) {
+                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { deleteConfirmPoint = null }) {
                     Text("Annulla")
                 }
             }

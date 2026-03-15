@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class SortOrder(val label: String) {
@@ -30,7 +31,7 @@ data class ListUiState(
 
 @HiltViewModel
 class ListViewModel @Inject constructor(
-    repository: GeoPointRepository
+    private val repository: GeoPointRepository
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -80,4 +81,5 @@ class ListViewModel @Inject constructor(
     fun updateQuery(q: String) = _query.update { q }
     fun toggleTag(tag: String) = _selectedTags.update { if (tag in it) it - tag else it + tag }
     fun setSortOrder(order: SortOrder) = _sortOrder.update { order }
+    fun deletePoint(point: GeoPoint) = viewModelScope.launch { repository.delete(point) }
 }
