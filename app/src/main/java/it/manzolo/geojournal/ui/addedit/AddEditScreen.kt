@@ -1,8 +1,11 @@
 package it.manzolo.geojournal.ui.addedit
 
 import android.Manifest
-import android.content.Context
-import android.location.LocationManager
+import androidx.compose.runtime.mutableStateOf
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.tasks.await
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -89,8 +93,10 @@ fun AddEditScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var isLocating by remember { mutableStateOf(false) }
 
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     // Navigazione dopo salvataggio o eliminazione
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
@@ -257,30 +263,45 @@ fun AddEditScreen(
                 OutlinedButton(
                     onClick = {
                         if (locationPermission.status.isGranted) {
-                            getLastLocation(context)?.let { (lat, lon) ->
-                                viewModel.updateLocation(lat, lon)
+                            scope.launch {
+                                isLocating = true
+                                try {
+                                    val cts = CancellationTokenSource()
+                                    val loc = fusedLocationClient.getCurrentLocation(
+                                        Priority.PRIORITY_HIGH_ACCURACY, cts.token
+                                    ).await()
+                                    if (loc != null) {
+                                        viewModel.updateLocation(loc.latitude, loc.longitude)
+                                    } else {
+                                        snackbarHostState.showSnackbar(
+                                            "GPS non disponibile. Assicurati che sia attivo."
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar(
+                                        "Errore posizione: ${e.localizedMessage ?: "riprova"}"
+                                    )
+                                } finally {
+                                    isLocating = false
+                                }
                             }
                         } else {
                             locationPermission.launchPermissionRequest()
                         }
-                    }
+                    },
+                    enabled = !isLocating
                 ) {
-                    Icon(
-                        Icons.Filled.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Rileva GPS")
-                }
-            }
-
-            // Rileva automaticamente dopo permesso concesso (se posizione non impostata)
-            LaunchedEffect(locationPermission.status.isGranted) {
-                if (locationPermission.status.isGranted && uiState.latitude == 0.0 && uiState.longitude == 0.0) {
-                    getLastLocation(context)?.let { (lat, lon) ->
-                        viewModel.updateLocation(lat, lon)
+                    if (isLocating) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            Icons.Filled.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(if (isLocating) "Ricerca…" else "Rileva GPS")
                 }
             }
 
@@ -388,14 +409,3 @@ private fun EmojiPickerDialog(
     )
 }
 
-private fun getLastLocation(context: Context): Pair<Double, Double>? {
-    return try {
-        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-        location?.let { it.latitude to it.longitude }
-    } catch (_: SecurityException) {
-        null
-    }
-}
