@@ -78,7 +78,7 @@ class CalendarViewModel @Inject constructor(
             else endOrig ?: start
 
             // Tieni solo le date che cadono nel mese corrente
-            return generateSequence(start) { d -> if (d <= end) d.plusDays(1) else null }
+            return generateSequence(start) { d -> if (d < end) d.plusDays(1) else null }
                 .filter { it.year == month.year && it.monthValue == month.monthValue }
                 .toList()
         }
