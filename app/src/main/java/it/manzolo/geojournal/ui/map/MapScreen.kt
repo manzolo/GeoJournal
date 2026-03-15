@@ -63,8 +63,6 @@ fun MapScreen(
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
-            // Disabilita i controlli built-in di OSMDroid: causano l'icona ☰
-            // che sfora sulle schermate sovrastanti (AndroidView non è Compose)
             zoomController.setVisibility(
                 org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
             )
@@ -74,10 +72,8 @@ fun MapScreen(
     }
 
     DisposableEffect(Unit) {
-        mapView.onResume()
         onDispose {
             mapView.overlays.clear()
-            mapView.onPause()
             mapView.onDetach()
         }
     }
@@ -88,12 +84,11 @@ fun MapScreen(
         }
     }
 
-    // Focus one-shot: centra la mappa sul punto richiesto da un altro schermo
+    // Gestione del focus su un punto specifico (es. da Lista)
     LaunchedEffect(uiState.focusTarget) {
         uiState.focusTarget?.let { (lat, lon) ->
+            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
             mapView.controller.setZoom(17.0)
-            mapView.controller.setCenter(OsmGeoPoint(lat, lon))
-            mapView.invalidate()
             viewModel.clearFocusTarget()
         }
     }
@@ -124,9 +119,9 @@ fun MapScreen(
             )
         }
 
-        // Centra automaticamente dopo permesso concesso
+        // Centra automaticamente dopo permesso concesso SOLO se non c'è un focusTarget attivo
         LaunchedEffect(locationPermission.status.isGranted) {
-            if (locationPermission.status.isGranted) {
+            if (locationPermission.status.isGranted && uiState.focusTarget == null) {
                 centerMapOnUserLocation(context, mapView)
             }
         }

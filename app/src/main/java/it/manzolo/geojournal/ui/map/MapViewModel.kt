@@ -1,16 +1,18 @@
 package it.manzolo.geojournal.ui.map
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -31,8 +33,7 @@ data class MapUiState(
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val repository: GeoPointRepository,
-    private val savedStateHandle: SavedStateHandle
+    private val repository: GeoPointRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MapUiState())
@@ -45,23 +46,26 @@ class MapViewModel @Inject constructor(
     }
 
     /**
-     * Osserva focusLat/focusLon nel SavedStateHandle.
-     * Vengono scritti da altri schermi prima di navigare back alla mappa
-     * (tramite navController.getBackStackEntry(Routes.Map.route).savedStateHandle).
+     * Collects focus requests emitted via [FocusRequest.send] da qualsiasi schermata.
+     * Non dipende dal back stack o dal savedStateHandle: nessuna race condition possibile.
      */
     private fun observeFocusRequests() {
         viewModelScope.launch {
-            savedStateHandle.getStateFlow("focusLat", 0f)
-                .combine(savedStateHandle.getStateFlow("focusLon", 0f)) { lat, lon -> lat to lon }
-                .collect { (lat, lon) ->
-                    if (lat != 0f || lon != 0f) {
-                        _uiState.update { it.copy(focusTarget = Pair(lat.toDouble(), lon.toDouble())) }
-                        // Reset: evita che il focus si ritrighi al prossimo recompose
-                        savedStateHandle["focusLat"] = 0f
-                        savedStateHandle["focusLon"] = 0f
-                    }
-                }
+            FocusRequest.events.collect { (lat, lon) ->
+                _uiState.update { it.copy(focusTarget = lat to lon) }
+            }
         }
+    }
+
+    /** Canale singleton per richiedere il focus sulla mappa da qualsiasi schermata. */
+    object FocusRequest {
+        private val _events = MutableSharedFlow<Pair<Double, Double>>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST
+        )
+        val events: SharedFlow<Pair<Double, Double>> = _events.asSharedFlow()
+
+        fun send(lat: Double, lon: Double) { _events.tryEmit(lat to lon) }
     }
 
     private fun observePoints() {

@@ -451,13 +451,7 @@ fun AddEditScreen(
 // ─── Navigazione verso la mappa con focus ────────────────────────────────────
 
 private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double) {
-    try {
-        navController.getBackStackEntry(it.manzolo.geojournal.ui.navigation.Routes.Map.route)
-            .savedStateHandle.apply {
-                set("focusLat", lat.toFloat())
-                set("focusLon", lon.toFloat())
-            }
-    } catch (_: Exception) { /* Map non in back stack */ }
+    it.manzolo.geojournal.ui.map.MapViewModel.FocusRequest.send(lat, lon)
     navController.navigate(it.manzolo.geojournal.ui.navigation.Routes.Map.route) {
         popUpTo(it.manzolo.geojournal.ui.navigation.Routes.Map.route) { inclusive = false }
         launchSingleTop = true
