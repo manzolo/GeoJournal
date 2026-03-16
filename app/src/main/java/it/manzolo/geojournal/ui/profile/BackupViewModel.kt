@@ -6,7 +6,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.backup.BackupManager
+import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
+import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +23,9 @@ import javax.inject.Inject
 class BackupViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val userPrefsRepository: UserPreferencesRepository,
-    private val autoBackupScheduler: AutoBackupScheduler
+    private val autoBackupScheduler: AutoBackupScheduler,
+    private val geojExporter: GeoPointExporter,
+    private val geoPointRepository: GeoPointRepository
 ) : ViewModel() {
 
     sealed class State {
@@ -29,6 +33,7 @@ class BackupViewModel @Inject constructor(
         object Working : State()
         data class ExportOk(val pointCount: Int) : State()
         data class ImportOk(val pointCount: Int, val reminderCount: Int, val visitCount: Int) : State()
+        data class ImportPointOk(val title: String) : State()
         data class Error(val message: String) : State()
     }
 
@@ -90,6 +95,17 @@ class BackupViewModel @Inject constructor(
                 val r = backupManager.importFromUri(uri)
                 State.ImportOk(r.pointCount, r.reminderCount, r.visitCount)
             }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione") }
+        }
+    }
+
+    fun importGeojPoint(uri: Uri) {
+        viewModelScope.launch {
+            _state.value = State.Working
+            _state.value = runCatching {
+                val point = geojExporter.importFromUri(uri)
+                geoPointRepository.save(point)
+                State.ImportPointOk(point.title)
+            }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione del punto") }
         }
     }
 
