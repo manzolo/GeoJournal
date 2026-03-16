@@ -44,4 +44,11 @@ interface GeoPointDao {
 
     @Query("UPDATE geo_points SET synced_to_firestore = 1 WHERE id = :id")
     suspend fun markAsSynced(id: String)
+
+    // Migrazione guest → cloud (Task 9)
+    @Query("SELECT * FROM geo_points WHERE owner_id = ''")
+    suspend fun getGuestPoints(): List<GeoPointEntity>
+
+    @Query("UPDATE geo_points SET owner_id = :userId, synced_to_firestore = 0 WHERE owner_id = ''")
+    suspend fun claimGuestPoints(userId: String)
 }

@@ -80,6 +80,18 @@ class GeoPointRepositoryImpl @Inject constructor(
         }
     }
 
+    // ─── Task 9: migrazione punti guest → cloud ───────────────────────────────
+
+    override suspend fun migrateGuestPointsToUser(userId: String): Int {
+        val guestPoints = dao.getGuestPoints()
+        if (guestPoints.isEmpty()) return 0
+        dao.claimGuestPoints(userId)
+        guestPoints.forEach { entity ->
+            syncPointToFirestore(entity.toDomain().copy(ownerId = userId))
+        }
+        return guestPoints.size
+    }
+
     private suspend fun deletePointFromFirestore(pointId: String) {
         val uid = auth.currentUser?.uid ?: return
         try {

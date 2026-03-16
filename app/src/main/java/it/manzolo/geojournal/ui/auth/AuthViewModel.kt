@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.AuthRepository
+import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,7 +24,8 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userPrefs: UserPreferencesRepository
+    private val userPrefs: UserPreferencesRepository,
+    private val geoPointRepository: GeoPointRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -36,6 +38,7 @@ class AuthViewModel @Inject constructor(
                 .onSuccess { user ->
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
+                    geoPointRepository.migrateGuestPointsToUser(user.uid)
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
@@ -51,6 +54,7 @@ class AuthViewModel @Inject constructor(
                 .onSuccess { user ->
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
+                    geoPointRepository.migrateGuestPointsToUser(user.uid)
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
@@ -66,6 +70,7 @@ class AuthViewModel @Inject constructor(
                 .onSuccess { user ->
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
+                    geoPointRepository.migrateGuestPointsToUser(user.uid)
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
