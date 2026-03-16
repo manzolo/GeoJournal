@@ -24,8 +24,12 @@ Export all your data to a ZIP file and import it on another device. Automatic da
 ☁️ CLOUD SYNC (optional)
 Sign in with Google or email to sync your points across all your devices. Data saved offline is transferred automatically when you log in.
 
-🔒 PRIVACY
-You can use GeoJournal completely offline, with no sign-up required. Your data stays on the device until you choose to sync it.
+🔒 PRIVACY AND DATA CONTROL
+You can use GeoJournal completely offline with no sign-up required: in that case, zero data leaves your device.
+
+If you choose to log in, your points are synced to Firebase (Google) — a Google service linked to your account, not to our servers. We as developers do not collect or access your data.
+
+You can delete your account and all your data at any time directly from the app: Profile → "Delete account and all data". No waiting, no emails to send.
 
 ---
 Made with ❤️ by Manzolo
