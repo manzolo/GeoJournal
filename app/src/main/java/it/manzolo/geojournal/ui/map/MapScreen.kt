@@ -496,7 +496,7 @@ private fun createCloudBubbleDrawable(
 
     // Bordo verde unico sull'intera sagoma
     canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(255, 46, 125, 50)
+        color = AndroidColor.argb(255, 56, 102, 65) // MossGreen (386641)
         style = Paint.Style.STROKE
         strokeWidth = 2f * d
     })
@@ -567,13 +567,13 @@ private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable 
 
     // Riempimento verde
     canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(235, 46, 125, 50)
+        color = AndroidColor.argb(235, 56, 102, 65) // MossGreen (386641)
         style = Paint.Style.FILL
     })
 
     // Bordo verde scuro
     canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(255, 27, 94, 32)
+        color = AndroidColor.argb(255, 27, 67, 50) // MossGreenDark (1B4332)
         style = Paint.Style.STROKE
         strokeWidth = 1.5f * d
     })

@@ -85,6 +85,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -319,20 +320,35 @@ fun AddEditScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             // --- Emoji ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.size(56.dp).clickable { viewModel.toggleEmojiPicker() }
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clickable { viewModel.toggleEmojiPicker() }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(uiState.emoji, style = MaterialTheme.typography.headlineMedium)
+                        Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
                     }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Tocca per cambiare emoji",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        "Scegli un simbolo",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        "Tocca per cambiare l'icona",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // --- Titolo ---

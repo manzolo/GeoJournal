@@ -22,8 +22,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -171,12 +174,28 @@ private fun GeoJournalBottomNav(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
         bottomNavItems.forEach { item ->
+            val selected = currentRoute == item.route
             NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
-                label = { Text(stringResource(item.labelRes)) },
-                selected = currentRoute == item.route,
+                icon = { 
+                    Icon(
+                        item.icon, 
+                        contentDescription = stringResource(item.labelRes),
+                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ) 
+                },
+                label = { 
+                    Text(
+                        stringResource(item.labelRes),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                    ) 
+                },
+                selected = selected,
                 onClick = {
                     navController.navigate(item.route) {
                         popUpTo(navController.graph.startDestinationId) {
@@ -185,7 +204,10 @@ private fun GeoJournalBottomNav(navController: NavController) {
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                )
             )
         }
     }

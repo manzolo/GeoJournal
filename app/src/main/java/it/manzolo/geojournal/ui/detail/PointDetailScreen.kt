@@ -176,13 +176,27 @@ private fun PointDetailContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Emoji + titolo
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(point.emoji, style = MaterialTheme.typography.displaySmall)
-            Spacer(modifier = Modifier.width(16.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(point.emoji, style = MaterialTheme.typography.displaySmall)
+            }
+            Spacer(modifier = Modifier.width(20.dp))
             Text(
                 text = point.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
             )
         }
 
