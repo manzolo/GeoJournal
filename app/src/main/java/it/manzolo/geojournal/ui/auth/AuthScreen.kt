@@ -46,7 +46,9 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
+import androidx.credentials.GetCredentialResponse
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import it.manzolo.geojournal.R
@@ -82,31 +84,50 @@ fun AuthScreen(
         }
     }
 
-    // Funzione helper per avviare Google Sign-In via Credential Manager
+    // Estrae l'idToken da una GetCredentialResponse
+    fun handleCredentialResult(result: GetCredentialResponse) {
+        val credential = result.credential
+        if (credential is CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+            viewModel.signInWithGoogle(tokenCredential.idToken)
+        } else {
+            viewModel.setError("Tipo di credenziale non supportato")
+        }
+    }
+
+    // Avvia Google Sign-In: prima prova GetGoogleIdOption (One Tap),
+    // se fallisce con NoCredentialException usa GetSignInWithGoogleOption (selettore account classico)
     fun launchGoogleSignIn() {
         coroutineScope.launch {
+            val clientId = context.getString(R.string.default_web_client_id)
             try {
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .setServerClientId(clientId)
                     .build()
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-                val result = credentialManager.getCredential(context, request)
-                val credential = result.credential
-                if (credential is CustomCredential &&
-                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                ) {
-                    val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    viewModel.signInWithGoogle(tokenCredential.idToken)
-                } else {
-                    viewModel.setError("Tipo di credenziale non supportato")
-                }
+                val result = credentialManager.getCredential(
+                    context,
+                    GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
+                )
+                handleCredentialResult(result)
             } catch (e: GetCredentialCancellationException) {
-                // Utente ha annullato — nessun feedback necessario
+                // Utente ha annullato — nessun feedback
             } catch (e: NoCredentialException) {
-                viewModel.setError("Nessun account Google trovato sul dispositivo")
+                // Fallback: selettore account classico (più compatibile)
+                try {
+                    val signInOption = GetSignInWithGoogleOption.Builder(clientId).build()
+                    val result = credentialManager.getCredential(
+                        context,
+                        GetCredentialRequest.Builder().addCredentialOption(signInOption).build()
+                    )
+                    handleCredentialResult(result)
+                } catch (e2: GetCredentialCancellationException) {
+                    // Utente ha annullato
+                } catch (e2: GetCredentialException) {
+                    viewModel.setError("Accesso Google fallito: ${e2.message}")
+                }
             } catch (e: GoogleIdTokenParsingException) {
                 viewModel.setError("Errore nel token Google")
             } catch (e: GetCredentialException) {
