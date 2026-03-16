@@ -146,7 +146,20 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // Per application/octet-stream (WhatsApp ecc.) verifica l'estensione
+        // file:// URI: il path contiene direttamente il nome file → controllo estensione affidabile
+        if (uri.scheme == "file") {
+            val path = uri.path ?: ""
+            Log.d("GeoJournal_Intent", "file:// path='$path'")
+            if (path.endsWith(".geoj", ignoreCase = true)) {
+                Log.d("GeoJournal_Intent", "MATCH via file:// path → setPendingGeojUri")
+                mainViewModel.setPendingGeojUri(uri)
+            } else {
+                Log.d("GeoJournal_Intent", "NESSUN MATCH su file:// path")
+            }
+            return
+        }
+
+        // Per content:// URI (application/octet-stream, application/zip, ecc.) verifica l'estensione
         val geoj = isGeojUri(uri)
         Log.d("GeoJournal_Intent", "isGeojUri=$geoj")
         if (geoj) {
