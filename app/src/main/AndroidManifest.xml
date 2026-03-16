@@ -51,17 +51,30 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Apri file .geoj condivisi da altri utenti GeoJournal (MIME type nativo) -->
+            <!-- Apri file .geoj: MIME type nativo (condivisione da altra GeoJournal) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/x-geojournal-point" />
             </intent-filter>
-            <!-- Apri file .geoj da WhatsApp/altri (MIME type generico per estensioni sconosciute) -->
+            <!-- Apri file .geoj: MIME generico (WhatsApp, app che non conoscono l'estensione) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <!-- Apri file .geoj: ZIP (file manager che rileva i magic bytes del file ZIP) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
+            <!-- Apri file .geoj: file:// URI senza MIME type (file manager che usano URI diretto) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.geoj" />
+                <data android:scheme="file" android:pathPattern=".*\\.GEOJ" />
             </intent-filter>
         </activity>
 
