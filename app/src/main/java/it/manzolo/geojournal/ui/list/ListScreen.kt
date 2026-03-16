@@ -89,7 +89,7 @@ fun ListScreen(navController: NavController) {
                         leadingIcon = { Icon(Icons.Filled.Map, null) },
                         onClick = {
                             contextMenuPoint = null
-                            navigateToMapFocus(navController, point.latitude, point.longitude)
+                            navigateToMapFocus(navController, point.latitude, point.longitude, point.id)
                         }
                     )
                     DropdownMenuItem(
@@ -365,8 +365,8 @@ private fun EmptyState(hasFilters: Boolean) {
 private fun Date.toDisplayDate(): String =
     SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(this)
 
-private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double) {
-    it.manzolo.geojournal.ui.map.MapViewModel.FocusRequest.send(lat, lon)
+private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double, pointId: String) {
+    it.manzolo.geojournal.ui.map.MapViewModel.FocusRequest.send(lat, lon, pointId)
     navController.navigate(Routes.Map.route) {
         popUpTo(Routes.Map.route) { inclusive = false }
         launchSingleTop = true

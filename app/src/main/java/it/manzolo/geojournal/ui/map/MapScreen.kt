@@ -11,26 +11,44 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.location.LocationManager
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,11 +60,26 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.components.PointBottomSheet
 import it.manzolo.geojournal.ui.navigation.Routes
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+
+private data class MapCluster(
+    val centerLat: Double,
+    val centerLon: Double,
+    val points: List<GeoPoint>
+)
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -57,6 +90,11 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    // Ref aggiornabile per avere sempre i punti correnti nel listener di zoom
+    val pointsRef = remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
+    // Punti del cluster troppo vicini da separare visivamente → mostra il picker
+    val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
 
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
@@ -71,6 +109,26 @@ fun MapScreen(
         }
     }
 
+    // Listener di zoom: ri-clustera quando cambia il livello intero di zoom
+    LaunchedEffect(Unit) {
+        var lastZoom = -1
+        mapView.addMapListener(object : MapListener {
+            override fun onScroll(event: ScrollEvent) = false
+            override fun onZoom(event: ZoomEvent): Boolean {
+                val z = mapView.zoomLevelDouble.toInt()
+                if (z != lastZoom) {
+                    lastZoom = z
+                    updateClusteredMarkers(
+                        mapView, pointsRef.value, context,
+                        onMarkerClick = { viewModel.onPointSelected(it) },
+                        onClusterTooClose = { clusterPickerRef.value = it }
+                    )
+                }
+                return false
+            }
+        })
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             mapView.overlays.clear()
@@ -79,16 +137,22 @@ fun MapScreen(
     }
 
     LaunchedEffect(uiState.points) {
-        updateMapMarkers(mapView, uiState.points, context) { point ->
-            viewModel.onPointSelected(point)
-        }
+        pointsRef.value = uiState.points
+        updateClusteredMarkers(
+            mapView, uiState.points, context,
+            onMarkerClick = { viewModel.onPointSelected(it) },
+            onClusterTooClose = { clusterPickerRef.value = it }
+        )
     }
 
-    // Gestione del focus su un punto specifico (es. da Lista)
+    // Focus su punto specifico (es. da Lista): centra + auto-seleziona il punto
     LaunchedEffect(uiState.focusTarget) {
-        uiState.focusTarget?.let { (lat, lon) ->
-            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+        uiState.focusTarget?.let { target ->
+            mapView.controller.animateTo(OsmGeoPoint(target.lat, target.lon))
             mapView.controller.setZoom(17.0)
+            target.pointId?.let { id ->
+                uiState.points.find { it.id == id }?.let { viewModel.onPointSelected(it) }
+            }
             viewModel.clearFocusTarget()
         }
     }
@@ -99,7 +163,36 @@ fun MapScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // FAB posizione utente
+        // Controlli zoom + inquadra tutto (lato sinistro)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SmallFloatingActionButton(
+                onClick = { mapView.controller.zoomIn() },
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.ZoomIn, contentDescription = "Zoom avanti")
+            }
+            SmallFloatingActionButton(
+                onClick = { mapView.controller.zoomOut() },
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.ZoomOut, contentDescription = "Zoom indietro")
+            }
+            if (uiState.points.isNotEmpty()) {
+                SmallFloatingActionButton(
+                    onClick = { fitAllPoints(mapView, uiState.points) },
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(Icons.Filled.FitScreen, contentDescription = "Inquadra tutti i punti")
+                }
+            }
+        }
+
+        // FAB posizione utente (lato destro)
         SmallFloatingActionButton(
             onClick = {
                 if (locationPermission.status.isGranted) {
@@ -119,14 +212,12 @@ fun MapScreen(
             )
         }
 
-        // Centra automaticamente dopo permesso concesso SOLO se non c'è un focusTarget attivo
         LaunchedEffect(locationPermission.status.isGranted) {
             if (locationPermission.status.isGranted && uiState.focusTarget == null) {
                 centerMapOnUserLocation(context, mapView)
             }
         }
 
-        // FAB aggiungi punto
         FloatingActionButton(
             onClick = { navController.navigate(Routes.AddEditPoint.createRoute()) },
             modifier = Modifier
@@ -141,7 +232,6 @@ fun MapScreen(
             )
         }
 
-        // Bottom sheet con dettagli del punto selezionato
         if (uiState.isBottomSheetVisible && uiState.selectedPoint != null) {
             PointBottomSheet(
                 point = uiState.selectedPoint!!,
@@ -156,6 +246,48 @@ fun MapScreen(
                 }
             )
         }
+
+        // Picker per cluster con punti troppo vicini da separare visivamente
+        clusterPickerRef.value?.let { points ->
+            ClusterPickerSheet(
+                points = points,
+                onDismiss = { clusterPickerRef.value = null },
+                onPointClick = { point ->
+                    clusterPickerRef.value = null
+                    viewModel.onPointSelected(point)
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ClusterPickerSheet(
+    points: List<GeoPoint>,
+    onDismiss: () -> Unit,
+    onPointClick: (GeoPoint) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = "${points.size} punti in questa zona",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            items(points) { point ->
+                ListItem(
+                    headlineContent = { Text(point.title) },
+                    leadingContent = { Text(point.emoji, style = MaterialTheme.typography.titleLarge) },
+                    supportingContent = point.description.takeIf { it.isNotBlank() }?.let {
+                        { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    },
+                    modifier = Modifier.clickable { onPointClick(point) }
+                )
+                HorizontalDivider()
+            }
+        }
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -171,24 +303,105 @@ private fun centerMapOnUserLocation(context: Context, mapView: MapView) {
     } catch (_: SecurityException) { /* permesso revocato */ }
 }
 
-private fun updateMapMarkers(
+private fun fitAllPoints(mapView: MapView, points: List<GeoPoint>) {
+    if (points.isEmpty()) return
+    val lats = points.map { it.latitude }
+    val lons = points.map { it.longitude }
+    val latPad = maxOf(0.005, (lats.max() - lats.min()) * 0.25)
+    val lonPad = maxOf(0.005, (lons.max() - lons.min()) * 0.25)
+    mapView.zoomToBoundingBox(
+        BoundingBox(
+            lats.max() + latPad, lons.max() + lonPad,
+            lats.min() - latPad, lons.min() - lonPad
+        ),
+        true, 120
+    )
+}
+
+/**
+ * Raggruppa i punti in cluster greedy basati sulla distanza in gradi.
+ * La soglia è calibrata su ~80px di schermo: threshold = 112.5 / 2^zoom
+ * (zoom 13 ≈ 1.4°/tile → 80px ≈ 0.014°; zoom 17 → 0.00086°).
+ * Sopra zoom 19 non si raggruppa più nulla.
+ */
+private fun clusterPoints(points: List<GeoPoint>, zoom: Double): List<MapCluster> {
+    if (points.isEmpty()) return emptyList()
+    val threshold = if (zoom >= 19.0) 0.0 else 112.5 / 2.0.pow(zoom)
+    val remaining = points.toMutableList()
+    val clusters = mutableListOf<MapCluster>()
+    while (remaining.isNotEmpty()) {
+        val seed = remaining.removeFirst()
+        if (threshold == 0.0) {
+            clusters.add(MapCluster(seed.latitude, seed.longitude, listOf(seed)))
+            continue
+        }
+        val grouped = remaining.filter { p ->
+            abs(p.latitude - seed.latitude) < threshold &&
+                abs(p.longitude - seed.longitude) < threshold
+        }
+        remaining.removeAll(grouped.toSet())
+        val all = listOf(seed) + grouped
+        clusters.add(
+            MapCluster(
+                centerLat = all.map { it.latitude }.average(),
+                centerLon = all.map { it.longitude }.average(),
+                points = all
+            )
+        )
+    }
+    return clusters
+}
+
+// Soglia in gradi sotto la quale due punti non sono separabili visivamente nemmeno al max zoom.
+// ~0.001° ≈ 111m lat / 78m lon @ lat 45° → corrisponde alla larghezza del marker bubble a zoom 19.
+private const val MIN_SEPARABLE_DEG = 0.001
+
+private fun updateClusteredMarkers(
     mapView: MapView,
     points: List<GeoPoint>,
     context: Context,
-    onMarkerClick: (GeoPoint) -> Unit
+    onMarkerClick: (GeoPoint) -> Unit,
+    onClusterTooClose: (List<GeoPoint>) -> Unit = {}
 ) {
+    val zoom = mapView.zoomLevelDouble
+    val clusters = clusterPoints(points, zoom)
     mapView.overlays.removeAll { it is Marker }
 
-    points.forEach { point ->
+    clusters.forEach { cluster ->
         val marker = Marker(mapView).apply {
-            position = OsmGeoPoint(point.latitude, point.longitude)
-            title = point.title
-            snippet = point.description
-            icon = createSpeechBubbleDrawable(context, point.emoji, point.title)
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            setOnMarkerClickListener { _, _ ->
-                onMarkerClick(point)
-                true
+            position = OsmGeoPoint(cluster.centerLat, cluster.centerLon)
+            if (cluster.points.size == 1) {
+                val point = cluster.points[0]
+                icon = createCloudBubbleDrawable(context, point.emoji, point.title)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                setOnMarkerClickListener { _, _ ->
+                    onMarkerClick(point)
+                    true
+                }
+            } else {
+                icon = createClusterDrawable(context, cluster.points.size)
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                setOnMarkerClickListener { _, _ ->
+                    val lats = cluster.points.map { it.latitude }
+                    val lons = cluster.points.map { it.longitude }
+                    val latRange = lats.max() - lats.min()
+                    val lonRange = lons.max() - lons.min()
+                    if (latRange < MIN_SEPARABLE_DEG && lonRange < MIN_SEPARABLE_DEG) {
+                        // Punti troppo vicini: mostra lista invece di zoomare
+                        onClusterTooClose(cluster.points)
+                    } else {
+                        val latPad = maxOf(0.002, latRange * 0.3)
+                        val lonPad = maxOf(0.002, lonRange * 0.3)
+                        mapView.zoomToBoundingBox(
+                            BoundingBox(
+                                lats.max() + latPad, lons.max() + lonPad,
+                                lats.min() - latPad, lons.min() - lonPad
+                            ),
+                            true, 80
+                        )
+                    }
+                    true
+                }
             }
         }
         mapView.overlays.add(marker)
@@ -196,83 +409,163 @@ private fun updateMapMarkers(
     mapView.invalidate()
 }
 
-private fun createSpeechBubbleDrawable(
+/**
+ * Nuvoletta per marker singolo: corpo + 4 bumps fusi in un'unica sagoma via Path.Op.UNION
+ * così non appaiono cerchi separati con bordo individuale.
+ */
+private fun createCloudBubbleDrawable(
     context: Context,
     emoji: String,
     title: String
 ): BitmapDrawable {
-    val density = context.resources.displayMetrics.density
-    val bubbleWidth = (140 * density).toInt()
-    val bubbleHeight = (52 * density).toInt()
-    val tailH = (14 * density).toInt()
-    val radius = 14f * density
-    val pad = 8f * density
+    val d = context.resources.displayMetrics.density
+    val bodyW = (140 * d).toInt()
+    val bodyH = (48 * d).toInt()
+    val bumpR = 10f * d
+    val numBumps = 4
+    val tailH = (13 * d).toInt()
+    val bumpOverhang = (bumpR * 0.5f).toInt()
+    val totalH = bumpOverhang + bodyH + tailH
+    val bodyTop = bumpOverhang.toFloat()
 
-    val totalHeight = bubbleHeight + tailH
-    val bitmap = Bitmap.createBitmap(bubbleWidth, totalHeight, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(bodyW, totalH, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    // Ombra morbida
-    val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(50, 0, 0, 0)
-        style = Paint.Style.FILL
+    // Corpo arrotondato
+    val bodyRect = RectF(0f, bodyTop, bodyW.toFloat(), bodyTop + bodyH)
+    val cloudPath = Path().apply {
+        addRoundRect(bodyRect, 14f * d, 14f * d, Path.Direction.CW)
     }
-    canvas.drawRoundRect(
-        RectF(3f * density, 3f * density, bubbleWidth - 1f * density, bubbleHeight - 1f * density),
-        radius, radius, shadowPaint
+
+    // Bumps in cima — uniti al corpo con UNION (nessun bordo interno visibile)
+    val bumpSpacing = bodyW.toFloat() / (numBumps + 1)
+    val bumpCy = bodyTop + bumpR * 0.5f
+    for (i in 1..numBumps) {
+        cloudPath.op(
+            Path().apply { addCircle(bumpSpacing * i, bumpCy, bumpR, Path.Direction.CW) },
+            Path.Op.UNION
+        )
+    }
+
+    // Codina triangolare — unita al corpo
+    val cx = bodyW / 2f
+    cloudPath.op(
+        Path().apply {
+            moveTo(cx - tailH * 0.75f, bodyTop + bodyH - 2f * d)
+            lineTo(cx, (bodyTop + bodyH + tailH))
+            lineTo(cx + tailH * 0.75f, bodyTop + bodyH - 2f * d)
+            close()
+        },
+        Path.Op.UNION
     )
 
-    // Sfondo bubble bianco
-    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    // Ombra
+    canvas.save()
+    canvas.translate(2f * d, 2f * d)
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(35, 0, 0, 0)
+        style = Paint.Style.FILL
+    })
+    canvas.restore()
+
+    // Riempimento bianco
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = AndroidColor.WHITE
         style = Paint.Style.FILL
-    }
-    val bubbleRect = RectF(0f, 0f, bubbleWidth.toFloat(), bubbleHeight.toFloat())
-    canvas.drawRoundRect(bubbleRect, radius, radius, bgPaint)
+    })
 
-    // Coda triangolare in basso al centro
-    val tailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.WHITE
-        style = Paint.Style.FILL
-    }
-    val tailPath = Path().apply {
-        val cx = bubbleWidth / 2f
-        moveTo(cx - tailH * 0.8f, bubbleHeight.toFloat() - 2f * density)
-        lineTo(cx, totalHeight.toFloat())
-        lineTo(cx + tailH * 0.8f, bubbleHeight.toFloat() - 2f * density)
-        close()
-    }
-    canvas.drawPath(tailPath, tailPaint)
-
-    // Bordo verde
-    val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    // Bordo verde unico sull'intera sagoma
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = AndroidColor.argb(255, 46, 125, 50)
         style = Paint.Style.STROKE
-        strokeWidth = 2.2f * density
-    }
-    canvas.drawRoundRect(bubbleRect, radius, radius, borderPaint)
+        strokeWidth = 2f * d
+    })
 
-    // Emoji
-    val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 20f * density
+    // Emoji + titolo
+    val textY = bodyTop + bodyH / 2f + 8f * d
+    canvas.drawText(emoji, 8f * d, textY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 20f * d
         textAlign = Paint.Align.LEFT
-    }
-    canvas.drawText(emoji, pad, bubbleHeight / 2f + 9f * density, emojiPaint)
+    })
 
-    // Titolo (troncato se troppo lungo)
     val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = AndroidColor.argb(255, 27, 36, 20)
-        textSize = 9.5f * density
+        textSize = 9.5f * d
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.LEFT
     }
-    val maxW = bubbleWidth - (pad * 2) - (28f * density)
+    val maxW = bodyW - 16f * d - 28f * d
     var displayTitle = title
     while (titlePaint.measureText(displayTitle) > maxW && displayTitle.length > 3) {
         displayTitle = displayTitle.dropLast(1)
     }
     if (displayTitle.length < title.length) displayTitle = displayTitle.dropLast(2) + "…"
-    canvas.drawText(displayTitle, pad + 26f * density, bubbleHeight / 2f + 9f * density, titlePaint)
+    canvas.drawText(displayTitle, 34f * d, textY, titlePaint)
+
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/**
+ * Icona cluster: cerchio centrale + 8 bumps fusi con Path.Op.UNION → nuvoletta verde
+ * senza cerchi separati visibili. Il conteggio è scritto in bianco al centro.
+ */
+private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable {
+    val d = context.resources.displayMetrics.density
+    val mainR = 26f * d
+    val bumpR = 9f * d
+    val pad = bumpR + 4f * d
+    val size = ((mainR + pad) * 2).toInt()
+    val cx = size / 2f
+    val cy = size / 2f
+
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Cerchio centrale
+    val cloudPath = Path().apply { addCircle(cx, cy, mainR, Path.Direction.CW) }
+
+    // 8 bumps a 45° — uniti con UNION
+    val bumpDist = mainR * 0.82f
+    for (i in 0 until 8) {
+        val rad = i * 45.0 * PI / 180.0
+        val bx = cx + bumpDist * cos(rad).toFloat()
+        val by = cy + bumpDist * sin(rad).toFloat()
+        cloudPath.op(
+            Path().apply { addCircle(bx, by, bumpR, Path.Direction.CW) },
+            Path.Op.UNION
+        )
+    }
+
+    // Ombra
+    canvas.save()
+    canvas.translate(2f * d, 2f * d)
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(40, 0, 0, 0)
+        style = Paint.Style.FILL
+    })
+    canvas.restore()
+
+    // Riempimento verde
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(235, 46, 125, 50)
+        style = Paint.Style.FILL
+    })
+
+    // Bordo verde scuro
+    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(255, 27, 94, 32)
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f * d
+    })
+
+    // Conteggio
+    val label = if (count > 99) "99+" else count.toString()
+    canvas.drawText(label, cx, cy + 5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textSize = 14f * d
+        typeface = Typeface.DEFAULT_BOLD
+        textAlign = Paint.Align.CENTER
+    })
 
     return BitmapDrawable(context.resources, bitmap)
 }
