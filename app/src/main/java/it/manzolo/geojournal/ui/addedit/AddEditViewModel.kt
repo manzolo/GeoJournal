@@ -42,7 +42,8 @@ data class AddEditUiState(
     val showEmojiPicker: Boolean = false,
     val showDeleteConfirm: Boolean = false,
     val reminders: List<Reminder> = emptyList(),
-    val showReminderSheet: Boolean = false
+    val showReminderSheet: Boolean = false,
+    val rating: Int = 0
 )
 
 @HiltViewModel
@@ -88,7 +89,8 @@ class AddEditViewModel @Inject constructor(
                         latitude = point.latitude,
                         longitude = point.longitude,
                         photoUris = point.photoUrls,
-                        isLoading = false
+                        isLoading = false,
+                        rating = point.rating
                     )
                 }
             } else {
@@ -122,6 +124,7 @@ class AddEditViewModel @Inject constructor(
     fun removePhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris - uri) }
 
     fun toggleReminderSheet() = _uiState.update { it.copy(showReminderSheet = !it.showReminderSheet) }
+    fun updateRating(stars: Int) = _uiState.update { it.copy(rating = if (it.rating == stars) 0 else stars) }
 
     fun addReminder(reminder: Reminder) {
         val r = reminder.copy(geoPointId = existingId)
@@ -168,7 +171,8 @@ class AddEditViewModel @Inject constructor(
                 photoUrls = resolvedPhotos,
                 createdAt = if (isEditMode) existingCreatedAt else Date(),
                 updatedAt = Date(),
-                ownerId = prefs.userId
+                ownerId = prefs.userId,
+                rating = state.rating
             )
             repository.save(point)
             // Salva i reminder pendenti (solo nuovo modo, edit mode li salva subito)

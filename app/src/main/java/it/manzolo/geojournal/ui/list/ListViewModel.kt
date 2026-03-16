@@ -3,15 +3,21 @@ package it.manzolo.geojournal.ui.list
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 enum class SortOrder(val label: String) {
@@ -31,8 +37,19 @@ data class ListUiState(
 
 @HiltViewModel
 class ListViewModel @Inject constructor(
-    private val repository: GeoPointRepository
+    private val repository: GeoPointRepository,
+    private val exporter: GeoPointExporter
 ) : ViewModel() {
+
+    private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
+    val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
+
+    fun prepareShare(point: GeoPoint) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { exporter.exportPointToCache(point) }
+                .onSuccess { _shareFileEvent.emit(it) }
+        }
+    }
 
     private val _query = MutableStateFlow("")
     private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())

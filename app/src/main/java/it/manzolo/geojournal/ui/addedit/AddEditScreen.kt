@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.AlertDialog
@@ -353,6 +355,34 @@ fun AddEditScreen(
                 maxLines = 5,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
+
+            // --- Valutazione ---
+            Text("Valutazione", style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                (1..5).forEach { star ->
+                    IconButton(
+                        onClick = { viewModel.updateRating(star) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = "$star stelle",
+                            tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+                if (uiState.rating > 0) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "${uiState.rating}/5",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             // --- GPS ---
             Text("Posizione", style = MaterialTheme.typography.labelLarge,

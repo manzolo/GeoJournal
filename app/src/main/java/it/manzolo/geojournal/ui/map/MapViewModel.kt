@@ -3,8 +3,10 @@ package it.manzolo.geojournal.ui.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Date
 import javax.inject.Inject
 
@@ -35,8 +38,19 @@ data class MapUiState(
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val repository: GeoPointRepository
+    private val repository: GeoPointRepository,
+    private val exporter: GeoPointExporter
 ) : ViewModel() {
+
+    private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
+    val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
+
+    fun prepareShare(point: GeoPoint) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { exporter.exportPointToCache(point) }
+                .onSuccess { _shareFileEvent.emit(it) }
+        }
+    }
 
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()

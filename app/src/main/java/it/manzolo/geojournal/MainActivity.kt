@@ -1,6 +1,9 @@
 package it.manzolo.geojournal
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,16 +15,21 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,10 +48,20 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleGeojIntent(intent)
         setContent {
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
             GeoJournalTheme(darkTheme = isDarkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
+                val pendingGeojUri by mainViewModel.pendingGeojUri.collectAsState()
+                val context = LocalContext.current
+
+                // Toast dal risultato import .geoj
+                LaunchedEffect(Unit) {
+                    mainViewModel.geojImportMessage.collect { msg ->
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    }
+                }
 
                 startDestination?.let { dest ->
                     val navController = rememberNavController()
@@ -65,8 +83,39 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(innerPadding)
                         )
                     }
+
+                    // Dialog conferma import .geoj
+                    pendingGeojUri?.let { uri ->
+                        AlertDialog(
+                            onDismissRequest = { mainViewModel.clearPendingGeojUri() },
+                            title = { Text("Importa punto") },
+                            text = { Text("Vuoi importare questo punto GeoJournal nel tuo diario?") },
+                            confirmButton = {
+                                Button(onClick = {
+                                    mainViewModel.importGeojPoint(uri)
+                                    mainViewModel.clearPendingGeojUri()
+                                }) { Text("Importa") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { mainViewModel.clearPendingGeojUri() }) {
+                                    Text("Annulla")
+                                }
+                            }
+                        )
+                    }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleGeojIntent(intent)
+    }
+
+    private fun handleGeojIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.data?.let { mainViewModel.setPendingGeojUri(it) }
         }
     }
 }

@@ -30,7 +30,9 @@ data class GeoPointEntity(
     @ColumnInfo(name = "is_shared") val isShared: Boolean = false,
 
     // Flag per sincronizzazione Firestore (Phase 11)
-    @ColumnInfo(name = "synced_to_firestore") val syncedToFirestore: Boolean = false
+    @ColumnInfo(name = "synced_to_firestore") val syncedToFirestore: Boolean = false,
+
+    @ColumnInfo(name = "rating") val rating: Int = 0
 )
 
 // ─── Mapper Domain ↔ Entity ──────────────────────────────────────────────────
@@ -48,7 +50,8 @@ fun GeoPointEntity.toDomain(): GeoPoint = GeoPoint(
     createdAt = Date(createdAt),
     updatedAt = Date(updatedAt),
     ownerId = ownerId,
-    isShared = isShared
+    isShared = isShared,
+    rating = rating
 )
 
 fun GeoPoint.toEntity(syncedToFirestore: Boolean = false): GeoPointEntity = GeoPointEntity(
@@ -65,5 +68,6 @@ fun GeoPoint.toEntity(syncedToFirestore: Boolean = false): GeoPointEntity = GeoP
     updatedAt = updatedAt.time,
     ownerId = ownerId,
     isShared = isShared,
-    syncedToFirestore = syncedToFirestore
+    syncedToFirestore = syncedToFirestore,
+    rating = rating
 )

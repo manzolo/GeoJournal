@@ -19,7 +19,9 @@ data class UserPreferences(
     val isPro: Boolean = false,
     val userId: String = "",
     val isGuest: Boolean = false,
-    val lastSyncTimestamp: Long = 0L
+    val lastSyncTimestamp: Long = 0L,
+    val autoBackupEnabled: Boolean = true,
+    val driveBackupUri: String = ""   // URI SAF persistito per il backup su Drive/cloud
 )
 
 @Singleton
@@ -32,6 +34,8 @@ class UserPreferencesRepository @Inject constructor(
         val USER_ID = stringPreferencesKey("user_id")
         val IS_GUEST = booleanPreferencesKey("is_guest")
         val LAST_SYNC = longPreferencesKey("last_sync_timestamp")
+        val AUTO_BACKUP_ENABLED = booleanPreferencesKey("auto_backup_enabled")
+        val DRIVE_BACKUP_URI = stringPreferencesKey("drive_backup_uri")
     }
 
     val preferences: Flow<UserPreferences> = dataStore.data
@@ -45,7 +49,9 @@ class UserPreferencesRepository @Inject constructor(
                 isPro = prefs[Keys.IS_PRO] ?: false,
                 userId = prefs[Keys.USER_ID] ?: "",
                 isGuest = prefs[Keys.IS_GUEST] ?: false,
-                lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L
+                lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L,
+                autoBackupEnabled = prefs[Keys.AUTO_BACKUP_ENABLED] ?: true,
+                driveBackupUri = prefs[Keys.DRIVE_BACKUP_URI] ?: ""
             )
         }
 
@@ -67,5 +73,13 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setLastSync(timestamp: Long) {
         dataStore.edit { it[Keys.LAST_SYNC] = timestamp }
+    }
+
+    suspend fun setAutoBackupEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.AUTO_BACKUP_ENABLED] = enabled }
+    }
+
+    suspend fun setDriveBackupUri(uri: String) {
+        dataStore.edit { it[Keys.DRIVE_BACKUP_URI] = uri }
     }
 }
