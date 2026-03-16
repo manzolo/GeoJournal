@@ -52,7 +52,7 @@
 
     <!-- Privacy Policy -->
     <string name="privacy_policy">Privacy Policy</string>
-    <string name="privacy_policy_url">https://manzolo.github.io/GeoJournal/privacy</string>
+    <string name="privacy_policy_url">https://manzolo.github.io/GeoJournal-privacy/</string>
 
     <!-- Errors -->
     <string name="error_generic">Si è verificato un errore. Riprova.</string>
