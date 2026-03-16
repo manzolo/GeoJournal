@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
 
+data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null)
+
 data class MapUiState(
     val points: List<GeoPoint> = emptyList(),
     val selectedPoint: GeoPoint? = null,
@@ -27,8 +29,8 @@ data class MapUiState(
     val zoomLevel: Double = 13.0,
     val isBottomSheetVisible: Boolean = false,
     val error: String? = null,
-    /** Coordinate one-shot per centrare la mappa al primo frame, poi viene azzerato */
-    val focusTarget: Pair<Double, Double>? = null
+    /** Focus one-shot su coordinate + eventuale punto da auto-selezionare */
+    val focusTarget: FocusTarget? = null
 )
 
 @HiltViewModel
@@ -51,21 +53,23 @@ class MapViewModel @Inject constructor(
      */
     private fun observeFocusRequests() {
         viewModelScope.launch {
-            FocusRequest.events.collect { (lat, lon) ->
-                _uiState.update { it.copy(focusTarget = lat to lon) }
+            FocusRequest.events.collect { target ->
+                _uiState.update { it.copy(focusTarget = target) }
             }
         }
     }
 
     /** Canale singleton per richiedere il focus sulla mappa da qualsiasi schermata. */
     object FocusRequest {
-        private val _events = MutableSharedFlow<Pair<Double, Double>>(
+        private val _events = MutableSharedFlow<FocusTarget>(
             extraBufferCapacity = 1,
             onBufferOverflow = BufferOverflow.DROP_OLDEST
         )
-        val events: SharedFlow<Pair<Double, Double>> = _events.asSharedFlow()
+        val events: SharedFlow<FocusTarget> = _events.asSharedFlow()
 
-        fun send(lat: Double, lon: Double) { _events.tryEmit(lat to lon) }
+        fun send(lat: Double, lon: Double, pointId: String? = null) {
+            _events.tryEmit(FocusTarget(lat, lon, pointId))
+        }
     }
 
     private fun observePoints() {
