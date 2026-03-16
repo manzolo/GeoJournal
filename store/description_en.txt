@@ -1,0 +1,31 @@
+GeoJournal is your personal place diary. Save the spots you love, enrich them with photos, notes and tags, and find them again on the map or in the calendar.
+
+📍 SAVE YOUR SPECIAL PLACES
+Add a point on the map in one tap. Give it a title, a description, an emoji and tags so you can recognise it instantly. Rate it with stars to remember the places that impressed you most.
+
+🗺️ EXPLORE ON THE MAP
+View all your points on an interactive map (OpenStreetMap, no subscription needed). Tap a point to see its details, or use it as a starting point to open Google Maps.
+
+📋 LIST & SEARCH
+Browse your list of places, filter by tag or search by keyword. Keep everything organised your way.
+
+📅 CALENDAR
+Review your places day by day. See upcoming reminders and logged visits in a monthly view.
+
+🔔 REMINDERS
+Set a reminder to go back to a special place: a specific date, a yearly anniversary or a recurring notification.
+
+📷 PHOTOS & SHARING
+Add photos taken on the spot or from your gallery. Share a single point as a .geoj file with anyone who has GeoJournal.
+
+💾 BACKUP & RESTORE
+Export all your data to a ZIP file and import it on another device. Automatic daily backup to a path of your choice (including Google Drive).
+
+☁️ CLOUD SYNC (optional)
+Sign in with Google or email to sync your points across all your devices. Data saved offline is transferred automatically when you log in.
+
+🔒 PRIVACY
+You can use GeoJournal completely offline, with no sign-up required. Your data stays on the device until you choose to sync it.
+
+---
+Made with ❤️ by Manzolo
