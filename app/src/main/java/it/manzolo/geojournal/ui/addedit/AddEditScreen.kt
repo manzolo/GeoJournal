@@ -38,12 +38,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.view.MotionEvent
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -211,36 +215,55 @@ fun AddEditScreen(
     }
 
     if (showPhotoSourceDialog) {
-        AlertDialog(
+        ModalBottomSheet(
             onDismissRequest = { showPhotoSourceDialog = false },
-            title = { Text("Aggiungi foto") },
-            text = {
-                Column {
-                    TextButton(
-                        onClick = {
-                            showPhotoSourceDialog = false
-                            if (cameraPermission.status.isGranted) {
-                                cameraUri = createCameraUri(context)
-                                cameraLauncher.launch(cameraUri!!)
-                            } else {
-                                cameraPermission.launchPermissionRequest()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("📷  Fotocamera") }
-                    TextButton(
-                        onClick = {
-                            showPhotoSourceDialog = false
-                            galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("🖼️  Galleria") }
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Aggiungi foto",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                OutlinedButton(
+                    onClick = {
+                        showPhotoSourceDialog = false
+                        if (cameraPermission.status.isGranted) {
+                            cameraUri = createCameraUri(context)
+                            cameraLauncher.launch(cameraUri!!)
+                        } else {
+                            cameraPermission.launchPermissionRequest()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                ) {
+                    Icon(Icons.Filled.Camera, contentDescription = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Fotocamera", style = MaterialTheme.typography.bodyLarge)
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showPhotoSourceDialog = false }) { Text("Annulla") }
+                OutlinedButton(
+                    onClick = {
+                        showPhotoSourceDialog = false
+                        galleryLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                ) {
+                    Icon(Icons.Filled.Image, contentDescription = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Galleria foto", style = MaterialTheme.typography.bodyLarge)
+                }
             }
-        )
+        }
     }
 
     Scaffold(
@@ -422,7 +445,11 @@ fun AddEditScreen(
                     uiState.photoUris.forEach { uri ->
                         Box(modifier = Modifier.size(90.dp)) {
                             AsyncImage(
-                                model = if (uri.startsWith("/")) File(uri) else uri,
+                                model = when {
+                                    uri.startsWith("/") -> File(uri)
+                                    uri.startsWith("content://") -> android.net.Uri.parse(uri)
+                                    else -> uri
+                                },
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
