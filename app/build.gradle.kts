@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
@@ -15,9 +14,9 @@ android {
     defaultConfig {
         applicationId = "it.manzolo.geojournal"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 17
-        versionName = "0.2.6"
+        targetSdk = 36
+        versionCode = 18
+        versionName = "0.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -53,24 +52,26 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-Xjvm-default=all",
-            "-Xbackend-threads=0" // Usa tutti i core della CPU per la compilazione Kotlin
-        )
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
+        }
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
-        resValues = false // Disabilita se non usi valori dinamici in res (es. API keys in resValues)
     }
+}
+
+hilt {
+    enableAggregatingTask = false
 }
 
 ksp {
     arg("room.incremental", "true")
-    arg("room.expandProjection", "true")
+    arg("hilt.enableAggregatingTask", "true")
 }
 
 dependencies {
