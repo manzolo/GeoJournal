@@ -3,6 +3,7 @@ package it.manzolo.geojournal
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -114,9 +115,25 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleGeojIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW) {
-            intent.data?.let { mainViewModel.setPendingGeojUri(it) }
+        if (intent?.action != Intent.ACTION_VIEW) return
+        val uri = intent.data ?: return
+        val filename = resolveFileName(uri)
+        if (filename.endsWith(".geoj", ignoreCase = true)) {
+            mainViewModel.setPendingGeojUri(uri)
         }
+    }
+
+    private fun resolveFileName(uri: Uri): String {
+        // Prova prima tramite ContentResolver (content:// URI da WhatsApp, Drive, ecc.)
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val name = cursor.getString(0)
+                    if (!name.isNullOrBlank()) return name
+                }
+            }
+        // Fallback: ultimo segmento dell'URI (file:// o path diretto)
+        return uri.lastPathSegment ?: ""
     }
 }
 
