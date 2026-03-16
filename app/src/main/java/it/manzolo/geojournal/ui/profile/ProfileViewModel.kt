@@ -18,7 +18,6 @@ data class ProfileUiState(
     val email: String = "",
     val photoUrl: String? = null,
     val isGuest: Boolean = false,
-    val isPro: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isDarkTheme: Boolean = false,
     val navigateToLogin: Boolean = false
@@ -44,7 +43,6 @@ class ProfileViewModel @Inject constructor(
                     email = user?.email ?: "",
                     photoUrl = user?.photoUrl?.toString(),
                     isGuest = user == null && prefs.isGuest,
-                    isPro = prefs.isPro,
                     isLoggedIn = user != null,
                     isDarkTheme = prefs.isDarkTheme
                 )
