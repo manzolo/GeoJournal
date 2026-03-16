@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface VisitLogRepository {
     fun observeByGeoPointId(geoPointId: String): Flow<List<VisitLogEntry>>
     fun observeForDateRange(startEpoch: Long, endEpoch: Long): Flow<List<VisitLogEntry>>
+    suspend fun getAll(): List<VisitLogEntry>
+    suspend fun saveEntry(entry: VisitLogEntry)
     suspend fun logVisit(geoPointId: String, note: String = "")
     suspend fun delete(entry: VisitLogEntry)
 }

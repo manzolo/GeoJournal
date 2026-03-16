@@ -14,6 +14,9 @@ interface VisitLogDao {
     @Query("SELECT * FROM visit_logs WHERE visited_at BETWEEN :startEpoch AND :endEpoch ORDER BY visited_at ASC")
     fun observeForDateRange(startEpoch: Long, endEpoch: Long): Flow<List<VisitLogEntity>>
 
+    @Query("SELECT * FROM visit_logs ORDER BY visited_at ASC")
+    suspend fun getAll(): List<VisitLogEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: VisitLogEntity)
 

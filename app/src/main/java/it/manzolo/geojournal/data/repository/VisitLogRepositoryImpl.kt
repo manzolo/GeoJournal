@@ -22,6 +22,12 @@ class VisitLogRepositoryImpl @Inject constructor(
     override fun observeForDateRange(startEpoch: Long, endEpoch: Long): Flow<List<VisitLogEntry>> =
         dao.observeForDateRange(startEpoch, endEpoch).map { list -> list.map { it.toDomain() } }
 
+    override suspend fun getAll(): List<VisitLogEntry> =
+        dao.getAll().map { it.toDomain() }
+
+    override suspend fun saveEntry(entry: VisitLogEntry) =
+        dao.insert(entry.toEntity())
+
     override suspend fun logVisit(geoPointId: String, note: String) {
         val entry = VisitLogEntry(
             id = UUID.randomUUID().toString(),
