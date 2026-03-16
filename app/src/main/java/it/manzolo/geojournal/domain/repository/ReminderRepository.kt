@@ -7,6 +7,7 @@ interface ReminderRepository {
     fun observeByGeoPointId(geoPointId: String): Flow<List<Reminder>>
     fun observeForDateRange(startEpoch: Long, endEpoch: Long): Flow<List<Reminder>>
     fun observeAllActive(): Flow<List<Reminder>>
+    suspend fun getAll(): List<Reminder>
     suspend fun getActiveReminders(): List<Reminder>
     suspend fun save(reminder: Reminder)
     suspend fun delete(reminder: Reminder)

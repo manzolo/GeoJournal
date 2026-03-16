@@ -12,6 +12,9 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE geo_point_id = :geoPointId ORDER BY start_date ASC")
     fun observeByGeoPointId(geoPointId: String): Flow<List<ReminderEntity>>
 
+    @Query("SELECT * FROM reminders")
+    suspend fun getAll(): List<ReminderEntity>
+
     @Query("SELECT * FROM reminders WHERE is_active = 1")
     suspend fun getActiveReminders(): List<ReminderEntity>
 
