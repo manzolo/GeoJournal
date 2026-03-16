@@ -72,10 +72,15 @@ fun ProfileScreen(
         ActivityResultContracts.CreateDocument("application/zip")
     ) { uri -> uri?.let { backupViewModel.export(it) } }
 
-    // SAF: apri file ZIP per l'import
+    // SAF: apri file ZIP per l'import backup completo
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { backupViewModel.import(it) } }
+
+    // SAF: apri file .geoj per importare un singolo punto
+    val importGeojLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { backupViewModel.importGeojPoint(it) } }
 
     // SAF: crea file ZIP su Drive (URI persistito per auto-backup)
     val driveLauncher = rememberLauncherForActivityResult(
@@ -405,6 +410,34 @@ fun ProfileScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Importa singolo punto .geoj
+                OutlinedButton(
+                    onClick = {
+                        importGeojLauncher.launch(
+                            arrayOf(
+                                "application/x-geojournal-point",
+                                "application/zip",
+                                "application/octet-stream",
+                                "*/*"
+                            )
+                        )
+                    },
+                    enabled = !isWorking,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isWorking) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text("Importa punto .geoj")
+                }
+
                 // Feedback operazione
                 when (val s = backupState) {
                     is BackupViewModel.State.ExportOk -> {
@@ -419,6 +452,14 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             "✓ Importati: ${s.pointCount} punti, ${s.reminderCount} promemoria, ${s.visitCount} visite",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    is BackupViewModel.State.ImportPointOk -> {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "✓ Punto \"${s.title}\" importato",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -491,6 +532,7 @@ fun ProfileScreen(
     LaunchedEffect(backupState) {
         if (backupState is BackupViewModel.State.ExportOk ||
             backupState is BackupViewModel.State.ImportOk ||
+            backupState is BackupViewModel.State.ImportPointOk ||
             backupState is BackupViewModel.State.Error
         ) {
             kotlinx.coroutines.delay(5_000)
