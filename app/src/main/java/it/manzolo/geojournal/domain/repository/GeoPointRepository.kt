@@ -10,4 +10,5 @@ interface GeoPointRepository {
     suspend fun save(point: GeoPoint)
     suspend fun delete(point: GeoPoint)
     suspend fun deleteById(id: String)
+    suspend fun migrateGuestPointsToUser(userId: String): Int
 }
