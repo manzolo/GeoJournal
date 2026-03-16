@@ -91,10 +91,17 @@ fun AuthScreen(
             try {
                 val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
                     .getResult(ApiException::class.java)
-                account?.idToken?.let { viewModel.signInWithGoogle(it) }
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    viewModel.signInWithGoogle(idToken)
+                } else {
+                    viewModel.setError("Accesso Google fallito: token non ricevuto")
+                }
             } catch (e: ApiException) {
-                // Errore gestito tramite snackbar se necessario
+                viewModel.setError("Accesso Google fallito (codice ${e.statusCode})")
             }
+        } else if (result.resultCode != Activity.RESULT_CANCELED) {
+            viewModel.setError("Accesso Google non completato")
         }
     }
 

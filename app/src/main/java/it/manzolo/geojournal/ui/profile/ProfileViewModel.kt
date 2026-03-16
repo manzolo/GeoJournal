@@ -43,7 +43,7 @@ class ProfileViewModel @Inject constructor(
                     displayName = user?.displayName ?: "",
                     email = user?.email ?: "",
                     photoUrl = user?.photoUrl?.toString(),
-                    isGuest = prefs.isGuest,
+                    isGuest = user == null && prefs.isGuest,
                     isPro = prefs.isPro,
                     isLoggedIn = user != null,
                     isDarkTheme = prefs.isDarkTheme
