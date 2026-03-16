@@ -73,4 +73,16 @@ class FirebaseAuthRepositoryImpl @Inject constructor(
             // Firebase sign out già completato — ignoriamo errori del credential manager
         }
     }
+
+    override suspend fun deleteAccount(): Result<Unit> {
+        return try {
+            auth.currentUser?.delete()?.await()
+            try {
+                credentialManager.clearCredentialState(ClearCredentialStateRequest())
+            } catch (_: Exception) {}
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

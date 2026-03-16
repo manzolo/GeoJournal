@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elimina account – GeoJournal</title>
+  <style>
+    :root { --primary: #4A6741; --bg: #FAFAF7; --text: #1C1C1E; --muted: #6B7280; --border: #E5E7EB; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 0 16px 64px; }
+    header { background: var(--primary); color: white; padding: 32px 24px 24px; margin: 0 -16px 32px; text-align: center; }
+    header h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    header p { font-size: 0.95rem; opacity: 0.85; }
+    .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; max-width: 700px; margin-left: auto; margin-right: auto; }
+    .card h2 { color: var(--primary); font-size: 1.1rem; margin-bottom: 12px; }
+    ol, ul { padding-left: 20px; }
+    li { margin-bottom: 8px; }
+    .warning { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 16px; margin-top: 16px; color: #991B1B; font-size: 0.9rem; }
+    .lang-toggle { text-align: center; margin-bottom: 24px; }
+    .lang-toggle a { color: var(--primary); text-decoration: none; font-weight: 600; margin: 0 8px; }
+    footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🗺️ GeoJournal</h1>
+  <p>Eliminazione account e dati personali</p>
+</header>
+
+<div class="lang-toggle">
+  <a href="#it">Italiano</a> | <a href="#en">English</a>
+</div>
+
+<!-- ─── ITALIANO ─── -->
+<div id="it">
+  <div class="card">
+    <h2>Come eliminare il tuo account dall'app</h2>
+    <p>Puoi eliminare il tuo account e tutti i tuoi dati direttamente dall'app GeoJournal, senza contattare nessuno:</p>
+    <ol>
+      <li>Apri l'app GeoJournal</li>
+      <li>Tocca l'icona <strong>Profilo</strong> nella barra in basso</li>
+      <li>Scorri fino alla sezione <strong>Account</strong></li>
+      <li>Tocca <strong>"Elimina account e tutti i dati"</strong></li>
+      <li>Leggi il messaggio di conferma e tocca <strong>"Elimina tutto"</strong></li>
+    </ol>
+    <div class="warning">
+      ⚠️ <strong>Attenzione:</strong> l'operazione è irreversibile. Verranno eliminati definitivamente il tuo account, tutti i punti geografici, le foto, i promemoria e i dati di sincronizzazione cloud.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cosa viene eliminato</h2>
+    <ul>
+      <li>Account Firebase (email o Google)</li>
+      <li>Tutti i punti geografici salvati (locali e cloud)</li>
+      <li>Foto associate ai punti</li>
+      <li>Promemoria e diari di visita</li>
+      <li>Dati di sincronizzazione Firestore</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Non riesci ad accedere all'app?</h2>
+    <p>Se non riesci ad accedere all'app per eliminare il tuo account, apri una segnalazione su GitHub e ti aiuteremo a procedere con la cancellazione manuale:</p>
+    <p style="margin-top:12px">
+      <a href="https://github.com/manzolo/GeoJournal/issues/new?title=Account+Deletion+Request&labels=account-deletion" style="color:#4A6741;font-weight:600">
+        Richiedi eliminazione account via GitHub →
+      </a>
+    </p>
+  </div>
+</div>
+
+<!-- ─── ENGLISH ─── -->
+<div id="en">
+  <div class="card">
+    <h2>How to delete your account from the app</h2>
+    <p>You can delete your account and all your data directly from the GeoJournal app, without contacting anyone:</p>
+    <ol>
+      <li>Open the GeoJournal app</li>
+      <li>Tap the <strong>Profile</strong> icon in the bottom bar</li>
+      <li>Scroll to the <strong>Account</strong> section</li>
+      <li>Tap <strong>"Delete account and all data"</strong></li>
+      <li>Read the confirmation message and tap <strong>"Delete everything"</strong></li>
+    </ol>
+    <div class="warning">
+      ⚠️ <strong>Warning:</strong> this action is irreversible. Your account, all geographic points, photos, reminders, and cloud sync data will be permanently deleted.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What gets deleted</h2>
+    <ul>
+      <li>Firebase account (email or Google)</li>
+      <li>All saved geographic points (local and cloud)</li>
+      <li>Photos attached to points</li>
+      <li>Reminders and visit logs</li>
+      <li>Firestore sync data</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Can't access the app?</h2>
+    <p>If you cannot access the app to delete your account, open an issue on GitHub and we'll help you with manual deletion:</p>
+    <p style="margin-top:12px">
+      <a href="https://github.com/manzolo/GeoJournal/issues/new?title=Account+Deletion+Request&labels=account-deletion" style="color:#4A6741;font-weight:600">
+        Request account deletion via GitHub →
+      </a>
+    </p>
+  </div>
+</div>
+
+<footer>
+  <p>GeoJournal · <a href="privacy.html" style="color:var(--primary)">Privacy Policy</a> · <a href="https://github.com/manzolo/GeoJournal" style="color:var(--primary)">GitHub</a></p>
+</footer>
+
+</body>
+</html>

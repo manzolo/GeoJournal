@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.AuthRepository
+import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,13 +22,16 @@ data class ProfileUiState(
     val isGuest: Boolean = false,
     val isLoggedIn: Boolean = false,
     val isDarkTheme: Boolean = false,
-    val navigateToLogin: Boolean = false
+    val navigateToLogin: Boolean = false,
+    val isDeletingAccount: Boolean = false,
+    val deleteAccountError: String? = null
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userPrefs: UserPreferencesRepository
+    private val userPrefs: UserPreferencesRepository,
+    private val geoPointRepository: GeoPointRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -67,5 +72,30 @@ class ProfileViewModel @Inject constructor(
 
     fun onNavigated() {
         _uiState.update { it.copy(navigateToLogin = false) }
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeletingAccount = true, deleteAccountError = null) }
+            val uid = userPrefs.preferences.first().userId
+            // 1. Cancella tutti i dati Firestore (best-effort)
+            if (uid.isNotEmpty()) geoPointRepository.deleteAllFirestoreData(uid)
+            // 2. Cancella tutti i dati locali (Room + CASCADE su reminders/visits)
+            geoPointRepository.deleteAllLocalData()
+            // 3. Elimina account Firebase Auth + pulisce DataStore
+            authRepository.deleteAccount()
+                .onSuccess {
+                    userPrefs.setUserId("")
+                    userPrefs.setIsGuest(false)
+                    _uiState.update { it.copy(isDeletingAccount = false, navigateToLogin = true) }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isDeletingAccount = false, deleteAccountError = e.message) }
+                }
+        }
+    }
+
+    fun clearDeleteAccountError() {
+        _uiState.update { it.copy(deleteAccountError = null) }
     }
 }

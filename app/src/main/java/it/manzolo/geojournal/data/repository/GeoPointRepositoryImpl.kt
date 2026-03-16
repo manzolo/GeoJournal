@@ -159,4 +159,27 @@ class GeoPointRepositoryImpl @Inject constructor(
             // Non fatale
         }
     }
+
+    // ─── Eliminazione account: cancella tutti i dati locali e remoti ─────────
+
+    override suspend fun deleteAllLocalData() {
+        dao.deleteAll() // CASCADE elimina anche reminders e visit_logs
+    }
+
+    override suspend fun deleteAllFirestoreData(userId: String) {
+        try {
+            val snapshot = firestore
+                .collection("users")
+                .document(userId)
+                .collection("geo_points")
+                .get()
+                .await()
+            for (doc in snapshot.documents) {
+                doc.reference.delete().await()
+            }
+            firestore.collection("users").document(userId).delete().await()
+        } catch (_: Exception) {
+            // Best-effort: l'account Firebase verrà eliminato comunque
+        }
+    }
 }
