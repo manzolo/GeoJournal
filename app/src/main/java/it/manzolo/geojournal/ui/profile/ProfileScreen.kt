@@ -67,6 +67,7 @@ fun ProfileScreen(
     val context = LocalContext.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showImportConfirm by remember { mutableStateOf(false) }
+    var showDeleteAccountConfirm by remember { mutableStateOf(false) }
 
     val dateTag = remember { SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date()) }
 
@@ -97,6 +98,10 @@ fun ProfileScreen(
                 popUpTo(0) { inclusive = true }
             }
         }
+    }
+
+    LaunchedEffect(uiState.deleteAccountError) {
+        uiState.deleteAccountError?.let { viewModel.clearDeleteAccountError() }
     }
 
     Column(
@@ -197,9 +202,37 @@ fun ProfileScreen(
                 if (uiState.isLoggedIn) {
                     OutlinedButton(
                         onClick = { viewModel.signOut() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isDeletingAccount
                     ) {
                         Text("Esci dall'account")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteAccountConfirm = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isDeletingAccount,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        if (uiState.isDeletingAccount) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                        }
+                        Text("Elimina account e tutti i dati")
+                    }
+                    if (uiState.deleteAccountError != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Errore: ${uiState.deleteAccountError}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 } else {
                     Button(
@@ -488,6 +521,33 @@ fun ProfileScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    // Dialog conferma eliminazione account
+    if (showDeleteAccountConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAccountConfirm = false },
+            title = { Text("Elimina account") },
+            text = {
+                Text(
+                    "Questa operazione eliminerà in modo permanente il tuo account e tutti i tuoi dati (punti, foto, backup cloud). L'operazione non è reversibile.\n\nSei sicuro di voler procedere?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteAccountConfirm = false
+                        viewModel.deleteAccount()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text("Elimina tutto") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAccountConfirm = false }) { Text("Annulla") }
+            }
+        )
     }
 
     // Dialog conferma import (sovrascrive dati esistenti)
