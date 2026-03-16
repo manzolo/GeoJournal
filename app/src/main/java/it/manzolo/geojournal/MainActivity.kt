@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -115,18 +116,44 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleGeojIntent(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_VIEW) return
-        val uri = intent.data ?: return
+        Log.d("GeoJournal_Intent", "action=${intent?.action}")
+        Log.d("GeoJournal_Intent", "type=${intent?.type}")
+        Log.d("GeoJournal_Intent", "data=${intent?.data}")
+        Log.d("GeoJournal_Intent", "extras keys=${intent?.extras?.keySet()}")
+        intent?.extras?.keySet()?.forEach { key ->
+            Log.d("GeoJournal_Intent", "  extra[$key]=${intent.extras?.get(key)}")
+        }
+
+        if (intent?.action != Intent.ACTION_VIEW) {
+            Log.d("GeoJournal_Intent", "SKIP: action non è ACTION_VIEW")
+            return
+        }
+        val uri = intent.data ?: run {
+            Log.d("GeoJournal_Intent", "SKIP: intent.data è null")
+            return
+        }
+
+        val resolvedMime = try { contentResolver.getType(uri) } catch (e: Exception) { "error: ${e.message}" }
+        Log.d("GeoJournal_Intent", "uri=$uri")
+        Log.d("GeoJournal_Intent", "resolvedMimeType=$resolvedMime")
+
         // MIME type custom: è sicuramente un nostro file
         if (intent.type == "application/x-geojournal-point" ||
-            contentResolver.getType(uri) == "application/x-geojournal-point"
+            resolvedMime == "application/x-geojournal-point"
         ) {
+            Log.d("GeoJournal_Intent", "MATCH via MIME custom → setPendingGeojUri")
             mainViewModel.setPendingGeojUri(uri)
             return
         }
+
         // Per application/octet-stream (WhatsApp ecc.) verifica l'estensione
-        if (isGeojUri(uri)) {
+        val geoj = isGeojUri(uri)
+        Log.d("GeoJournal_Intent", "isGeojUri=$geoj")
+        if (geoj) {
+            Log.d("GeoJournal_Intent", "MATCH via isGeojUri → setPendingGeojUri")
             mainViewModel.setPendingGeojUri(uri)
+        } else {
+            Log.d("GeoJournal_Intent", "NESSUN MATCH — file ignorato")
         }
     }
 
@@ -137,13 +164,17 @@ class MainActivity : ComponentActivity() {
                 ?.use { cursor ->
                     if (cursor.moveToFirst()) {
                         val name = cursor.getString(0)
+                        Log.d("GeoJournal_Intent", "DISPLAY_NAME='$name'")
                         if (!name.isNullOrBlank()) return name.endsWith(".geoj", ignoreCase = true)
                     }
                 }
-        } catch (_: Exception) { }
-        // 2. Fallback: cerca ".geoj" ovunque nella rappresentazione testuale dell'URI
-        //    (copre FileProvider WhatsApp con path tipo /WhatsApp Documents/file.geoj)
-        return uri.toString().contains(".geoj", ignoreCase = true)
+        } catch (e: Exception) {
+            Log.d("GeoJournal_Intent", "DISPLAY_NAME query fallita: ${e.message}")
+        }
+        // 2. Fallback: cerca ".geoj" nella stringa URI
+        val uriString = uri.toString()
+        Log.d("GeoJournal_Intent", "uri.toString()='$uriString'")
+        return uriString.contains(".geoj", ignoreCase = true)
     }
 }
 
