@@ -117,23 +117,33 @@ class MainActivity : ComponentActivity() {
     private fun handleGeojIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return
-        val filename = resolveFileName(uri)
-        if (filename.endsWith(".geoj", ignoreCase = true)) {
+        // MIME type custom: è sicuramente un nostro file
+        if (intent.type == "application/x-geojournal-point" ||
+            contentResolver.getType(uri) == "application/x-geojournal-point"
+        ) {
+            mainViewModel.setPendingGeojUri(uri)
+            return
+        }
+        // Per application/octet-stream (WhatsApp ecc.) verifica l'estensione
+        if (isGeojUri(uri)) {
             mainViewModel.setPendingGeojUri(uri)
         }
     }
 
-    private fun resolveFileName(uri: Uri): String {
-        // Prova prima tramite ContentResolver (content:// URI da WhatsApp, Drive, ecc.)
-        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val name = cursor.getString(0)
-                    if (!name.isNullOrBlank()) return name
+    private fun isGeojUri(uri: Uri): Boolean {
+        // 1. DISPLAY_NAME via ContentResolver (FileProvider, Drive, Downloads…)
+        try {
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val name = cursor.getString(0)
+                        if (!name.isNullOrBlank()) return name.endsWith(".geoj", ignoreCase = true)
+                    }
                 }
-            }
-        // Fallback: ultimo segmento dell'URI (file:// o path diretto)
-        return uri.lastPathSegment ?: ""
+        } catch (_: Exception) { }
+        // 2. Fallback: cerca ".geoj" ovunque nella rappresentazione testuale dell'URI
+        //    (copre FileProvider WhatsApp con path tipo /WhatsApp Documents/file.geoj)
+        return uri.toString().contains(".geoj", ignoreCase = true)
     }
 }
 
