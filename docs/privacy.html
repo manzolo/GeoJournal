@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – GeoJournal</title>
+  <style>
+    :root {
+      --primary: #4A6741;
+      --bg: #FAFAF7;
+      --card: #FFFFFF;
+      --text: #1C1C1E;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 0 16px 64px;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 32px 24px 24px;
+      margin: 0 -16px 32px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.8rem; margin-bottom: 4px; }
+    header p  { font-size: 0.95rem; opacity: 0.85; }
+    .lang-switcher {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .lang-switcher button {
+      padding: 6px 20px;
+      border: 2px solid var(--primary);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--primary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .lang-switcher button.active {
+      background: var(--primary);
+      color: white;
+    }
+    .content { display: none; max-width: 720px; margin: 0 auto; }
+    .content.visible { display: block; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    p  { color: var(--text); margin-bottom: 10px; font-size: 0.95rem; }
+    p:last-child { margin-bottom: 0; }
+    ul { padding-left: 20px; margin-bottom: 10px; }
+    li { margin-bottom: 6px; font-size: 0.95rem; }
+    .badge {
+      display: inline-block;
+      background: #EFF6EE;
+      color: var(--primary);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .highlight {
+      background: #EFF6EE;
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 0.93rem;
+    }
+    .updated {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 32px;
+    }
+    a { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🗺️ GeoJournal</h1>
+  <p>Privacy Policy</p>
+</header>
+
+<div class="lang-switcher">
+  <button class="active" onclick="setLang('it')">Italiano</button>
+  <button onclick="setLang('en')">English</button>
+</div>
+
+<!-- ═══════════════════════════════ ITALIANO ═══════════════════════════════ -->
+<div id="it" class="content visible">
+
+  <div class="card">
+    <h2>👤 Titolare del trattamento</h2>
+    <p><strong>Manzolo</strong><br>
+    Sviluppatore indipendente<br>
+    Contatto: tramite la pagina GitHub del progetto<br>
+    <a href="https://github.com/manzolo/GeoJournal">github.com/manzolo/GeoJournal</a></p>
+  </div>
+
+  <div class="card">
+    <h2>🔍 Cosa raccoglie GeoJournal</h2>
+
+    <div class="highlight">
+      ✅ GeoJournal funziona completamente offline senza registrazione. In modalità
+      ospite <strong>non viene raccolta né trasmessa alcuna informazione personale</strong>.
+    </div>
+
+    <p><strong>Solo se scegli di accedere con un account</strong> (Google o email), vengono trattati:</p>
+    <ul>
+      <li><strong>Email e nome</strong> — forniti da Google o inseriti dall'utente, usati solo per identificare l'account</li>
+      <li><strong>Identificatore utente (UID)</strong> — generato da Firebase Auth, mai condiviso con terzi</li>
+      <li><strong>Punti geografici</strong> — titolo, descrizione, coordinate GPS, tag, emoji, valutazione, URL foto — salvati su Firebase Firestore solo se loggato</li>
+      <li><strong>Foto</strong> — caricate dall'utente dalla galleria o dalla fotocamera; rimangono sul dispositivo salvo upload esplicito</li>
+    </ul>
+
+    <p><strong>Automaticamente (anche in modalità ospite):</strong></p>
+    <ul>
+      <li><strong>Report di crash</strong> — Firebase Crashlytics raccoglie dati anonimi di crash (modello dispositivo, versione OS, stack trace). Non contengono dati personali.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📍 Posizione GPS</h2>
+    <p>L'app richiede il permesso di localizzazione <strong>solo quando l'utente aggiunge un punto</strong> e preme "Rileva GPS". La posizione non viene tracciata in background né trasmessa automaticamente.</p>
+  </div>
+
+  <div class="card">
+    <h2>☁️ Servizi di terze parti</h2>
+    <ul>
+      <li><strong>Firebase Auth</strong> (Google LLC) — autenticazione opzionale</li>
+      <li><strong>Firebase Firestore</strong> (Google LLC) — sincronizzazione dati cloud opzionale</li>
+      <li><strong>Firebase Crashlytics</strong> (Google LLC) — segnalazioni di crash anonime</li>
+      <li><strong>OpenStreetMap / OSMDroid</strong> — tiles cartografiche, nessun dato personale trasmesso</li>
+      <li><strong>Google Drive</strong> — usato solo se l'utente configura esplicitamente il backup su Drive tramite la selezione file di Android</li>
+    </ul>
+    <p>Policy di Google: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
+  </div>
+
+  <div class="card">
+    <h2>💾 Dove vengono conservati i dati</h2>
+    <ul>
+      <li><span class="badge">Locale</span> — Database Room sul dispositivo (modalità ospite o loggata)</li>
+      <li><span class="badge">Cloud</span> — Firebase Firestore (solo se loggato), server Google nell'UE/USA</li>
+      <li><span class="badge">Backup</span> — File ZIP su storage locale o Google Drive, solo se l'utente lo configura</li>
+    </ul>
+    <p>I dati su Firestore vengono conservati finché l'utente non elimina i punti o il proprio account.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔒 I tuoi diritti (GDPR)</h2>
+    <p>Se sei un utente dell'Unione Europea hai diritto a:</p>
+    <ul>
+      <li><strong>Accesso</strong> — sapere quali dati trattiamo</li>
+      <li><strong>Rettifica</strong> — correggere dati errati</li>
+      <li><strong>Cancellazione</strong> — eliminare i tuoi dati</li>
+      <li><strong>Portabilità</strong> — esportare i tuoi dati tramite la funzione "Esporta backup" nell'app</li>
+      <li><strong>Opposizione</strong> — interrompere il trattamento disconnettendoti dall'account</li>
+    </ul>
+    <p>Per esercitare i tuoi diritti contattaci tramite <a href="https://github.com/manzolo/GeoJournal">GitHub</a>.</p>
+  </div>
+
+  <div class="card">
+    <h2>👶 Minori</h2>
+    <p>GeoJournal non è destinato a minori di 13 anni. Non raccogliamo consapevolmente dati di minori.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔄 Modifiche a questa policy</h2>
+    <p>Eventuali aggiornamenti verranno pubblicati su questa pagina. L'uso continuato dell'app dopo le modifiche costituisce accettazione della nuova policy.</p>
+  </div>
+
+  <p class="updated">Ultimo aggiornamento: 16 marzo 2026</p>
+</div>
+
+<!-- ═══════════════════════════════ ENGLISH ════════════════════════════════ -->
+<div id="en" class="content">
+
+  <div class="card">
+    <h2>👤 Data Controller</h2>
+    <p><strong>Manzolo</strong><br>
+    Independent Developer<br>
+    Contact: via the project's GitHub page<br>
+    <a href="https://github.com/manzolo/GeoJournal">github.com/manzolo/GeoJournal</a></p>
+  </div>
+
+  <div class="card">
+    <h2>🔍 What GeoJournal collects</h2>
+
+    <div class="highlight">
+      ✅ GeoJournal works fully offline without sign-up. In guest mode,
+      <strong>no personal information is collected or transmitted</strong>.
+    </div>
+
+    <p><strong>Only if you choose to sign in</strong> (Google or email):</p>
+    <ul>
+      <li><strong>Email and name</strong> — provided by Google or entered by the user, used only to identify the account</li>
+      <li><strong>User identifier (UID)</strong> — generated by Firebase Auth, never shared with third parties</li>
+      <li><strong>Geo points</strong> — title, description, GPS coordinates, tags, emoji, rating, photo URLs — saved to Firebase Firestore only when signed in</li>
+      <li><strong>Photos</strong> — uploaded by the user from the gallery or camera; they stay on the device unless explicitly uploaded</li>
+    </ul>
+
+    <p><strong>Automatically (even in guest mode):</strong></p>
+    <ul>
+      <li><strong>Crash reports</strong> — Firebase Crashlytics collects anonymous crash data (device model, OS version, stack trace). No personal data included.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>📍 GPS Location</h2>
+    <p>The app requests location permission <strong>only when the user adds a point</strong> and taps "Detect GPS". Location is never tracked in the background or transmitted automatically.</p>
+  </div>
+
+  <div class="card">
+    <h2>☁️ Third-party services</h2>
+    <ul>
+      <li><strong>Firebase Auth</strong> (Google LLC) — optional authentication</li>
+      <li><strong>Firebase Firestore</strong> (Google LLC) — optional cloud data sync</li>
+      <li><strong>Firebase Crashlytics</strong> (Google LLC) — anonymous crash reporting</li>
+      <li><strong>OpenStreetMap / OSMDroid</strong> — map tiles, no personal data transmitted</li>
+      <li><strong>Google Drive</strong> — used only if the user explicitly configures Drive backup via Android's file picker</li>
+    </ul>
+    <p>Google Privacy Policy: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
+  </div>
+
+  <div class="card">
+    <h2>💾 Where data is stored</h2>
+    <ul>
+      <li><span class="badge">Local</span> — Room database on the device (guest or signed-in mode)</li>
+      <li><span class="badge">Cloud</span> — Firebase Firestore (only when signed in), Google servers in EU/USA</li>
+      <li><span class="badge">Backup</span> — ZIP file on local storage or Google Drive, only if configured by the user</li>
+    </ul>
+    <p>Firestore data is retained until the user deletes their points or account.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔒 Your rights (GDPR)</h2>
+    <p>If you are a European Union user, you have the right to:</p>
+    <ul>
+      <li><strong>Access</strong> — know what data we process</li>
+      <li><strong>Rectification</strong> — correct inaccurate data</li>
+      <li><strong>Erasure</strong> — delete your data</li>
+      <li><strong>Portability</strong> — export your data via the "Export backup" function in the app</li>
+      <li><strong>Objection</strong> — stop processing by signing out of your account</li>
+    </ul>
+    <p>To exercise your rights, contact us via <a href="https://github.com/manzolo/GeoJournal">GitHub</a>.</p>
+  </div>
+
+  <div class="card">
+    <h2>👶 Children</h2>
+    <p>GeoJournal is not intended for children under 13. We do not knowingly collect data from minors.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔄 Changes to this policy</h2>
+    <p>Any updates will be published on this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+  </div>
+
+  <p class="updated">Last updated: March 16, 2026</p>
+</div>
+
+<script>
+  function setLang(lang) {
+    document.querySelectorAll('.content').forEach(el => el.classList.remove('visible'));
+    document.querySelectorAll('.lang-switcher button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(lang).classList.add('visible');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

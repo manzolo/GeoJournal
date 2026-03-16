@@ -50,6 +50,10 @@
     <string name="support_button">Buy me a coffee</string>
     <string name="buy_me_coffee_url">https://www.buymeacoffee.com/manzolo</string>
 
+    <!-- Privacy Policy -->
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="privacy_policy_url">https://manzolo.github.io/GeoJournal/privacy</string>
+
     <!-- Errors -->
     <string name="error_generic">Si è verificato un errore. Riprova.</string>
     <string name="error_network">Nessuna connessione internet.</string>

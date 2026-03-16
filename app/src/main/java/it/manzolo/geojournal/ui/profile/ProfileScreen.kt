@@ -465,6 +465,25 @@ fun ProfileScreen(
                         textAlign = TextAlign.End
                     )
                 }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                val privacyUrl = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.privacy_policy_url)
+                TextButton(
+                    onClick = {
+                        context.startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse(privacyUrl)
+                            )
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.privacy_policy),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
