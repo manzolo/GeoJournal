@@ -1,8 +1,10 @@
 package it.manzolo.geojournal.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import it.manzolo.geojournal.data.local.db.GeoPointDao
+import it.manzolo.geojournal.data.local.db.GeoPointEntity
 import it.manzolo.geojournal.data.local.db.toEntity
 import it.manzolo.geojournal.data.local.db.toDomain
 import it.manzolo.geojournal.domain.model.GeoPoint
@@ -64,7 +66,8 @@ class GeoPointRepositoryImpl @Inject constructor(
                 "createdAt" to point.createdAt.time,
                 "updatedAt" to point.updatedAt.time,
                 "isShared" to point.isShared,
-                "ownerId" to uid
+                "ownerId" to uid,
+                "rating" to point.rating
             )
             firestore
                 .collection("users")
@@ -90,6 +93,56 @@ class GeoPointRepositoryImpl @Inject constructor(
             syncPointToFirestore(entity.toDomain().copy(ownerId = userId))
         }
         return guestPoints.size
+    }
+
+    // ─── Task 10a: pull da Firestore al login ────────────────────────────────
+
+    override suspend fun pullFromFirestore(): Int {
+        val uid = auth.currentUser?.uid ?: return 0
+        return try {
+            val snapshot = firestore
+                .collection("users")
+                .document(uid)
+                .collection("geo_points")
+                .get()
+                .await()
+            var count = 0
+            for (doc in snapshot.documents) {
+                val remote = doc.toGeoPointEntity(uid) ?: continue
+                val local = dao.getById(remote.id)
+                when {
+                    local == null -> { dao.insert(remote); count++ }
+                    remote.updatedAt > local.updatedAt -> { dao.update(remote); count++ }
+                    // local è uguale o più recente: niente da fare
+                }
+            }
+            count
+        } catch (_: Exception) { 0 }
+    }
+
+    private fun DocumentSnapshot.toGeoPointEntity(uid: String): GeoPointEntity? {
+        return try {
+            val title = getString("title") ?: return null
+            val latitude = getDouble("latitude") ?: return null
+            val longitude = getDouble("longitude") ?: return null
+            GeoPointEntity(
+                id = getString("id") ?: id,
+                title = title,
+                description = getString("description") ?: "",
+                latitude = latitude,
+                longitude = longitude,
+                tags = (get("tags") as? List<*>)?.joinToString("|") ?: "",
+                photoUrls = (get("photoUrls") as? List<*>)?.joinToString("|") ?: "",
+                audioUrl = getString("audioUrl"),
+                emoji = getString("emoji") ?: "📍",
+                createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
+                updatedAt = getLong("updatedAt") ?: System.currentTimeMillis(),
+                ownerId = uid,
+                isShared = getBoolean("isShared") ?: false,
+                syncedToFirestore = true,
+                rating = getLong("rating")?.toInt() ?: 0
+            )
+        } catch (_: Exception) { null }
     }
 
     private suspend fun deletePointFromFirestore(pointId: String) {
