@@ -43,9 +43,12 @@
 
     <!-- Profile -->
     <string name="profile_title">Profile</string>
-    <string name="profile_upgrade_pro">Upgrade to Pro</string>
-    <string name="profile_pro_features">Unlimited points, backup and much more</string>
-    <string name="profile_free_limit">You have reached the 5-point limit of the free plan</string>
+
+    <!-- Support / Buy Me a Coffee -->
+    <string name="support_title">Support GeoJournal ☕</string>
+    <string name="support_subtitle">If you enjoy the app, buy me a coffee. It helps keep it alive and improving!</string>
+    <string name="support_button">Buy me a coffee</string>
+    <string name="buy_me_coffee_url">https://www.buymeacoffee.com/manzolo</string>
 
     <!-- Errors -->
     <string name="error_generic">An error occurred. Please try again.</string>

@@ -15,8 +15,8 @@ android {
         applicationId = "it.manzolo.geojournal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "0.3.5"
+        versionCode = 24
+        versionName = "0.3.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -119,9 +119,6 @@ dependencies {
 
     // OSMDroid
     implementation(libs.osmdroid)
-
-    // Billing
-    implementation(libs.billing)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)

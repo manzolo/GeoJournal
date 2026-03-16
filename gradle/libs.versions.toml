@@ -1,7 +1,7 @@
 [versions]
-agp = "9.0.0"
+agp = "9.0.1"
 kotlin = "2.2.10"
-ksp = "2.2.10-2.0.2"
+ksp = "2.3.2"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -19,7 +19,6 @@ datastore = "1.1.1"
 coil = "2.7.0"
 firebase = "33.7.0"
 osmDroid = "6.1.20"
-billing = "7.1.1"
 workManager = "2.10.0"
 accompanistPermissions = "0.36.0"
 coroutines = "1.8.1"
@@ -78,9 +77,6 @@ firebase-crashlytics-ktx = { group = "com.google.firebase", name = "firebase-cra
 
 # OSMDroid (OpenStreetMap, nessuna API key necessaria)
 osmdroid = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmDroid" }
-
-# Google Play Billing
-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 # WorkManager
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }

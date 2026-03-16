@@ -16,7 +16,6 @@ import javax.inject.Singleton
 
 data class UserPreferences(
     val isDarkTheme: Boolean = false,
-    val isPro: Boolean = false,
     val userId: String = "",
     val isGuest: Boolean = false,
     val lastSyncTimestamp: Long = 0L,
@@ -30,7 +29,6 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     private object Keys {
         val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
-        val IS_PRO = booleanPreferencesKey("is_pro")
         val USER_ID = stringPreferencesKey("user_id")
         val IS_GUEST = booleanPreferencesKey("is_guest")
         val LAST_SYNC = longPreferencesKey("last_sync_timestamp")
@@ -46,7 +44,6 @@ class UserPreferencesRepository @Inject constructor(
         .map { prefs ->
             UserPreferences(
                 isDarkTheme = prefs[Keys.IS_DARK_THEME] ?: false,
-                isPro = prefs[Keys.IS_PRO] ?: false,
                 userId = prefs[Keys.USER_ID] ?: "",
                 isGuest = prefs[Keys.IS_GUEST] ?: false,
                 lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L,
@@ -57,10 +54,6 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setDarkTheme(isDark: Boolean) {
         dataStore.edit { it[Keys.IS_DARK_THEME] = isDark }
-    }
-
-    suspend fun setIsPro(isPro: Boolean) {
-        dataStore.edit { it[Keys.IS_PRO] = isPro }
     }
 
     suspend fun setUserId(userId: String) {
