@@ -51,6 +51,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import android.util.Log
 import it.manzolo.geojournal.R
 import kotlinx.coroutines.launch
 
@@ -87,13 +88,20 @@ fun AuthScreen(
     // Estrae l'idToken da una GetCredentialResponse
     fun handleCredentialResult(result: GetCredentialResponse) {
         val credential = result.credential
+        Log.d("GeoJournal_Auth", "Credential type: ${credential.type}, class: ${credential::class.simpleName}")
         if (credential is CustomCredential &&
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
-            val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-            viewModel.signInWithGoogle(tokenCredential.idToken)
+            try {
+                val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                viewModel.signInWithGoogle(tokenCredential.idToken)
+            } catch (e: GoogleIdTokenParsingException) {
+                Log.e("GeoJournal_Auth", "Token parsing failed", e)
+                viewModel.setError("Errore nel token Google: ${e.message}")
+            }
         } else {
-            viewModel.setError("Tipo di credenziale non supportato")
+            Log.e("GeoJournal_Auth", "Unsupported credential type: ${credential.type}")
+            viewModel.setError("Credenziale non supportata (${credential.type})")
         }
     }
 
@@ -116,6 +124,7 @@ fun AuthScreen(
                 // Utente ha annullato — nessun feedback
             } catch (e: NoCredentialException) {
                 // Fallback: selettore account classico (più compatibile)
+                Log.d("GeoJournal_Auth", "No credential via OneTap, trying SignInWithGoogle fallback")
                 try {
                     val signInOption = GetSignInWithGoogleOption.Builder(clientId).build()
                     val result = credentialManager.getCredential(
@@ -125,8 +134,10 @@ fun AuthScreen(
                     handleCredentialResult(result)
                 } catch (e2: GetCredentialCancellationException) {
                     // Utente ha annullato
+                    Log.d("GeoJournal_Auth", "Fallback cancelled by user")
                 } catch (e2: GetCredentialException) {
-                    viewModel.setError("Accesso Google fallito: ${e2.message}")
+                    Log.e("GeoJournal_Auth", "Fallback failed: type=${e2.type} msg=${e2.message}", e2)
+                    viewModel.setError("Accesso Google fallito: ${e2.message ?: e2.type}")
                 }
             } catch (e: GoogleIdTokenParsingException) {
                 viewModel.setError("Errore nel token Google")
