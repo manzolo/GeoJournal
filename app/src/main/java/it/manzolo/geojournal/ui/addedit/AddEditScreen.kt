@@ -36,10 +36,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import android.view.MotionEvent
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.AlertDialog
@@ -533,6 +535,10 @@ private fun GpsPreviewDialog(
     var location by remember { mutableStateOf<android.location.Location?>(null) }
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
+    // Posizione selezionata manualmente toccando la mappa (ha priorità sul GPS)
+    val manualTapState = remember { mutableStateOf<OsmGeoPoint?>(null) }
+    var manualTapPosition by manualTapState
+
     // Avvia aggiornamenti continui — si fermano al dismiss (onDispose)
     DisposableEffect(Unit) {
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_000L)
@@ -547,12 +553,24 @@ private fun GpsPreviewDialog(
         onDispose { fusedClient.removeLocationUpdates(callback) }
     }
 
-    // MapView OSMDroid
+    // Overlay tap: qualsiasi tocco sulla mappa imposta la posizione manuale
+    val tapOverlay = remember {
+        object : org.osmdroid.views.overlay.Overlay() {
+            override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
+                val gp = mapView.projection.fromPixels(e.x.toInt(), e.y.toInt())
+                manualTapState.value = OsmGeoPoint(gp.latitude, gp.longitude)
+                return true
+            }
+        }
+    }
+
+    // MapView OSMDroid — tapOverlay aggiunto una sola volta
     val mapView = remember {
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(16.0)
+            overlays.add(tapOverlay)   // index 0; i marker vengono inseriti a index 0 → tapOverlay sempre a index superiore → priorità eventi
         }
     }
     var firstFix by remember { mutableStateOf(true) }
@@ -561,74 +579,138 @@ private fun GpsPreviewDialog(
         onDispose { mapView.onPause() }
     }
 
+    // Posizione effettiva: manuale > GPS
+    val effectivePos: OsmGeoPoint? = manualTapPosition
+        ?: location?.let { OsmGeoPoint(it.latitude, it.longitude) }
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column {
-                // Mappa live
-                AndroidView(
-                    factory = { mapView },
-                    update = { mv ->
-                        location?.let { loc ->
-                            val gp = OsmGeoPoint(loc.latitude, loc.longitude)
-                            if (firstFix) {
-                                mv.controller.setZoom(17.0)
-                                firstFix = false
+                // Mappa con suggerimento sovrapposto
+                Box {
+                    AndroidView(
+                        factory = { mapView },
+                        update = { mv ->
+                            if (manualTapPosition != null) {
+                                // Modalità manuale: marker fisso, non seguire il GPS
+                                mv.overlays.removeAll { it is Marker }
+                                mv.overlays.add(0, Marker(mv).apply {
+                                    position = manualTapPosition!!
+                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                    infoWindow = null
+                                })
+                                mv.invalidate()
+                            } else {
+                                // Modalità GPS: marker segue la posizione
+                                location?.let { loc ->
+                                    val gp = OsmGeoPoint(loc.latitude, loc.longitude)
+                                    if (firstFix) {
+                                        mv.controller.setZoom(17.0)
+                                        mv.controller.setCenter(gp)
+                                        firstFix = false
+                                    } else {
+                                        mv.controller.setCenter(gp)
+                                    }
+                                    mv.overlays.removeAll { it is Marker }
+                                    mv.overlays.add(0, Marker(mv).apply {
+                                        position = gp
+                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        infoWindow = null
+                                    })
+                                    mv.invalidate()
+                                }
                             }
-                            mv.controller.setCenter(gp)
-                            mv.overlays.removeAll { it is Marker }
-                            mv.overlays.add(Marker(mv).apply {
-                                position = gp
-                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                            })
-                            mv.invalidate()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp)
-                )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(280.dp)
+                    )
+                    // Suggerimento in basso sulla mappa
+                    Text(
+                        text = "Tocca la mappa per spostare il punto",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 8.dp)
+                            .background(Color(0x99000000), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
 
-                // Info precisione + bottoni
+                // Info posizione + bottoni
                 Column(modifier = Modifier.padding(16.dp)) {
-                    if (location != null) {
-                        val acc = location!!.accuracy
-                        val accColor = when {
-                            acc <= 10f -> Color(0xFF4CAF50)
-                            acc <= 50f -> Color(0xFFFFC107)
-                            else -> Color(0xFFF44336)
-                        }
-                        Text(
-                            "%.5f, %.5f".format(location!!.latitude, location!!.longitude),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(accColor)
-                            )
-                            Spacer(Modifier.width(6.dp))
+                    when {
+                        manualTapPosition != null -> {
+                            // Posizione manuale
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Filled.LocationOn,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    "Posizione selezionata sulla mappa",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
                             Text(
-                                "Precisione: ±${acc.toInt()} m",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = accColor
+                                "%.5f, %.5f".format(
+                                    manualTapPosition!!.latitude,
+                                    manualTapPosition!!.longitude
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
+                        location != null -> {
+                            // Posizione GPS
+                            val acc = location!!.accuracy
+                            val accColor = when {
+                                acc <= 10f -> Color(0xFF4CAF50)
+                                acc <= 50f -> Color(0xFFFFC107)
+                                else -> Color(0xFFF44336)
+                            }
+                            Text(
+                                "%.5f, %.5f".format(location!!.latitude, location!!.longitude),
+                                style = MaterialTheme.typography.bodyMedium
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Acquisizione GPS…",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(accColor)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "Precisione: ±${acc.toInt()} m",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = accColor
+                                )
+                            }
+                        }
+                        else -> {
+                            // In attesa del primo fix GPS
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Acquisizione GPS…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
@@ -636,15 +718,29 @@ private fun GpsPreviewDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // "Usa GPS" visibile solo in modalità manuale
+                        if (manualTapPosition != null) {
+                            TextButton(onClick = { manualTapPosition = null }) {
+                                Icon(
+                                    Icons.Filled.GpsFixed,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Usa GPS")
+                            }
+                            Spacer(Modifier.width(4.dp))
+                        }
                         TextButton(onClick = onDismiss) { Text("Annulla") }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                location?.let { onLocationConfirmed(it.latitude, it.longitude) }
+                                effectivePos?.let { onLocationConfirmed(it.latitude, it.longitude) }
                             },
-                            enabled = location != null
+                            enabled = effectivePos != null
                         ) { Text("Usa posizione") }
                     }
                 }
