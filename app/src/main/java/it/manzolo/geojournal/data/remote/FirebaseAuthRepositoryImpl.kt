@@ -1,8 +1,12 @@
 package it.manzolo.geojournal.data.remote
 
+import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import dagger.hilt.android.qualifiers.ApplicationContext
 import it.manzolo.geojournal.domain.repository.AuthRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -13,8 +17,11 @@ import javax.inject.Singleton
 
 @Singleton
 class FirebaseAuthRepositoryImpl @Inject constructor(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context
 ) : AuthRepository {
+
+    private val credentialManager = CredentialManager.create(context)
 
     override val currentUser: Flow<FirebaseUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
@@ -60,5 +67,10 @@ class FirebaseAuthRepositoryImpl @Inject constructor(
 
     override suspend fun signOut() {
         auth.signOut()
+        try {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        } catch (_: Exception) {
+            // Firebase sign out già completato — ignoriamo errori del credential manager
+        }
     }
 }

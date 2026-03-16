@@ -1,8 +1,5 @@
 package it.manzolo.geojournal.ui.auth
 
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,10 +40,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import it.manzolo.geojournal.R
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
@@ -55,6 +60,8 @@ fun AuthScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val credentialManager = remember { CredentialManager.create(context) }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -75,33 +82,36 @@ fun AuthScreen(
         }
     }
 
-    // Google Sign-In launcher
-    val googleSignInClient = remember {
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.default_web_client_id))
-            .requestEmail()
-            .build()
-        GoogleSignIn.getClient(context, gso)
-    }
-
-    val googleLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
+    // Funzione helper per avviare Google Sign-In via Credential Manager
+    fun launchGoogleSignIn() {
+        coroutineScope.launch {
             try {
-                val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                    .getResult(ApiException::class.java)
-                val idToken = account?.idToken
-                if (idToken != null) {
-                    viewModel.signInWithGoogle(idToken)
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .build()
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+                val result = credentialManager.getCredential(context, request)
+                val credential = result.credential
+                if (credential is CustomCredential &&
+                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                ) {
+                    val tokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    viewModel.signInWithGoogle(tokenCredential.idToken)
                 } else {
-                    viewModel.setError("Accesso Google fallito: token non ricevuto")
+                    viewModel.setError("Tipo di credenziale non supportato")
                 }
-            } catch (e: ApiException) {
-                viewModel.setError("Accesso Google fallito (codice ${e.statusCode})")
+            } catch (e: GetCredentialCancellationException) {
+                // Utente ha annullato — nessun feedback necessario
+            } catch (e: NoCredentialException) {
+                viewModel.setError("Nessun account Google trovato sul dispositivo")
+            } catch (e: GoogleIdTokenParsingException) {
+                viewModel.setError("Errore nel token Google")
+            } catch (e: GetCredentialException) {
+                viewModel.setError("Accesso Google fallito: ${e.message}")
             }
-        } else if (result.resultCode != Activity.RESULT_CANCELED) {
-            viewModel.setError("Accesso Google non completato")
         }
     }
 
@@ -135,7 +145,7 @@ fun AuthScreen(
 
             // Bottone Google
             Button(
-                onClick = { googleLauncher.launch(googleSignInClient.signInIntent) },
+                onClick = { launchGoogleSignIn() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !uiState.isLoading
             ) {
