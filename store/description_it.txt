@@ -24,8 +24,12 @@ Esporta tutti i tuoi dati in un file ZIP e importali su un altro dispositivo. Ba
 ☁️ SINCRONIZZAZIONE CLOUD (opzionale)
 Accedi con Google o con email per sincronizzare i tuoi punti su tutti i dispositivi. I dati salvati offline vengono trasferiti automaticamente al momento del login.
 
-🔒 PRIVACY
-Puoi usare GeoJournal completamente offline, senza registrazione. I tuoi dati rimangono sul dispositivo finché non scegli tu di sincronizzarli.
+🔒 PRIVACY E CONTROLLO DEI TUOI DATI
+Puoi usare GeoJournal completamente offline, senza registrazione: in questo caso zero dati escono dal tuo dispositivo.
+
+Se scegli il login, i tuoi punti vengono sincronizzati su Firebase (Google) — un servizio Google associato al tuo account, non a nostri server. Noi sviluppatori non raccogliamo né vediamo i tuoi dati.
+
+Puoi eliminare il tuo account e tutti i dati in autonomia dall'app in qualsiasi momento: Profilo → "Elimina account e tutti i dati". Nessuna attesa, nessuna email da inviare.
 
 ---
 Sviluppato con ❤️ da Manzolo
