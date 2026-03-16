@@ -39,6 +39,7 @@ class AuthViewModel @Inject constructor(
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
                     geoPointRepository.migrateGuestPointsToUser(user.uid)
+                    geoPointRepository.pullFromFirestore()
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
@@ -55,6 +56,7 @@ class AuthViewModel @Inject constructor(
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
                     geoPointRepository.migrateGuestPointsToUser(user.uid)
+                    geoPointRepository.pullFromFirestore()
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
@@ -71,6 +73,7 @@ class AuthViewModel @Inject constructor(
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
                     geoPointRepository.migrateGuestPointsToUser(user.uid)
+                    geoPointRepository.pullFromFirestore()
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
