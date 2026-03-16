@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,12 +59,15 @@ fun ProfileScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backupState by backupViewModel.state.collectAsState()
+    val autoBackupEnabled by backupViewModel.autoBackupEnabled.collectAsState()
+    val driveBackupUri by backupViewModel.driveBackupUri.collectAsState()
+    val context = LocalContext.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showImportConfirm by remember { mutableStateOf(false) }
 
     val dateTag = remember { SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date()) }
 
-    // SAF: crea file ZIP per l'export
+    // SAF: crea file ZIP per l'export manuale
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip")
     ) { uri -> uri?.let { backupViewModel.export(it) } }
@@ -70,6 +76,11 @@ fun ProfileScreen(
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { backupViewModel.import(it) } }
+
+    // SAF: crea file ZIP su Drive (URI persistito per auto-backup)
+    val driveLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri -> uri?.let { backupViewModel.setDriveBackupUri(it, context) } }
 
     LaunchedEffect(uiState.navigateToLogin) {
         if (uiState.navigateToLogin) {
@@ -290,6 +301,79 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Toggle backup automatico giornaliero
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Backup automatico",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Salva automaticamente ogni giorno",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = autoBackupEnabled,
+                        onCheckedChange = { backupViewModel.setAutoBackup(it) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Sezione backup su Drive
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Backup su cloud (Drive)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = if (driveBackupUri.isNotEmpty()) "File configurato ✓"
+                                   else "Nessun file configurato",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (driveBackupUri.isNotEmpty()) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (driveBackupUri.isNotEmpty()) {
+                        TextButton(onClick = { backupViewModel.clearDriveBackupUri() }) {
+                            Icon(Icons.Filled.CloudOff, contentDescription = null,
+                                modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.size(4.dp))
+                            Text("Rimuovi")
+                        }
+                    } else {
+                        OutlinedButton(onClick = {
+                            driveLauncher.launch("geojournal_backup_cloud.zip")
+                        }) {
+                            Icon(Icons.Filled.Cloud, contentDescription = null,
+                                modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.size(4.dp))
+                            Text("Configura")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
                 Spacer(modifier = Modifier.height(12.dp))
 
                 val isWorking = backupState is BackupViewModel.State.Working

@@ -30,6 +30,11 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.Card
@@ -77,6 +82,21 @@ fun ListScreen(navController: NavController) {
     var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
 
+    // Emette il file .geoj da condividere via share sheet
+    LaunchedEffect(Unit) {
+        viewModel.shareFileEvent.collect { file ->
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/x-geojournal-point"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Condividi punto"))
+        }
+    }
+
     // Menu contestuale (tap lungo)
     contextMenuPoint?.let { point ->
         androidx.compose.material3.AlertDialog(
@@ -107,6 +127,14 @@ fun ListScreen(navController: NavController) {
                         onClick = {
                             contextMenuPoint = null
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Condividi") },
+                        leadingIcon = { Icon(Icons.Filled.Share, null) },
+                        onClick = {
+                            contextMenuPoint = null
+                            viewModel.prepareShare(point)
                         }
                     )
                     DropdownMenuItem(
@@ -328,6 +356,21 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (point.rating > 0) {
+                        Spacer(Modifier.width(10.dp))
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        Text(
+                            text = "${point.rating}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

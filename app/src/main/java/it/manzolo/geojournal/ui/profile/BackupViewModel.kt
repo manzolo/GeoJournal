@@ -4,16 +4,24 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.backup.BackupManager
+import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class BackupViewModel @Inject constructor(
-    private val backupManager: BackupManager
+    private val backupManager: BackupManager,
+    private val userPrefsRepository: UserPreferencesRepository,
+    private val autoBackupScheduler: AutoBackupScheduler
 ) : ViewModel() {
 
     sealed class State {
@@ -26,6 +34,46 @@ class BackupViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
+
+    val autoBackupEnabled: StateFlow<Boolean> = userPrefsRepository.preferences
+        .map { it.autoBackupEnabled }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val driveBackupUri: StateFlow<String> = userPrefsRepository.preferences
+        .map { it.driveBackupUri }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    init {
+        viewModelScope.launch {
+            if (userPrefsRepository.preferences.first().autoBackupEnabled) {
+                autoBackupScheduler.schedule()
+            }
+        }
+    }
+
+    fun setAutoBackup(enabled: Boolean) {
+        viewModelScope.launch {
+            userPrefsRepository.setAutoBackupEnabled(enabled)
+            if (enabled) autoBackupScheduler.schedule() else autoBackupScheduler.cancel()
+        }
+    }
+
+    fun setDriveBackupUri(uri: Uri, context: android.content.Context) {
+        viewModelScope.launch {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            userPrefsRepository.setDriveBackupUri(uri.toString())
+        }
+    }
+
+    fun clearDriveBackupUri() {
+        viewModelScope.launch {
+            userPrefsRepository.setDriveBackupUri("")
+        }
+    }
 
     fun export(uri: Uri) {
         viewModelScope.launch {

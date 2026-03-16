@@ -16,7 +16,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -37,9 +40,57 @@ class BackupManager @Inject constructor(
         const val SCHEMA_VERSION = 1
         // Prefisso usato nel JSON per le foto locali nel backup ("backup://photos/...")
         private const val BACKUP_PHOTO_PREFIX = "backup://photos/"
+        private const val AUTO_BACKUP_DIR = "backups"
+        private const val AUTO_BACKUP_KEEP = 5
     }
 
-    // ─── Export ───────────────────────────────────────────────────────────────
+    private val backupDir: File
+        get() = File(context.filesDir, AUTO_BACKUP_DIR).also { it.mkdirs() }
+
+    // ─── Auto-backup (salvataggio locale) ─────────────────────────────────────
+
+    suspend fun exportToFile(): File {
+        val points    = geoPointRepository.observeAll().first()
+        val reminders = reminderRepository.getAll()
+        val visits    = visitLogRepository.getAll()
+
+        val dateTag = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+        val file = File(backupDir, "geojournal_backup_$dateTag.zip")
+
+        FileOutputStream(file).use { out ->
+            ZipOutputStream(BufferedOutputStream(out)).use { zip ->
+                val json = buildJson(points, reminders, visits)
+                zip.putNextEntry(ZipEntry("backup.json"))
+                zip.write(json.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+
+                points.forEach { point ->
+                    point.photoUrls.forEach { url ->
+                        if (!url.startsWith("https://") && !url.startsWith("content://")) {
+                            val photoFile = File(url)
+                            if (photoFile.exists()) {
+                                zip.putNextEntry(ZipEntry("photos/${point.id}/${photoFile.name}"))
+                                photoFile.inputStream().use { it.copyTo(zip) }
+                                zip.closeEntry()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return file
+    }
+
+    fun pruneOldBackups() {
+        val files = backupDir.listFiles { f ->
+            f.name.startsWith("geojournal_backup_") && f.name.endsWith(".zip")
+        } ?: return
+        if (files.size > AUTO_BACKUP_KEEP) {
+            files.sortedByDescending { it.lastModified() }.drop(AUTO_BACKUP_KEEP).forEach { it.delete() }
+        }
+    }
+
+    // ─── Export (SAF) ─────────────────────────────────────────────────────────
 
     suspend fun exportToUri(uri: Uri): Int {
         val points    = geoPointRepository.observeAll().first()
@@ -103,6 +154,7 @@ class BackupManager @Inject constructor(
                             else "$BACKUP_PHOTO_PREFIX${p.id}/${File(url).name}"
                         }))
                         p.audioUrl?.let { put("audioUrl", it) }
+                        put("rating", p.rating)
                     })
                 }
             })
@@ -201,7 +253,8 @@ class BackupManager @Inject constructor(
                 ownerId     = obj.optString("ownerId", ""),
                 isShared    = obj.optBoolean("isShared", false),
                 createdAt   = Date(obj.getLong("createdAt")),
-                updatedAt   = Date(obj.getLong("updatedAt"))
+                updatedAt   = Date(obj.getLong("updatedAt")),
+                rating      = obj.optInt("rating", 0)
             )
             geoPointRepository.save(point)
             pointCount++

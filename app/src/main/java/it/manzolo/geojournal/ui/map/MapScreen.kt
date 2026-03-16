@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -90,6 +92,20 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    LaunchedEffect(Unit) {
+        viewModel.shareFileEvent.collect { file ->
+            val uri = FileProvider.getUriForFile(
+                context, "${context.packageName}.fileprovider", file
+            )
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/x-geojournal-point"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "Condividi punto"))
+        }
+    }
 
     // Ref aggiornabile per avere sempre i punti correnti nel listener di zoom
     val pointsRef = remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
@@ -243,6 +259,10 @@ fun MapScreen(
                 onDetailClick = { point ->
                     viewModel.onBottomSheetDismiss()
                     navController.navigate(Routes.PointDetail.createRoute(point.id))
+                },
+                onShareClick = { point ->
+                    viewModel.onBottomSheetDismiss()
+                    viewModel.prepareShare(point)
                 }
             )
         }
