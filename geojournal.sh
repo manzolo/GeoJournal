@@ -188,6 +188,17 @@ cmd_bump() {
     git tag "v${new_vn}"
     git push origin "v${new_vn}"
     success "Tag v${new_vn} creato e pushato → CI avviata"
+
+    echo ""
+    read -rp "  Vuoi buildare l'AAB per Play Store ora? [Y/n] " build_aab
+    if [[ "${build_aab,,}" != "n" ]]; then
+        cmd_aab
+        local aab="$SCRIPT_DIR/app/build/outputs/bundle/release/app-release.aab"
+        if [[ -f "$aab" ]]; then
+            echo ""
+            success "AAB pronto per Play Console → $aab"
+        fi
+    fi
 }
 
 cmd_tag_list() {

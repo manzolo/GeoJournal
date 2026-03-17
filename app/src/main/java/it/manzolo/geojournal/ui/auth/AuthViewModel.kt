@@ -1,5 +1,6 @@
 package it.manzolo.geojournal.ui.auth
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,7 +12,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+
+private const val TAG = "GeoJournal_Auth"
+private const val FIRESTORE_TIMEOUT_MS = 10_000L
 
 data class AuthUiState(
     val isLoading: Boolean = false,
@@ -32,15 +37,31 @@ class AuthViewModel @Inject constructor(
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
+
+            Log.d(TAG, "signInWithGoogle: avvio Firebase Auth")
             authRepository.signInWithGoogle(idToken)
                 .onSuccess { user ->
+                    Log.d(TAG, "Firebase Auth OK → uid=${user.uid}")
+
                     userPrefs.setUserId(user.uid)
                     userPrefs.setIsGuest(false)
-                    geoPointRepository.migrateGuestPointsToUser(user.uid)
-                    geoPointRepository.pullFromFirestore()
+
+                    Log.d(TAG, "migrateGuestPoints: avvio")
+                    val migrated = withTimeoutOrNull(FIRESTORE_TIMEOUT_MS) {
+                        geoPointRepository.migrateGuestPointsToUser(user.uid)
+                    }
+                    Log.d(TAG, "migrateGuestPoints: completato (migrati=${migrated})")
+
+                    Log.d(TAG, "pullFromFirestore: avvio")
+                    val pulled = withTimeoutOrNull(FIRESTORE_TIMEOUT_MS) {
+                        geoPointRepository.pullFromFirestore()
+                    }
+                    Log.d(TAG, "pullFromFirestore: completato (pulled=${pulled})")
+
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }
                 .onFailure { e ->
+                    Log.e(TAG, "signInWithGoogle fallito: ${e.message}", e)
                     _uiState.update { it.copy(isLoading = false, error = e.message) }
                 }
         }
