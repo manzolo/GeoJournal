@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,14 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -32,17 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
@@ -71,10 +63,6 @@ fun AuthScreen(
     val coroutineScope = rememberCoroutineScope()
     val credentialManager = remember { CredentialManager.create(context) }
 
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
-    // Navigazione verso main quando autenticato
     LaunchedEffect(uiState.navigateToMain) {
         if (uiState.navigateToMain) {
             viewModel.onNavigated()
@@ -82,7 +70,6 @@ fun AuthScreen(
         }
     }
 
-    // Mostra errore su Snackbar
     LaunchedEffect(uiState.error) {
         uiState.error?.let {
             snackbarHostState.showSnackbar(it)
@@ -90,10 +77,8 @@ fun AuthScreen(
         }
     }
 
-    // Estrae l'idToken da una GetCredentialResponse
     fun handleCredentialResult(result: GetCredentialResponse) {
         val credential = result.credential
-        Log.d("GeoJournal_Auth", "Credential type: ${credential.type}, class: ${credential::class.simpleName}")
         if (credential is CustomCredential &&
             credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
         ) {
@@ -105,13 +90,10 @@ fun AuthScreen(
                 viewModel.setError("Errore nel token Google: ${e.message}")
             }
         } else {
-            Log.e("GeoJournal_Auth", "Unsupported credential type: ${credential.type}")
             viewModel.setError("Credenziale non supportata (${credential.type})")
         }
     }
 
-    // Avvia Google Sign-In: prima prova GetGoogleIdOption (One Tap),
-    // se fallisce con NoCredentialException usa GetSignInWithGoogleOption (selettore account classico)
     fun launchGoogleSignIn() {
         coroutineScope.launch {
             val clientId = context.getString(R.string.default_web_client_id)
@@ -126,9 +108,8 @@ fun AuthScreen(
                 )
                 handleCredentialResult(result)
             } catch (e: GetCredentialCancellationException) {
-                // Utente ha annullato — nessun feedback
+                // utente ha annullato
             } catch (e: NoCredentialException) {
-                // Fallback: selettore account classico (più compatibile)
                 Log.d("GeoJournal_Auth", "No credential via OneTap, trying SignInWithGoogle fallback")
                 try {
                     val signInOption = GetSignInWithGoogleOption.Builder(clientId).build()
@@ -138,14 +119,11 @@ fun AuthScreen(
                     )
                     handleCredentialResult(result)
                 } catch (e2: GetCredentialCancellationException) {
-                    // Utente ha annullato
-                    Log.d("GeoJournal_Auth", "Fallback cancelled by user")
+                    // utente ha annullato
                 } catch (e2: GetCredentialException) {
-                    Log.e("GeoJournal_Auth", "Fallback failed: type=${e2.type} msg=${e2.message}", e2)
+                    Log.e("GeoJournal_Auth", "Fallback failed: ${e2.message}", e2)
                     viewModel.setError("Accesso Google fallito: ${e2.message ?: e2.type}")
                 }
-            } catch (e: GoogleIdTokenParsingException) {
-                viewModel.setError("Errore nel token Google")
             } catch (e: GetCredentialException) {
                 viewModel.setError("Accesso Google fallito: ${e.message}")
             }
@@ -176,21 +154,19 @@ fun AuthScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Spacer(modifier = Modifier.height(64.dp))
+                Spacer(modifier = Modifier.height(80.dp))
 
-                // Logo e titolo
+                // Logo
                 Box(
                     modifier = Modifier
                         .size(100.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surface,
-                            CircleShape
-                        ),
+                        .background(MaterialTheme.colorScheme.surface, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(text = "🗺️", style = MaterialTheme.typography.displayLarge)
                 }
                 Spacer(modifier = Modifier.height(24.dp))
+
                 Text(
                     text = "GeoJournal",
                     style = MaterialTheme.typography.displayMedium,
@@ -204,9 +180,9 @@ fun AuthScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(56.dp))
+                Spacer(modifier = Modifier.height(64.dp))
 
-                // Bottone Google
+                // Accedi con Google
                 Button(
                     onClick = { launchGoogleSignIn() },
                     modifier = Modifier
@@ -223,86 +199,14 @@ fun AuthScreen(
                     Text("Accedi con Google", style = MaterialTheme.typography.titleMedium)
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                // Separatore
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                    Text(
-                        "oppure",
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    HorizontalDivider(modifier = Modifier.weight(1f))
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Form email
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = {
-                            if (uiState.isSignUpMode) viewModel.createUserWithEmail(email, password)
-                            else viewModel.signInWithEmail(email, password)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(28.dp),
-                        enabled = !uiState.isLoading && email.isNotBlank() && password.isNotBlank()
-                    ) {
-                        Text(
-                            if (uiState.isSignUpMode) "Registrati" else "Accedi con Email",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
-                    TextButton(onClick = { viewModel.toggleSignUpMode() }) {
-                        Text(
-                            if (uiState.isSignUpMode) "Hai già un account? Accedi"
-                            else "Non hai un account? Registrati",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Loading indicator
                 if (uiState.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
 
-                // Continua senza account
+                // Ospite
                 TextButton(
                     onClick = { viewModel.continueAsGuest() },
                     enabled = !uiState.isLoading
@@ -321,7 +225,7 @@ fun AuthScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(64.dp))
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
