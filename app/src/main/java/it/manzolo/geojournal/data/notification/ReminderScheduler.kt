@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
@@ -12,11 +13,21 @@ import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val TAG = "ReminderScheduler"
+
 @Singleton
 class ReminderScheduler @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    fun canScheduleExact(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    }
 
     fun scheduleReminder(reminder: Reminder) {
         if (!reminder.isActive) return
@@ -28,10 +39,22 @@ class ReminderScheduler @Inject constructor(
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
+            // Permesso SCHEDULE_EXACT_ALARM non concesso → fallback a setAndAllowWhileIdle
+            Log.w(TAG, "canScheduleExactAlarms=false, usando setAndAllowWhileIdle (inexact)")
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
         } else {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                }
+                Log.d(TAG, "Alarm esatto schedulato per reminder=${reminder.id} triggerAt=$triggerAt")
+            } catch (e: SecurityException) {
+                Log.w(TAG, "SecurityException su setExactAndAllowWhileIdle, fallback inexact", e)
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            }
         }
     }
 
