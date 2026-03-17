@@ -53,6 +53,7 @@ class ReminderScheduler @Inject constructor(
     private fun nextTriggerMillis(reminder: Reminder): Long? {
         val startCal = Calendar.getInstance().apply { timeInMillis = reminder.startDate }
         val now = System.currentTimeMillis()
+        val todayCal = Calendar.getInstance()
 
         val trigger = Calendar.getInstance().apply {
             set(Calendar.MONTH, startCal.get(Calendar.MONTH))
@@ -63,16 +64,32 @@ class ReminderScheduler @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }
 
+        // Controlla se startDate è oggi (giorno/mese/anno coincidono)
+        val isStartDateToday =
+            startCal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
+            startCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) &&
+            startCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH)
+
+        // Per ANNUAL: "oggi" = stesso giorno/mese indipendentemente dall'anno
+        val isAnnualToday =
+            startCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) &&
+            startCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH)
+
         return when (reminder.type) {
             ReminderType.SINGLE, ReminderType.DATE_RANGE -> {
-                // Use the exact year from startDate for SINGLE
                 trigger.set(Calendar.YEAR, startCal.get(Calendar.YEAR))
-                if (trigger.timeInMillis > now) trigger.timeInMillis else null
+                when {
+                    trigger.timeInMillis > now -> trigger.timeInMillis
+                    isStartDateToday -> now + 60_000L  // oggi ma 9:00 già passate → tra 1 minuto
+                    else -> null                        // data passata, non schedulare
+                }
             }
             ReminderType.ANNUAL_RECURRING -> {
-                // Current year, or next year if already past
-                if (trigger.timeInMillis <= now) trigger.add(Calendar.YEAR, 1)
-                trigger.timeInMillis
+                when {
+                    trigger.timeInMillis > now -> trigger.timeInMillis
+                    isAnnualToday -> now + 60_000L      // impostato oggi → tra 1 minuto
+                    else -> { trigger.add(Calendar.YEAR, 1); trigger.timeInMillis }
+                }
             }
         }
     }
