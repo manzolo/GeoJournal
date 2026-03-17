@@ -56,6 +56,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -942,28 +945,25 @@ private fun AddReminderDialog(
                 // Type selector
                 Text("Tipo", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
                         onClick = { selectedType = ReminderType.SINGLE },
-                        colors = if (selectedType == ReminderType.SINGLE)
-                            androidx.compose.material3.ButtonDefaults.buttonColors()
-                        else
-                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
-                    ) { Text("Una volta") }
-                    Button(
+                        selected = selectedType == ReminderType.SINGLE,
+                        label = { Text("Una volta") }
+                    )
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         onClick = { selectedType = ReminderType.ANNUAL_RECURRING },
-                        colors = if (selectedType == ReminderType.ANNUAL_RECURRING)
-                            androidx.compose.material3.ButtonDefaults.buttonColors()
-                        else
-                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
-                    ) { Text("Ogni anno") }
-                    Button(
+                        selected = selectedType == ReminderType.ANNUAL_RECURRING,
+                        label = { Text("Ogni anno") }
+                    )
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
                         onClick = { selectedType = ReminderType.DATE_RANGE },
-                        colors = if (selectedType == ReminderType.DATE_RANGE)
-                            androidx.compose.material3.ButtonDefaults.buttonColors()
-                        else
-                            androidx.compose.material3.ButtonDefaults.outlinedButtonColors()
-                    ) { Text("Periodo") }
+                        selected = selectedType == ReminderType.DATE_RANGE,
+                        label = { Text("Periodo") }
+                    )
                 }
 
                 // Date picker — simplified: show current and allow increment/decrement days
