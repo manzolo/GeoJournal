@@ -350,7 +350,7 @@ private fun clusterPoints(points: List<GeoPoint>, zoom: Double): List<MapCluster
     val remaining = points.toMutableList()
     val clusters = mutableListOf<MapCluster>()
     while (remaining.isNotEmpty()) {
-        val seed = remaining.removeFirst()
+        val seed = remaining.removeAt(0)
         if (threshold == 0.0) {
             clusters.add(MapCluster(seed.latitude, seed.longitude, listOf(seed)))
             continue
