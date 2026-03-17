@@ -40,9 +40,49 @@
     <string name="login_with_google">Sign in with Google</string>
     <string name="login_with_email">Sign in with email</string>
     <string name="logout">Sign out</string>
+    <string name="auth_app_subtitle">Your diary of special places</string>
+    <string name="auth_guest_button">Explore as guest</string>
+    <string name="auth_guest_note">Data will stay only on this device</string>
 
     <!-- Profile -->
     <string name="profile_title">Profile</string>
+    <string name="profile_guest_warning_title">⚠️ Your data is not safe</string>
+    <string name="profile_guest_warning_body">You are using local mode. If you uninstall the app you will lose all your points. Sign in to save them to the cloud.</string>
+    <string name="profile_sign_in_now">Sign in now</string>
+    <string name="profile_alarm_warning_title">⏰ Reminders unavailable</string>
+    <string name="profile_alarm_warning_body">GeoJournal does not have permission to set exact alarms. Reminders may not ring at the correct time.</string>
+    <string name="profile_alarm_enable">Enable in settings</string>
+    <string name="profile_section_account">Account</string>
+    <string name="profile_section_prefs">Preferences</string>
+    <string name="profile_section_backup">Backup &amp; Restore</string>
+    <string name="profile_section_info">Information</string>
+    <string name="profile_user_fallback">User</string>
+    <string name="profile_local_mode">Local mode</string>
+    <string name="profile_no_account">No account linked</string>
+    <string name="profile_sign_out">Sign out</string>
+    <string name="profile_delete_account">Delete account and all data</string>
+    <string name="profile_sign_in">Sign in</string>
+    <string name="profile_dark_theme">Dark theme</string>
+    <string name="profile_dark_theme_on">Active</string>
+    <string name="profile_dark_theme_off">Inactive</string>
+    <string name="profile_backup_desc">Export all your points, photos, reminders and visits into a ZIP file. You can import it on another device or to restore your data.</string>
+    <string name="profile_auto_backup">Automatic backup</string>
+    <string name="profile_auto_backup_desc">Saves automatically every day</string>
+    <string name="profile_drive_backup">Cloud backup (Drive)</string>
+    <string name="profile_drive_configured">File configured ✓</string>
+    <string name="profile_drive_not_configured">No file configured</string>
+    <string name="profile_drive_remove">Remove</string>
+    <string name="profile_drive_configure">Configure</string>
+    <string name="profile_export">Export</string>
+    <string name="profile_import">Import</string>
+    <string name="profile_import_geoj">Import .geoj point</string>
+    <string name="profile_version">Version</string>
+    <string name="profile_delete_account_title">Delete account</string>
+    <string name="profile_delete_account_confirm">This will permanently delete your account and all your data (points, photos, cloud backup). This action cannot be undone.\n\nAre you sure you want to proceed?</string>
+    <string name="profile_delete_account_action">Delete everything</string>
+    <string name="profile_import_backup_title">Import backup</string>
+    <string name="profile_import_backup_confirm">Points and data from the file will be added or updated. Existing data with the same ID will be overwritten. Continue?</string>
+    <string name="action_cancel_label">Cancel</string>
 
     <!-- Support / Buy Me a Coffee -->
     <string name="support_title">Support GeoJournal ☕</string>

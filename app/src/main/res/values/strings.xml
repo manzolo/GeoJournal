@@ -40,9 +40,49 @@
     <string name="login_with_google">Accedi con Google</string>
     <string name="login_with_email">Accedi con email</string>
     <string name="logout">Esci</string>
+    <string name="auth_app_subtitle">Il tuo diario dei luoghi speciali</string>
+    <string name="auth_guest_button">Esplora come ospite</string>
+    <string name="auth_guest_note">I dati rimarranno solo su questo dispositivo</string>
 
     <!-- Profile -->
     <string name="profile_title">Profilo</string>
+    <string name="profile_guest_warning_title">⚠️ I tuoi dati non sono al sicuro</string>
+    <string name="profile_guest_warning_body">Stai usando la modalità locale. Se disinstalli l\'app perderai tutti i tuoi punti. Accedi per salvarli sul cloud.</string>
+    <string name="profile_sign_in_now">Accedi ora</string>
+    <string name="profile_alarm_warning_title">⏰ Promemoria non disponibili</string>
+    <string name="profile_alarm_warning_body">GeoJournal non ha il permesso per impostare allarmi esatti. I promemoria potrebbero non suonare all\'orario corretto.</string>
+    <string name="profile_alarm_enable">Abilita nelle impostazioni</string>
+    <string name="profile_section_account">Account</string>
+    <string name="profile_section_prefs">Preferenze</string>
+    <string name="profile_section_backup">Backup e Ripristino</string>
+    <string name="profile_section_info">Informazioni</string>
+    <string name="profile_user_fallback">Utente</string>
+    <string name="profile_local_mode">Modalità locale</string>
+    <string name="profile_no_account">Nessun account collegato</string>
+    <string name="profile_sign_out">Esci dall\'account</string>
+    <string name="profile_delete_account">Elimina account e tutti i dati</string>
+    <string name="profile_sign_in">Accedi</string>
+    <string name="profile_dark_theme">Tema scuro</string>
+    <string name="profile_dark_theme_on">Attivo</string>
+    <string name="profile_dark_theme_off">Disattivo</string>
+    <string name="profile_backup_desc">Esporta tutti i tuoi punti, foto, promemoria e visite in un file ZIP. Puoi importarlo su un altro dispositivo o per ripristinare i dati.</string>
+    <string name="profile_auto_backup">Backup automatico</string>
+    <string name="profile_auto_backup_desc">Salva automaticamente ogni giorno</string>
+    <string name="profile_drive_backup">Backup su cloud (Drive)</string>
+    <string name="profile_drive_configured">File configurato ✓</string>
+    <string name="profile_drive_not_configured">Nessun file configurato</string>
+    <string name="profile_drive_remove">Rimuovi</string>
+    <string name="profile_drive_configure">Configura</string>
+    <string name="profile_export">Esporta</string>
+    <string name="profile_import">Importa</string>
+    <string name="profile_import_geoj">Importa punto .geoj</string>
+    <string name="profile_version">Versione</string>
+    <string name="profile_delete_account_title">Elimina account</string>
+    <string name="profile_delete_account_confirm">Questa operazione eliminerà in modo permanente il tuo account e tutti i tuoi dati (punti, foto, backup cloud). L\'operazione non è reversibile.\n\nSei sicuro di voler procedere?</string>
+    <string name="profile_delete_account_action">Elimina tutto</string>
+    <string name="profile_import_backup_title">Importa backup</string>
+    <string name="profile_import_backup_confirm">I punti e i dati del file verranno aggiunti o aggiornati. I dati esistenti con lo stesso ID verranno sovrascritti. Continuare?</string>
+    <string name="action_cancel_label">Annulla</string>
 
     <!-- Support / Buy Me a Coffee -->
     <string name="support_title">Supporta GeoJournal ☕</string>

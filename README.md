@@ -16,7 +16,7 @@
 
 ### Sincronizzazione cloud (opzionale)
 
-Se scegli di fare login con Google o email, i tuoi punti vengono sincronizzati su **Firebase Firestore** — un servizio di Google, non un nostro server. I dati sono associati al **tuo account Google**, non a noi come sviluppatori: non abbiamo accesso ai tuoi punti e non li vediamo.
+Se scegli di fare login con Google, i tuoi punti vengono sincronizzati su **Firebase Firestore** — un servizio di Google, non un nostro server. I dati sono associati al **tuo account Google**, non a noi come sviluppatori: non abbiamo accesso ai tuoi punti e non li vediamo.
 
 Questa funzione è **completamente opzionale**: l'app funziona al 100% offline senza registrazione.
 
@@ -62,7 +62,7 @@ Puoi eliminare il tuo account e tutti i dati (locali + cloud) in qualsiasi momen
 
 In sintesi:
 - **Modalità ospite:** nessun dato trasmesso, tutto rimane sul dispositivo
-- **Modalità cloud:** i dati vanno su Firebase Firestore (Google), associati al tuo account — non ai nostri server
+- **Modalità cloud:** login con Google → i dati vanno su Firebase Firestore (Google), associati al tuo account — non ai nostri server
 - Noi sviluppatori non raccogliamo né vediamo i tuoi dati
 - Puoi eliminare tutto in autonomia dall'app in qualsiasi momento
 - Nessuna pubblicità, nessun tracciamento, nessuna vendita di dati

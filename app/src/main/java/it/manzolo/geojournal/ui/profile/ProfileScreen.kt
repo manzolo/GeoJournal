@@ -46,9 +46,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import it.manzolo.geojournal.R
 import androidx.compose.runtime.collectAsState
 import androidx.navigation.NavController
 import it.manzolo.geojournal.BuildConfig
@@ -132,13 +134,13 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "⚠️ I tuoi dati non sono al sicuro",
+                        text = stringResource(R.string.profile_guest_warning_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Stai usando la modalità locale. Se disinstalli l'app perderai tutti i tuoi punti. Accedi per salvarli sul cloud.",
+                        text = stringResource(R.string.profile_guest_warning_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -153,7 +155,7 @@ fun ProfileScreen(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Accedi ora")
+                        Text(stringResource(R.string.profile_sign_in_now))
                     }
                 }
             }
@@ -169,13 +171,13 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "⏰ Promemoria non disponibili",
+                        text = stringResource(R.string.profile_alarm_warning_title),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "GeoJournal non ha il permesso per impostare allarmi esatti. I promemoria potrebbero non suonare all'orario corretto.",
+                        text = stringResource(R.string.profile_alarm_warning_body),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -194,7 +196,7 @@ fun ProfileScreen(
                             containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Abilita nelle impostazioni")
+                        Text(stringResource(R.string.profile_alarm_enable))
                     }
                 }
             }
@@ -204,7 +206,7 @@ fun ProfileScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Account",
+                    text = stringResource(R.string.profile_section_account),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -221,7 +223,7 @@ fun ProfileScreen(
                     Column {
                         if (uiState.isLoggedIn) {
                             Text(
-                                text = uiState.displayName.ifBlank { "Utente" },
+                                text = uiState.displayName.ifBlank { stringResource(R.string.profile_user_fallback) },
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -232,12 +234,12 @@ fun ProfileScreen(
                             )
                         } else {
                             Text(
-                                text = "Modalità locale",
+                                text = stringResource(R.string.profile_local_mode),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Nessun account collegato",
+                                text = stringResource(R.string.profile_no_account),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -255,7 +257,7 @@ fun ProfileScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !uiState.isDeletingAccount
                     ) {
-                        Text("Esci dall'account")
+                        Text(stringResource(R.string.profile_sign_out))
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
@@ -274,7 +276,7 @@ fun ProfileScreen(
                             )
                             Spacer(modifier = Modifier.size(6.dp))
                         }
-                        Text("Elimina account e tutti i dati")
+                        Text(stringResource(R.string.profile_delete_account))
                     }
                     if (uiState.deleteAccountError != null) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -293,7 +295,7 @@ fun ProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Accedi")
+                        Text(stringResource(R.string.profile_sign_in))
                     }
                 }
             }
@@ -306,7 +308,7 @@ fun ProfileScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Preferenze",
+                    text = stringResource(R.string.profile_section_prefs),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -318,12 +320,12 @@ fun ProfileScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Tema scuro",
+                            text = stringResource(R.string.profile_dark_theme),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (uiState.isDarkTheme) "Attivo" else "Disattivo",
+                            text = stringResource(if (uiState.isDarkTheme) R.string.profile_dark_theme_on else R.string.profile_dark_theme_off),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -340,13 +342,13 @@ fun ProfileScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Backup e Ripristino",
+                    text = stringResource(R.string.profile_section_backup),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Esporta tutti i tuoi punti, foto, promemoria e visite in un file ZIP. Puoi importarlo su un altro dispositivo o per ripristinare i dati.",
+                    text = stringResource(R.string.profile_backup_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -362,12 +364,12 @@ fun ProfileScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Backup automatico",
+                            text = stringResource(R.string.profile_auto_backup),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Salva automaticamente ogni giorno",
+                            text = stringResource(R.string.profile_auto_backup_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -390,13 +392,12 @@ fun ProfileScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Backup su cloud (Drive)",
+                            text = stringResource(R.string.profile_drive_backup),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (driveBackupUri.isNotEmpty()) "File configurato ✓"
-                                   else "Nessun file configurato",
+                            text = stringResource(if (driveBackupUri.isNotEmpty()) R.string.profile_drive_configured else R.string.profile_drive_not_configured),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (driveBackupUri.isNotEmpty()) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -407,7 +408,7 @@ fun ProfileScreen(
                             Icon(Icons.Filled.CloudOff, contentDescription = null,
                                 modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.size(4.dp))
-                            Text("Rimuovi")
+                            Text(stringResource(R.string.profile_drive_remove))
                         }
                     } else {
                         OutlinedButton(onClick = {
@@ -416,7 +417,7 @@ fun ProfileScreen(
                             Icon(Icons.Filled.Cloud, contentDescription = null,
                                 modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.size(4.dp))
-                            Text("Configura")
+                            Text(stringResource(R.string.profile_drive_configure))
                         }
                     }
                 }
@@ -441,7 +442,7 @@ fun ProfileScreen(
                             Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
                         }
                         Spacer(modifier = Modifier.size(6.dp))
-                        Text("Esporta")
+                        Text(stringResource(R.string.profile_export))
                     }
                     Button(
                         onClick = { showImportConfirm = true },
@@ -450,7 +451,7 @@ fun ProfileScreen(
                     ) {
                         Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.size(6.dp))
-                        Text("Importa")
+                        Text(stringResource(R.string.profile_import))
                     }
                 }
 
@@ -479,7 +480,7 @@ fun ProfileScreen(
                         Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                     }
                     Spacer(modifier = Modifier.size(6.dp))
-                    Text("Importa punto .geoj")
+                    Text(stringResource(R.string.profile_import_geoj))
                 }
 
                 // Feedback operazione
@@ -527,7 +528,7 @@ fun ProfileScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Informazioni",
+                    text = stringResource(R.string.profile_section_info),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -537,7 +538,7 @@ fun ProfileScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Versione",
+                        text = stringResource(R.string.profile_version),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -577,12 +578,8 @@ fun ProfileScreen(
     if (showDeleteAccountConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteAccountConfirm = false },
-            title = { Text("Elimina account") },
-            text = {
-                Text(
-                    "Questa operazione eliminerà in modo permanente il tuo account e tutti i tuoi dati (punti, foto, backup cloud). L'operazione non è reversibile.\n\nSei sicuro di voler procedere?"
-                )
-            },
+            title = { Text(stringResource(R.string.profile_delete_account_title)) },
+            text = { Text(stringResource(R.string.profile_delete_account_confirm)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -592,10 +589,10 @@ fun ProfileScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
-                ) { Text("Elimina tutto") }
+                ) { Text(stringResource(R.string.profile_delete_account_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAccountConfirm = false }) { Text("Annulla") }
+                TextButton(onClick = { showDeleteAccountConfirm = false }) { Text(stringResource(R.string.action_cancel_label)) }
             }
         )
     }
@@ -604,16 +601,16 @@ fun ProfileScreen(
     if (showImportConfirm) {
         AlertDialog(
             onDismissRequest = { showImportConfirm = false },
-            title = { Text("Importa backup") },
-            text = { Text("I punti e i dati del file verranno aggiunti o aggiornati. I dati esistenti con lo stesso ID verranno sovrascritti. Continuare?") },
+            title = { Text(stringResource(R.string.profile_import_backup_title)) },
+            text = { Text(stringResource(R.string.profile_import_backup_confirm)) },
             confirmButton = {
                 Button(onClick = {
                     showImportConfirm = false
                     importLauncher.launch(arrayOf("application/zip", "*/*"))
-                }) { Text("Importa") }
+                }) { Text(stringResource(R.string.profile_import)) }
             },
             dismissButton = {
-                TextButton(onClick = { showImportConfirm = false }) { Text("Annulla") }
+                TextButton(onClick = { showImportConfirm = false }) { Text(stringResource(R.string.action_cancel_label)) }
             }
         )
     }

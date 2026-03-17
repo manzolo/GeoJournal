@@ -10,9 +10,6 @@
 
     <!-- Fotocamera e media -->
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
 
     <!-- Audio (note vocali) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />

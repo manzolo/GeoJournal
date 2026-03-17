@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -168,13 +169,13 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "GeoJournal",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.displayMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Il tuo diario dei luoghi speciali",
+                    text = stringResource(R.string.auth_app_subtitle),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -196,7 +197,7 @@ fun AuthScreen(
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
-                    Text("Accedi con Google", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.login_with_google), style = MaterialTheme.typography.titleMedium)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -212,14 +213,14 @@ fun AuthScreen(
                     enabled = !uiState.isLoading
                 ) {
                     Text(
-                        text = "Esplora come ospite",
+                        text = stringResource(R.string.auth_guest_button),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
                 }
                 Text(
-                    text = "I dati rimarranno solo su questo dispositivo",
+                    text = stringResource(R.string.auth_guest_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center
