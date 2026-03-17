@@ -205,7 +205,8 @@ class AddEditViewModel @Inject constructor(
             when {
                 uri.startsWith("https://") -> uri          // già su Firebase
                 uri.startsWith("content://") -> {          // nuovo dal picker/camera
-                    if (auth.currentUser != null) uploadToFirebase(uri, pointId)
+                    if (auth.currentUser != null)
+                        uploadToFirebase(uri, pointId) ?: copyToInternalStorage(uri, pointId)
                     else copyToInternalStorage(uri, pointId)
                 }
                 else -> uri                                 // path locale già salvato

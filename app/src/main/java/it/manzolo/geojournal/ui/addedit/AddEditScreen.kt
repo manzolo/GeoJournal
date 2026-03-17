@@ -132,7 +132,8 @@ private val EMOJI_LIST = listOf(
 )
 
 private fun createCameraUri(context: Context): Uri {
-    val tempFile = File.createTempFile("photo_", ".jpg", context.externalCacheDir)
+    val dir = context.externalCacheDir ?: context.cacheDir
+    val tempFile = File.createTempFile("photo_", ".jpg", dir)
     return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", tempFile)
 }
 
@@ -174,7 +175,16 @@ fun AddEditScreen(
     // Gallery
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia()
-    ) { uris -> uris.forEach { viewModel.addPhotoUri(it.toString()) } }
+    ) { uris ->
+        uris.forEach { uri ->
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            viewModel.addPhotoUri(uri.toString())
+        }
+    }
 
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
         if (uiState.isSaved || uiState.isDeleted) {
