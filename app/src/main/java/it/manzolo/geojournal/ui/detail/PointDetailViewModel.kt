@@ -13,6 +13,7 @@ import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -44,11 +45,14 @@ class PointDetailViewModel @Inject constructor(
 
     private fun loadPoint() {
         viewModelScope.launch {
-            val point = repository.getById(pointId)
-            _uiState.update {
-                if (point != null) it.copy(point = point, isLoading = false)
-                else it.copy(isLoading = false, error = "Punto non trovato")
-            }
+            repository.observeAll()
+                .map { list -> list.find { it.id == pointId } }
+                .collect { point ->
+                    _uiState.update {
+                        if (point != null) it.copy(point = point, isLoading = false)
+                        else it.copy(isLoading = false, error = "Punto non trovato")
+                    }
+                }
         }
         viewModelScope.launch {
             visitLogRepository.observeByGeoPointId(pointId).collect { logs ->

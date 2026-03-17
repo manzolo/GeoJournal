@@ -44,8 +44,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ModalBottomSheet
@@ -87,6 +90,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -354,55 +358,54 @@ fun AddEditScreen(
             // --- Titolo ---
             OutlinedTextField(
                 value = uiState.title,
-                onValueChange = viewModel::updateTitle,
+                onValueChange = { v ->
+                    viewModel.updateTitle(
+                        if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                    )
+                },
                 label = { Text("Titolo *") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Sentences
+                )
             )
 
             // --- Descrizione ---
             OutlinedTextField(
                 value = uiState.description,
-                onValueChange = viewModel::updateDescription,
+                onValueChange = { v ->
+                    viewModel.updateDescription(
+                        if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                    )
+                },
                 label = { Text("Descrizione") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Next,
+                    capitalization = KeyboardCapitalization.Sentences
+                )
             )
 
-            // --- Valutazione ---
-            Text("Valutazione", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                (1..5).forEach { star ->
-                    IconButton(
-                        onClick = { viewModel.updateRating(star) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = "$star stelle",
-                            tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
-                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-                if (uiState.rating > 0) {
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "${uiState.rating}/5",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
             // --- GPS ---
-            Text("Posizione", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Posizione",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
                     if (uiState.latitude != 0.0 || uiState.longitude != 0.0) {
@@ -442,8 +445,21 @@ fun AddEditScreen(
             }
 
             // --- Tag ---
-            Text("Tag", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Label,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Tag",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             OutlinedTextField(
                 value = uiState.tagInput,
                 onValueChange = viewModel::updateTagInput,
@@ -480,8 +496,21 @@ fun AddEditScreen(
             }
 
             // --- Foto ---
-            Text("Foto", style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.PhotoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Foto",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             if (uiState.photoUris.isNotEmpty()) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -528,8 +557,21 @@ fun AddEditScreen(
 
             // --- Promemoria ---
             run {
-                Text("Promemoria", style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Notifications,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Promemoria",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 if (uiState.reminders.isNotEmpty()) {
                     val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -565,6 +607,47 @@ fun AddEditScreen(
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Aggiungi promemoria")
+                }
+            }
+
+            // --- Valutazione ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "Valutazione",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                (1..5).forEach { star ->
+                    IconButton(
+                        onClick = { viewModel.updateRating(star) },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = "$star stelle",
+                            tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+                if (uiState.rating > 0) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "${uiState.rating}/5",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 

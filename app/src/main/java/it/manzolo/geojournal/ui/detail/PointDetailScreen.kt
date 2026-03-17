@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -30,14 +29,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -45,7 +52,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -62,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -160,69 +167,87 @@ private fun PointDetailContent(
     var selectedPhoto by remember { mutableStateOf<String?>(null) }
 
     selectedPhoto?.let { url ->
-        PhotoViewerDialog(
-            url = url,
-            onDismiss = { selectedPhoto = null }
-        )
+        PhotoViewerDialog(url = url, onDismiss = { selectedPhoto = null })
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Emoji + titolo
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
+        // ── Hero card: emoji + titolo + rating + descrizione ──────────────────
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            ),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(point.emoji, style = MaterialTheme.typography.displaySmall)
-            }
-            Spacer(modifier = Modifier.width(20.dp))
-            Text(
-                text = point.title,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Rating
-        if (point.rating > 0) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                (1..5).forEach { star ->
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = if (star <= point.rating) MaterialTheme.colorScheme.primary
-                               else MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(point.emoji, style = MaterialTheme.typography.displaySmall)
                 }
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = point.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    if (point.rating > 0) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            (1..5).forEach { star ->
+                                Icon(
+                                    imageVector = if (star <= point.rating) Icons.Filled.Star
+                                                  else Icons.Filled.StarBorder,
+                                    contentDescription = null,
+                                    tint = if (star <= point.rating) MaterialTheme.colorScheme.primary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "${point.rating}/5",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            if (point.description.isNotBlank()) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                )
                 Text(
-                    text = "${point.rating}/5",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = point.description,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
             }
         }
 
-        // Tag
+        // ── Tag ───────────────────────────────────────────────────────────────
         if (point.tags.isNotEmpty()) {
+            SectionHeader(icon = Icons.Filled.Label, title = "Tag")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 point.tags.forEach { tag ->
                     AssistChip(onClick = {}, label = { Text(tag) })
@@ -230,37 +255,42 @@ private fun PointDetailContent(
             }
         }
 
-        HorizontalDivider()
-
-        // Descrizione
-        if (point.description.isNotBlank()) {
-            Text(
-                text = point.description,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            HorizontalDivider()
+        // ── Informazioni (coordinate + date) ──────────────────────────────────
+        SectionHeader(icon = Icons.Filled.LocationOn, title = "Informazioni")
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                InfoRow(
+                    icon = Icons.Filled.LocationOn,
+                    label = "Latitudine",
+                    value = "%.6f".format(point.latitude)
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow(
+                    icon = Icons.Filled.LocationOn,
+                    label = "Longitudine",
+                    value = "%.6f".format(point.longitude)
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow(
+                    icon = Icons.Filled.CalendarToday,
+                    label = "Creato",
+                    value = dateFormat.format(point.createdAt)
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow(
+                    icon = Icons.Filled.Edit,
+                    label = "Modificato",
+                    value = dateFormat.format(point.updatedAt)
+                )
+            }
         }
 
-        // Coordinate
-        DetailRow(label = "Latitudine", value = "%.6f".format(point.latitude))
-        DetailRow(label = "Longitudine", value = "%.6f".format(point.longitude))
-
-        HorizontalDivider()
-
-        // Date
-        DetailRow(label = "Creato", value = dateFormat.format(point.createdAt))
-        DetailRow(label = "Modificato", value = dateFormat.format(point.updatedAt))
-
-        // Foto
+        // ── Foto ──────────────────────────────────────────────────────────────
         if (point.photoUrls.isNotEmpty()) {
-            HorizontalDivider()
-            Text(
-                text = "Foto (${point.photoUrls.size})",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
+            SectionHeader(icon = Icons.Filled.PhotoLibrary, title = "Foto (${point.photoUrls.size})")
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -272,7 +302,7 @@ private fun PointDetailContent(
                         contentDescription = null,
                         modifier = Modifier
                             .size(100.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .clickable { selectedPhoto = url },
                         contentScale = ContentScale.Crop
                     )
@@ -280,16 +310,10 @@ private fun PointDetailContent(
             }
         }
 
-        // Promemoria
+        // ── Promemoria ────────────────────────────────────────────────────────
         if (reminders.isNotEmpty()) {
-            HorizontalDivider()
+            SectionHeader(icon = Icons.Filled.Notifications, title = "Promemoria (${reminders.size})")
             val reminderDateFormat = remember { SimpleDateFormat("d MMM", Locale.ITALIAN) }
-            Text(
-                text = "Promemoria (${reminders.size})",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
             reminders.forEach { reminder ->
                 val dateStr = when (reminder.type) {
                     ReminderType.DATE_RANGE -> reminder.endDate?.let {
@@ -298,71 +322,146 @@ private fun PointDetailContent(
                     ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
                     ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🔔", modifier = Modifier.padding(end = 8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(reminder.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        Text(dateStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = { onDeleteReminder(reminder) }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                reminder.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                dateStr,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = { onDeleteReminder(reminder) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Rimuovi",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Registro visite
-        HorizontalDivider()
+        // ── Registro visite ───────────────────────────────────────────────────
+        SectionHeader(icon = Icons.Filled.CheckCircle, title = "Registro visite (${visitLogs.size})")
         val visitDateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ITALIAN) }
-        Text(
-            text = "Registro visite (${visitLogs.size})",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(4.dp))
         if (visitLogs.isNotEmpty()) {
             visitLogs.forEach { visit ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f))
-                        .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            visitDateFormat.format(Date(visit.visitedAt)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.size(20.dp)
                         )
-                        if (visit.note.isNotBlank()) {
-                            Text(visit.note, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                visitDateFormat.format(Date(visit.visitedAt)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (visit.note.isNotBlank()) {
+                                Text(
+                                    visit.note,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                    IconButton(onClick = { onDeleteVisitLog(visit) }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi", modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        IconButton(
+                            onClick = { onDeleteVisitLog(visit) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Rimuovi",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
         OutlinedButton(onClick = onLogVisitToday, modifier = Modifier.fillMaxWidth()) {
-            Text("📍  Sono stato qui oggi")
+            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Sono stato qui oggi")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun SectionHeader(icon: ImageVector, title: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun InfoRow(icon: ImageVector, label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(15.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(88.dp)
+        )
+        Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -392,7 +491,6 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // 1. Immagine (Layer Inferiore)
             AsyncImage(
                 model = if (url.startsWith("/")) File(url) else url,
                 contentDescription = null,
@@ -408,7 +506,6 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 contentScale = ContentScale.Fit
             )
 
-            // Barra superiore: share + salva a sinistra, chiudi a destra
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -434,7 +531,6 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
         }
     }
 }
-
 
 private suspend fun loadBitmap(context: android.content.Context, url: String): android.graphics.Bitmap? {
     val request = ImageRequest.Builder(context)
@@ -500,21 +596,5 @@ private suspend fun saveToGallery(context: android.content.Context, url: String)
     }
     withContext(Dispatchers.Main) {
         Toast.makeText(context, "Foto salvata in galleria", Toast.LENGTH_SHORT).show()
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
