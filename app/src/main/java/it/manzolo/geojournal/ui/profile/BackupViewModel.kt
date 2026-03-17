@@ -42,7 +42,7 @@ class BackupViewModel @Inject constructor(
 
     val autoBackupEnabled: StateFlow<Boolean> = userPrefsRepository.preferences
         .map { it.autoBackupEnabled }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val driveBackupUri: StateFlow<String> = userPrefsRepository.preferences
         .map { it.driveBackupUri }

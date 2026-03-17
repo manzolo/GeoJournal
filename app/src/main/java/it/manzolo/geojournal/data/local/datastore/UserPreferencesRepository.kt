@@ -19,7 +19,7 @@ data class UserPreferences(
     val userId: String = "",
     val isGuest: Boolean = false,
     val lastSyncTimestamp: Long = 0L,
-    val autoBackupEnabled: Boolean = true,
+    val autoBackupEnabled: Boolean = false,
     val driveBackupUri: String = ""   // URI SAF persistito per il backup su Drive/cloud
 )
 
@@ -47,7 +47,7 @@ class UserPreferencesRepository @Inject constructor(
                 userId = prefs[Keys.USER_ID] ?: "",
                 isGuest = prefs[Keys.IS_GUEST] ?: false,
                 lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L,
-                autoBackupEnabled = prefs[Keys.AUTO_BACKUP_ENABLED] ?: true,
+                autoBackupEnabled = prefs[Keys.AUTO_BACKUP_ENABLED] ?: false,
                 driveBackupUri = prefs[Keys.DRIVE_BACKUP_URI] ?: ""
             )
         }

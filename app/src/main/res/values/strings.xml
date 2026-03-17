@@ -83,6 +83,9 @@
     <string name="profile_import_backup_title">Importa backup</string>
     <string name="profile_import_backup_confirm">I punti e i dati del file verranno aggiunti o aggiornati. I dati esistenti con lo stesso ID verranno sovrascritti. Continuare?</string>
     <string name="action_cancel_label">Annulla</string>
+    <string name="profile_backup_local_only_title">⚠️ Backup solo locale</string>
+    <string name="profile_backup_local_only_body">Il backup automatico salva i dati solo nella memoria privata dell\'app. Se disinstalli l\'app perderai anche i backup. Configura un file su Drive per proteggerli davvero.</string>
+    <string name="profile_backup_configure_drive">Configura Drive</string>
 
     <!-- Support / Buy Me a Coffee -->
     <string name="support_title">Supporta GeoJournal ☕</string>
