@@ -14,6 +14,8 @@ import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,7 @@ data class AddEditUiState(
     val emoji: String = "📍",
     val tags: List<String> = emptyList(),
     val tagInput: String = "",
+    val suggestedTags: List<String> = emptyList(),
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val photoUris: List<String> = emptyList(),
@@ -69,9 +72,34 @@ class AddEditViewModel @Inject constructor(
 
     private var existingId: String = UUID.randomUUID().toString()
     private var existingCreatedAt: Date = Date()
+    private var _allUsedTags: List<String> = emptyList()
+    private var tagSuggestionsJob: Job? = null
 
     init {
         if (isEditMode) loadPoint() else _uiState.update { it.copy(isLoading = false) }
+        observeTagSuggestions()
+    }
+
+    private fun observeTagSuggestions() {
+        viewModelScope.launch {
+            repository.getAllUsedTags().collect { allTags ->
+                _allUsedTags = allTags
+                recomputeSuggestions()
+            }
+        }
+    }
+
+    private fun recomputeSuggestions() {
+        // Snapshot atomico: legge lo stato una sola volta per evitare race condition
+        val state = _uiState.value
+        val input = state.tagInput.trim().lowercase()
+        val currentTags = state.tags
+        val suggestions = if (input.isEmpty()) {
+            _allUsedTags.filter { it !in currentTags }.take(8)
+        } else {
+            _allUsedTags.filter { it.contains(input, ignoreCase = true) && it !in currentTags }.take(8)
+        }
+        _uiState.update { it.copy(suggestedTags = suggestions) }
     }
 
     private fun loadPoint() {
@@ -105,7 +133,15 @@ class AddEditViewModel @Inject constructor(
 
     fun updateTitle(value: String) = _uiState.update { it.copy(title = value) }
     fun updateDescription(value: String) = _uiState.update { it.copy(description = value) }
-    fun updateTagInput(value: String) = _uiState.update { it.copy(tagInput = value) }
+    fun updateTagInput(value: String) {
+        _uiState.update { it.copy(tagInput = value) }
+        // Debounce: evita filtri su ogni singolo carattere digitato
+        tagSuggestionsJob?.cancel()
+        tagSuggestionsJob = viewModelScope.launch {
+            delay(200)
+            recomputeSuggestions()
+        }
+    }
     fun selectEmoji(emoji: String) = _uiState.update { it.copy(emoji = emoji, showEmojiPicker = false) }
     fun toggleEmojiPicker() = _uiState.update { it.copy(showEmojiPicker = !it.showEmojiPicker) }
     fun updateLocation(lat: Double, lon: Double) = _uiState.update { it.copy(latitude = lat, longitude = lon) }
@@ -114,10 +150,21 @@ class AddEditViewModel @Inject constructor(
         val tag = _uiState.value.tagInput.trim().lowercase()
         if (tag.isNotBlank() && !_uiState.value.tags.contains(tag)) {
             _uiState.update { it.copy(tags = it.tags + tag, tagInput = "") }
+            recomputeSuggestions()
         }
     }
 
-    fun removeTag(tag: String) = _uiState.update { it.copy(tags = it.tags - tag) }
+    fun addTagFromSuggestion(tag: String) {
+        if (!_uiState.value.tags.contains(tag)) {
+            _uiState.update { it.copy(tags = it.tags + tag) }
+            recomputeSuggestions()
+        }
+    }
+
+    fun removeTag(tag: String) {
+        _uiState.update { it.copy(tags = it.tags - tag) }
+        recomputeSuggestions()
+    }
     fun toggleDeleteConfirm() = _uiState.update { it.copy(showDeleteConfirm = !it.showDeleteConfirm) }
 
     fun addPhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris + uri) }

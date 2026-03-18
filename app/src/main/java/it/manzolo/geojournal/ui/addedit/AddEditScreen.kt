@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -86,6 +87,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -148,8 +152,18 @@ fun AddEditScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val titleFocusRequester = remember { FocusRequester() }
     var showGpsPreview by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
+
+    // Feature 2: auto-focus sul campo Titolo solo per nuovi punti
+    LaunchedEffect(Unit) {
+        if (!viewModel.isEditMode) {
+            delay(150)
+            titleFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
 
     // Location permission — apre il dialog preview se concesso
     val locationPermission = rememberPermissionState(
@@ -377,7 +391,7 @@ fun AddEditScreen(
                     )
                 },
                 label = { Text("Titolo *") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().focusRequester(titleFocusRequester),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     imeAction = ImeAction.Next,
@@ -489,7 +503,7 @@ fun AddEditScreen(
             )
             if (uiState.tags.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.tags.forEach { tag ->
+                    uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
                         InputChip(
                             selected = false,
                             onClick = {},
@@ -503,6 +517,17 @@ fun AddEditScreen(
                                         modifier = Modifier.size(14.dp))
                                 }
                             }
+                        )
+                    }
+                }
+            }
+            // Feature 3: suggerimenti tag esistenti
+            if (uiState.suggestedTags.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.suggestedTags.forEach { tag ->
+                        SuggestionChip(
+                            onClick = { viewModel.addTagFromSuggestion(tag) },
+                            label = { Text(tag) }
                         )
                     }
                 }

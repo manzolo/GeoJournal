@@ -11,6 +11,14 @@
     <string name="map_add_point">Add point</string>
     <string name="map_my_location">My location</string>
     <string name="map_loading">Loading map…</string>
+    <string name="map_parking_fab">I parked here</string>
+    <string name="map_parking_point_title">Parking</string>
+    <string name="map_parking_saved">Parking saved!</string>
+    <string name="map_parking_updated">Parking updated!</string>
+    <string name="map_parking_dialog_title">Parking already saved</string>
+    <string name="map_parking_dialog_text">You already have a saved parking spot. Do you want to update the location with the current one, or go back to the saved spot?</string>
+    <string name="map_parking_update_action">Update location</string>
+    <string name="map_parking_navigate">Take me there</string>
 
     <!-- Point Details -->
     <string name="point_edit">Edit</string>

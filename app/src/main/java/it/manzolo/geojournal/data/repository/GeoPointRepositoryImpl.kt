@@ -26,6 +26,14 @@ class GeoPointRepositoryImpl @Inject constructor(
     override fun observeAll(): Flow<List<GeoPoint>> =
         dao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
+    override fun getAllUsedTags(): Flow<List<String>> =
+        dao.observeAllTagStrings().map { tagStrings ->
+            tagStrings.flatMap { it.split("|") }
+                .filter { it.isNotEmpty() && !it.startsWith("_") }
+                .distinct()
+                .sorted()
+        }
+
     override suspend fun getById(id: String): GeoPoint? =
         dao.getById(id)?.toDomain()
 

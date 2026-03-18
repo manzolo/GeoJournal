@@ -11,6 +11,14 @@
     <string name="map_add_point">Aggiungi punto</string>
     <string name="map_my_location">La mia posizione</string>
     <string name="map_loading">Caricamento mappa…</string>
+    <string name="map_parking_fab">Ho parcheggiato qui</string>
+    <string name="map_parking_point_title">Parcheggio</string>
+    <string name="map_parking_saved">Parcheggio salvato!</string>
+    <string name="map_parking_updated">Parcheggio aggiornato!</string>
+    <string name="map_parking_dialog_title">Parcheggio già salvato</string>
+    <string name="map_parking_dialog_text">Hai già un parcheggio salvato. Vuoi aggiornare la posizione con quella attuale o tornare al parcheggio salvato?</string>
+    <string name="map_parking_update_action">Aggiorna posizione</string>
+    <string name="map_parking_navigate">Portami lì</string>
 
     <!-- Point Details -->
     <string name="point_edit">Modifica</string>

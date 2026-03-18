@@ -24,10 +24,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -36,9 +39,13 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,11 +69,8 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.components.PointBottomSheet
 import it.manzolo.geojournal.ui.navigation.Routes
-import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.pow
-import kotlin.math.sin
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
@@ -92,6 +96,17 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val parkingPointTitle = stringResource(R.string.map_parking_point_title)
+
+    // Feature 6: snackbar conferma parcheggio
+    val parkingSnackbarText = uiState.parkingSnackbarRes?.let { stringResource(it) }
+    LaunchedEffect(uiState.parkingSnackbarRes) {
+        parkingSnackbarText?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearParkingSnackbar()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.shareFileEvent.collect { file ->
@@ -112,6 +127,7 @@ fun MapScreen(
     // Punti del cluster troppo vicini da separare visivamente → mostra il picker
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
 
+    // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni)
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
         MapView(context).apply {
@@ -120,18 +136,39 @@ fun MapScreen(
             zoomController.setVisibility(
                 org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
             )
-            controller.setZoom(13.0)
-            controller.setCenter(OsmGeoPoint(45.4654219, 9.1859243))
+            controller.setZoom(uiState.zoomLevel)
+            controller.setCenter(OsmGeoPoint(uiState.userLatitude, uiState.userLongitude))
         }
     }
 
-    // Listener di zoom: ri-clustera quando cambia il livello intero di zoom
+    // Listener di zoom e scroll: ri-clustera al cambio zoom, salva camera (throttled 100ms)
     LaunchedEffect(Unit) {
         var lastZoom = -1
+        var lastSaveMs = 0L
         mapView.addMapListener(object : MapListener {
-            override fun onScroll(event: ScrollEvent) = false
+            override fun onScroll(event: ScrollEvent): Boolean {
+                val now = System.currentTimeMillis()
+                if (now - lastSaveMs > 100) {
+                    viewModel.onMapMoved(
+                        mapView.mapCenter.latitude,
+                        mapView.mapCenter.longitude,
+                        mapView.zoomLevelDouble
+                    )
+                    lastSaveMs = now
+                }
+                return false
+            }
             override fun onZoom(event: ZoomEvent): Boolean {
                 val z = mapView.zoomLevelDouble.toInt()
+                val now = System.currentTimeMillis()
+                if (now - lastSaveMs > 100) {
+                    viewModel.onMapMoved(
+                        mapView.mapCenter.latitude,
+                        mapView.mapCenter.longitude,
+                        mapView.zoomLevelDouble
+                    )
+                    lastSaveMs = now
+                }
                 if (z != lastZoom) {
                     lastZoom = z
                     updateClusteredMarkers(
@@ -159,13 +196,22 @@ fun MapScreen(
             onMarkerClick = { viewModel.onPointSelected(it) },
             onClusterTooClose = { clusterPickerRef.value = it }
         )
+        // Feature 4: zoom iniziale su tutti i punti (solo al primo caricamento)
+        if (uiState.points.isNotEmpty() && !uiState.hasAppliedInitialZoom && uiState.focusTarget == null) {
+            fitAllPoints(mapView, uiState.points)
+            delay(600)
+            val z = mapView.zoomLevelDouble
+            if (z < 15) mapView.controller.setZoom(15.0)
+            else if (z > 18) mapView.controller.setZoom(18.0)
+            viewModel.markInitialFitDone()
+        }
     }
 
     // Focus su punto specifico (es. da Lista): centra + auto-seleziona il punto
     LaunchedEffect(uiState.focusTarget) {
         uiState.focusTarget?.let { target ->
             mapView.controller.animateTo(OsmGeoPoint(target.lat, target.lon))
-            mapView.controller.setZoom(17.0)
+            mapView.controller.setZoom(target.zoom)
             target.pointId?.let { id ->
                 uiState.points.find { it.id == id }?.let { viewModel.onPointSelected(it) }
             }
@@ -228,6 +274,28 @@ fun MapScreen(
             )
         }
 
+        // Feature 6: FAB parcheggio
+        SmallFloatingActionButton(
+            onClick = {
+                if (locationPermission.status.isGranted) {
+                    getCurrentLocationOnce(context) { lat, lon ->
+                        viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
+                    }
+                } else {
+                    locationPermission.launchPermissionRequest()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 136.dp),
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.Filled.DirectionsCar,
+                contentDescription = stringResource(R.string.map_parking_fab)
+            )
+        }
+
         LaunchedEffect(locationPermission.status.isGranted) {
             if (locationPermission.status.isGranted && uiState.focusTarget == null) {
                 centerMapOnUserLocation(context, mapView)
@@ -278,6 +346,38 @@ fun MapScreen(
                 }
             )
         }
+
+        // Dialog parcheggio già esistente
+        if (uiState.showParkingOptions) {
+            AlertDialog(
+                onDismissRequest = viewModel::dismissParkingOptions,
+                icon = { Icon(Icons.Filled.DirectionsCar, contentDescription = null) },
+                title = { Text(stringResource(R.string.map_parking_dialog_title)) },
+                text = { Text(stringResource(R.string.map_parking_dialog_text)) },
+                confirmButton = {
+                    TextButton(onClick = viewModel::confirmUpdateParking) {
+                        Text(stringResource(R.string.map_parking_update_action))
+                    }
+                },
+                dismissButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = viewModel::navigateToParking) {
+                            Text(stringResource(R.string.map_parking_navigate))
+                        }
+                        TextButton(onClick = viewModel::dismissParkingOptions) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
+                    }
+                }
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 96.dp)
+        )
     }
 }
 
@@ -311,16 +411,23 @@ private fun ClusterPickerSheet(
     }
 }
 
-private fun centerMapOnUserLocation(context: Context, mapView: MapView) {
-    try {
+private fun getLastKnownLocation(context: Context): android.location.Location? {
+    return try {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+        lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-        location?.let {
-            mapView.controller.animateTo(OsmGeoPoint(it.latitude, it.longitude))
-        }
-    } catch (_: SecurityException) { /* permesso revocato */ }
+    } catch (_: SecurityException) { null }
+}
+
+private fun centerMapOnUserLocation(context: Context, mapView: MapView) {
+    getLastKnownLocation(context)?.let {
+        mapView.controller.animateTo(OsmGeoPoint(it.latitude, it.longitude))
+    }
+}
+
+private fun getCurrentLocationOnce(context: Context, onLocation: (Double, Double) -> Unit) {
+    getLastKnownLocation(context)?.let { onLocation(it.latitude, it.longitude) }
 }
 
 private fun fitAllPoints(mapView: MapView, points: List<GeoPoint>) {
@@ -430,8 +537,8 @@ private fun updateClusteredMarkers(
 }
 
 /**
- * Nuvoletta per marker singolo: corpo + 4 bumps fusi in un'unica sagoma via Path.Op.UNION
- * così non appaiono cerchi separati con bordo individuale.
+ * Pin Material per marker singolo: badge arrotondato (emoji + titolo) con codina triangolare.
+ * Design pulito senza bumps — bordo verde, ombra morbida.
  */
 private fun createCloudBubbleDrawable(
     context: Context,
@@ -439,41 +546,49 @@ private fun createCloudBubbleDrawable(
     title: String
 ): BitmapDrawable {
     val d = context.resources.displayMetrics.density
-    val bodyW = (140 * d).toInt()
-    val bodyH = (48 * d).toInt()
-    val bumpR = 10f * d
-    val numBumps = 4
-    val tailH = (13 * d).toInt()
-    val bumpOverhang = (bumpR * 0.5f).toInt()
-    val totalH = bumpOverhang + bodyH + tailH
-    val bodyTop = bumpOverhang.toFloat()
+    val paddingH = 10f * d
+    val paddingV = 8f * d
+    val emojiSize = 20f * d
+    val titleSize = 10f * d
+    val gap = 6f * d
+    val cornerR = 12f * d
+    val tailH = 10f * d
+    val shadowDx = 1.5f * d
+    val shadowDy = 2f * d
 
-    val bitmap = Bitmap.createBitmap(bodyW, totalH, Bitmap.Config.ARGB_8888)
+    // Misura il titolo per calcolare la larghezza del badge
+    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = titleSize
+        typeface = Typeface.DEFAULT_BOLD
+    }
+    val maxTitleW = 90f * d
+    var displayTitle = title
+    while (titlePaint.measureText(displayTitle) > maxTitleW && displayTitle.length > 3) {
+        displayTitle = displayTitle.dropLast(1)
+    }
+    if (displayTitle.length < title.length) displayTitle = displayTitle.dropLast(2) + "…"
+    val titleW = titlePaint.measureText(displayTitle)
+
+    val bodyW = paddingH + emojiSize + gap + titleW + paddingH
+    val bodyH = paddingV + emojiSize + paddingV
+    val totalW = (bodyW + shadowDx + 2f * d).toInt()
+    val totalH = (bodyH + tailH + shadowDy + 2f * d).toInt()
+
+    val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    // Corpo arrotondato
-    val bodyRect = RectF(0f, bodyTop, bodyW.toFloat(), bodyTop + bodyH)
-    val cloudPath = Path().apply {
-        addRoundRect(bodyRect, 14f * d, 14f * d, Path.Direction.CW)
-    }
-
-    // Bumps in cima — uniti al corpo con UNION (nessun bordo interno visibile)
-    val bumpSpacing = bodyW.toFloat() / (numBumps + 1)
-    val bumpCy = bodyTop + bumpR * 0.5f
-    for (i in 1..numBumps) {
-        cloudPath.op(
-            Path().apply { addCircle(bumpSpacing * i, bumpCy, bumpR, Path.Direction.CW) },
-            Path.Op.UNION
-        )
-    }
-
-    // Codina triangolare — unita al corpo
+    val bodyRect = RectF(0f, 0f, bodyW, bodyH)
     val cx = bodyW / 2f
-    cloudPath.op(
+
+    val pinPath = Path().apply {
+        addRoundRect(bodyRect, cornerR, cornerR, Path.Direction.CW)
+    }
+    // Codina triangolare centrata in basso
+    pinPath.op(
         Path().apply {
-            moveTo(cx - tailH * 0.75f, bodyTop + bodyH - 2f * d)
-            lineTo(cx, (bodyTop + bodyH + tailH))
-            lineTo(cx + tailH * 0.75f, bodyTop + bodyH - 2f * d)
+            moveTo(cx - tailH * 0.6f, bodyH - 2f * d)
+            lineTo(cx, bodyH + tailH)
+            lineTo(cx + tailH * 0.6f, bodyH - 2f * d)
             close()
         },
         Path.Op.UNION
@@ -481,108 +596,83 @@ private fun createCloudBubbleDrawable(
 
     // Ombra
     canvas.save()
-    canvas.translate(2f * d, 2f * d)
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(35, 0, 0, 0)
+    canvas.translate(shadowDx, shadowDy)
+    canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(50, 0, 0, 0)
         style = Paint.Style.FILL
     })
     canvas.restore()
 
     // Riempimento bianco
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = AndroidColor.WHITE
         style = Paint.Style.FILL
     })
 
-    // Bordo verde unico sull'intera sagoma
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(255, 56, 102, 65) // MossGreen (386641)
+    // Bordo verde
+    canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(255, 56, 102, 65)
         style = Paint.Style.STROKE
         strokeWidth = 2f * d
     })
 
-    // Emoji + titolo
-    val textY = bodyTop + bodyH / 2f + 8f * d
-    canvas.drawText(emoji, 8f * d, textY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 20f * d
+    // Emoji
+    val textY = bodyH / 2f + emojiSize * 0.35f
+    canvas.drawText(emoji, paddingH, textY, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = emojiSize
         textAlign = Paint.Align.LEFT
     })
 
-    val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    // Titolo
+    titlePaint.apply {
         color = AndroidColor.argb(255, 27, 36, 20)
-        textSize = 9.5f * d
-        typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.LEFT
     }
-    val maxW = bodyW - 16f * d - 28f * d
-    var displayTitle = title
-    while (titlePaint.measureText(displayTitle) > maxW && displayTitle.length > 3) {
-        displayTitle = displayTitle.dropLast(1)
-    }
-    if (displayTitle.length < title.length) displayTitle = displayTitle.dropLast(2) + "…"
-    canvas.drawText(displayTitle, 34f * d, textY, titlePaint)
+    canvas.drawText(displayTitle, paddingH + emojiSize + gap, textY - 1f * d, titlePaint)
 
     return BitmapDrawable(context.resources, bitmap)
 }
 
 /**
- * Icona cluster: cerchio centrale + 8 bumps fusi con Path.Op.UNION → nuvoletta verde
- * senza cerchi separati visibili. Il conteggio è scritto in bianco al centro.
+ * Icona cluster: 3 cerchi concentrici sfumati (stile Google/Apple Maps).
+ * Anello esterno 25% opaco, anello medio 55% opaco, cerchio centrale pieno.
+ * Numero in bianco bold al centro.
  */
 private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable {
     val d = context.resources.displayMetrics.density
-    val mainR = 26f * d
-    val bumpR = 9f * d
-    val pad = bumpR + 4f * d
-    val size = ((mainR + pad) * 2).toInt()
+    val innerR = 18f * d
+    val midR = 26f * d
+    val outerR = 34f * d
+    val size = (outerR * 2 + 4f * d).toInt()
     val cx = size / 2f
     val cy = size / 2f
 
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    // Cerchio centrale
-    val cloudPath = Path().apply { addCircle(cx, cy, mainR, Path.Direction.CW) }
-
-    // 8 bumps a 45° — uniti con UNION
-    val bumpDist = mainR * 0.82f
-    for (i in 0 until 8) {
-        val rad = i * 45.0 * PI / 180.0
-        val bx = cx + bumpDist * cos(rad).toFloat()
-        val by = cy + bumpDist * sin(rad).toFloat()
-        cloudPath.op(
-            Path().apply { addCircle(bx, by, bumpR, Path.Direction.CW) },
-            Path.Op.UNION
-        )
-    }
-
-    // Ombra
-    canvas.save()
-    canvas.translate(2f * d, 2f * d)
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(40, 0, 0, 0)
-        style = Paint.Style.FILL
-    })
-    canvas.restore()
-
-    // Riempimento verde
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(235, 56, 102, 65) // MossGreen (386641)
+    // Anello esterno — trasparente 25%
+    canvas.drawCircle(cx, cy, outerR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(64, 56, 102, 65)
         style = Paint.Style.FILL
     })
 
-    // Bordo verde scuro
-    canvas.drawPath(cloudPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(255, 27, 67, 50) // MossGreenDark (1B4332)
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f * d
+    // Anello medio — semi-trasparente 55%
+    canvas.drawCircle(cx, cy, midR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(140, 56, 102, 65)
+        style = Paint.Style.FILL
     })
 
-    // Conteggio
+    // Cerchio centrale pieno
+    canvas.drawCircle(cx, cy, innerR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(255, 56, 102, 65)
+        style = Paint.Style.FILL
+    })
+
+    // Numero in bianco bold
     val label = if (count > 99) "99+" else count.toString()
     canvas.drawText(label, cx, cy + 5f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = AndroidColor.WHITE
-        textSize = 14f * d
+        textSize = 13f * d
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
     })

@@ -51,4 +51,8 @@ interface GeoPointDao {
 
     @Query("UPDATE geo_points SET owner_id = :userId, synced_to_firestore = 0 WHERE owner_id = ''")
     suspend fun claimGuestPoints(userId: String)
+
+    // Tag suggeriti (Feature 3)
+    @Query("SELECT tags FROM geo_points WHERE tags != ''")
+    fun observeAllTagStrings(): Flow<List<String>>
 }

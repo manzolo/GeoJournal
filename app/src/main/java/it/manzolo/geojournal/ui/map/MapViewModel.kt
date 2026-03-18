@@ -1,8 +1,10 @@
 package it.manzolo.geojournal.ui.map
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
@@ -21,7 +23,7 @@ import java.io.File
 import java.util.Date
 import javax.inject.Inject
 
-data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null)
+data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null, val zoom: Double = 17.0)
 
 data class MapUiState(
     val points: List<GeoPoint> = emptyList(),
@@ -33,7 +35,16 @@ data class MapUiState(
     val isBottomSheetVisible: Boolean = false,
     val error: String? = null,
     /** Focus one-shot su coordinate + eventuale punto da auto-selezionare */
-    val focusTarget: FocusTarget? = null
+    val focusTarget: FocusTarget? = null,
+    /** True dopo il primo fit automatico su tutti i punti */
+    val hasAppliedInitialZoom: Boolean = false,
+    /** Messaggio snackbar per conferma parcheggio (@StringRes, risolto nella UI) */
+    @StringRes val parkingSnackbarRes: Int? = null,
+    /** Mostra dialog quando esiste già un parcheggio salvato */
+    val showParkingOptions: Boolean = false,
+    /** Posizione corrente in attesa di conferma aggiornamento parcheggio */
+    val pendingParkingLat: Double = 0.0,
+    val pendingParkingLon: Double = 0.0
 )
 
 @HiltViewModel
@@ -118,7 +129,57 @@ class MapViewModel @Inject constructor(
 
     fun clearFocusTarget() = _uiState.update { it.copy(focusTarget = null) }
 
+    fun markInitialFitDone() = _uiState.update { it.copy(hasAppliedInitialZoom = true) }
+
+    fun clearParkingSnackbar() = _uiState.update { it.copy(parkingSnackbarRes = null) }
+
+    // ID del punto parcheggio esistente, cached per evitare doppia ricerca
+    private var pendingParkingPointId: String? = null
+
+    fun saveParkingPoint(lat: Double, lon: Double, pointTitle: String) {
+        val existing = _uiState.value.points.find { PARKING_TAG in it.tags }
+        if (existing != null) {
+            pendingParkingPointId = existing.id
+            _uiState.update { it.copy(showParkingOptions = true, pendingParkingLat = lat, pendingParkingLon = lon) }
+        } else {
+            viewModelScope.launch {
+                repository.save(
+                    GeoPoint(
+                        title = pointTitle,
+                        emoji = "🚗",
+                        tags = listOf(PARKING_TAG),
+                        latitude = lat,
+                        longitude = lon
+                    )
+                )
+                _uiState.update { it.copy(parkingSnackbarRes = R.string.map_parking_saved) }
+            }
+        }
+    }
+
+    fun confirmUpdateParking() {
+        val id = pendingParkingPointId ?: return
+        val state = _uiState.value
+        val existing = state.points.find { it.id == id } ?: return
+        viewModelScope.launch {
+            repository.save(existing.copy(latitude = state.pendingParkingLat, longitude = state.pendingParkingLon, updatedAt = Date()))
+            _uiState.update { it.copy(showParkingOptions = false, parkingSnackbarRes = R.string.map_parking_updated) }
+        }
+    }
+
+    fun navigateToParking() {
+        val id = pendingParkingPointId ?: return
+        val existing = _uiState.value.points.find { it.id == id } ?: return
+        _uiState.update { it.copy(showParkingOptions = false, focusTarget = FocusTarget(existing.latitude, existing.longitude, pointId = existing.id, zoom = 19.0)) }
+    }
+
+    fun dismissParkingOptions() {
+        pendingParkingPointId = null
+        _uiState.update { it.copy(showParkingOptions = false) }
+    }
+
     companion object {
+        const val PARKING_TAG = "_parking"
         private val now = Date()
         private val samplePoints = listOf(
             GeoPoint(
