@@ -52,6 +52,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -95,6 +102,7 @@ fun MapScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val snackbarHostState = remember { SnackbarHostState() }
     val parkingPointTitle = stringResource(R.string.map_parking_point_title)
@@ -258,7 +266,11 @@ fun MapScreen(
         SmallFloatingActionButton(
             onClick = {
                 if (locationPermission.status.isGranted) {
-                    centerMapOnUserLocation(context, mapView)
+                    coroutineScope.launch {
+                        getFreshLocation(context)?.let { (lat, lon) ->
+                            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                        }
+                    }
                 } else {
                     locationPermission.launchPermissionRequest()
                 }
@@ -278,8 +290,10 @@ fun MapScreen(
         SmallFloatingActionButton(
             onClick = {
                 if (locationPermission.status.isGranted) {
-                    getCurrentLocationOnce(context) { lat, lon ->
-                        viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
+                    coroutineScope.launch {
+                        getFreshLocation(context)?.let { (lat, lon) ->
+                            viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
+                        }
                     }
                 } else {
                     locationPermission.launchPermissionRequest()
@@ -298,7 +312,9 @@ fun MapScreen(
 
         LaunchedEffect(locationPermission.status.isGranted) {
             if (locationPermission.status.isGranted && uiState.focusTarget == null) {
-                centerMapOnUserLocation(context, mapView)
+                getFreshLocation(context)?.let { (lat, lon) ->
+                    mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                }
             }
         }
 
@@ -420,14 +436,25 @@ private fun getLastKnownLocation(context: Context): android.location.Location? {
     } catch (_: SecurityException) { null }
 }
 
-private fun centerMapOnUserLocation(context: Context, mapView: MapView) {
-    getLastKnownLocation(context)?.let {
-        mapView.controller.animateTo(OsmGeoPoint(it.latitude, it.longitude))
+/**
+ * Richiede una nuova fix GPS con alta accuratezza (timeout 3s),
+ * con fallback automatico sulla cache del sistema se il GPS non risponde.
+ */
+private suspend fun getFreshLocation(context: Context): Pair<Double, Double>? {
+    val cts = CancellationTokenSource()
+    return try {
+        val location = withTimeoutOrNull(3_000L) {
+            LocationServices.getFusedLocationProviderClient(context)
+                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                .await()
+        }
+        location?.let { it.latitude to it.longitude }
+            ?: getLastKnownLocation(context)?.let { it.latitude to it.longitude }
+    } catch (_: Exception) {
+        getLastKnownLocation(context)?.let { it.latitude to it.longitude }
+    } finally {
+        cts.cancel()
     }
-}
-
-private fun getCurrentLocationOnce(context: Context, onLocation: (Double, Double) -> Unit) {
-    getLastKnownLocation(context)?.let { onLocation(it.latitude, it.longitude) }
 }
 
 private fun fitAllPoints(mapView: MapView, points: List<GeoPoint>) {
