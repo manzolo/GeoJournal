@@ -136,22 +136,22 @@ fun MapScreen(
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
 
     // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
-    // Come centro iniziale usa l'ultima posizione GPS nota (sincrona) se disponibile,
-    // per evitare il salto visivo da Milano alla posizione reale.
+    // Al primo avvio usa lastKnownLocation (sincrona, nessun salto visivo).
+    // Nelle aperture successive usa la posizione salvata da onMapMoved.
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
-        val lastKnown = getLastKnownLocation(context)
-        val initialCenter = if (lastKnown != null)
-            OsmGeoPoint(lastKnown.latitude, lastKnown.longitude)
-        else
-            OsmGeoPoint(uiState.userLatitude, uiState.userLongitude)
+        val savedPosition = OsmGeoPoint(uiState.userLatitude, uiState.userLongitude)
+        val isFirstOpen = !uiState.hasAppliedInitialZoom
+        val lastKnown = if (isFirstOpen) getLastKnownLocation(context) else null
+        val initialCenter = lastKnown?.let { OsmGeoPoint(it.latitude, it.longitude) } ?: savedPosition
+        val initialZoom = if (lastKnown != null) 15.0 else uiState.zoomLevel
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             zoomController.setVisibility(
                 org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
             )
-            controller.setZoom(if (lastKnown != null) 15.0 else uiState.zoomLevel)
+            controller.setZoom(initialZoom)
             controller.setCenter(initialCenter)
         }
     }
@@ -211,22 +211,8 @@ fun MapScreen(
             onMarkerClick = { viewModel.onPointSelected(it) },
             onClusterTooClose = { clusterPickerRef.value = it }
         )
-        // Zoom iniziale: preferisce posizione utente, altrimenti centroide dei punti
-        if (uiState.points.isNotEmpty() && !uiState.hasAppliedInitialZoom && uiState.focusTarget == null) {
-            viewModel.markInitialFitDone() // segna subito per evitare riesecuzioni
-            val userLoc = if (locationPermission.status.isGranted) getFreshLocation(context) else null
-            // Controlla che nessun focusTarget sia arrivato mentre si attendeva il GPS
-            if (viewModel.uiState.value.focusTarget == null) {
-                if (userLoc != null) {
-                    mapView.controller.setCenter(OsmGeoPoint(userLoc.first, userLoc.second))
-                    mapView.controller.setZoom(15.0)
-                } else {
-                    val avgLat = uiState.points.map { it.latitude }.average()
-                    val avgLon = uiState.points.map { it.longitude }.average()
-                    mapView.controller.setCenter(OsmGeoPoint(avgLat, avgLon))
-                    mapView.controller.setZoom(13.0)
-                }
-            }
+        if (!uiState.hasAppliedInitialZoom) {
+            viewModel.markInitialFitDone()
         }
     }
 
@@ -325,13 +311,15 @@ fun MapScreen(
             )
         }
 
+        // Prima concessione del permesso GPS a runtime: centra sulla posizione utente
+        // solo se non c'è già un focusTarget attivo e la mappa è ancora ai default.
         LaunchedEffect(locationPermission.status.isGranted) {
-            if (locationPermission.status.isGranted && uiState.focusTarget == null) {
-                getFreshLocation(context)?.let { (lat, lon) ->
-                    // setCenter senza animazione: la mappa è già nell'area giusta
-                    // (inizializzata con lastKnownLocation), questo è solo un raffinamento.
-                    mapView.controller.setCenter(OsmGeoPoint(lat, lon))
-                    if (mapView.zoomLevelDouble < 13.0) mapView.controller.setZoom(15.0)
+            if (locationPermission.status.isGranted
+                && viewModel.uiState.value.focusTarget == null
+                && !viewModel.uiState.value.hasAppliedInitialZoom) {
+                getLastKnownLocation(context)?.let { loc ->
+                    mapView.controller.setCenter(OsmGeoPoint(loc.latitude, loc.longitude))
+                    mapView.controller.setZoom(15.0)
                 }
             }
         }
