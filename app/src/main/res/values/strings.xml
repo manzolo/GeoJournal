@@ -99,11 +99,78 @@
     <string name="profile_backup_local_only_body">Il backup automatico salva i dati solo nella memoria privata dell\'app. Se disinstalli l\'app perderai anche i backup. Configura un file su Drive per proteggerli davvero.</string>
     <string name="profile_backup_configure_drive">Configura Drive</string>
 
+    <!-- Common actions -->
+    <string name="action_back">Indietro</string>
+    <string name="action_add">Aggiungi</string>
+    <string name="action_remove">Rimuovi</string>
+    <string name="action_close">Chiudi</string>
+
     <!-- List Screen -->
+    <string name="list_title">Il tuo diario</string>
+    <string name="list_sort">Ordina</string>
+    <string name="list_search_placeholder">Cerca nei tuoi ricordi…</string>
+    <string name="list_search_clear">Cancella</string>
+    <string name="list_view_on_map">Vedi sulla mappa</string>
+    <string name="list_delete_point_title">Elimina punto</string>
+    <string name="list_delete_point_message">Vuoi eliminare \"%s\"? L\'operazione non è reversibile.</string>
+    <string name="list_empty_filtered">Nessun risultato</string>
+    <string name="list_empty_filtered_hint">Prova a modificare la ricerca o i filtri</string>
     <string name="list_delete_tag_title">Elimina tag</string>
     <string name="list_delete_tag_message">Vuoi rimuovere il tag \"%s\" da tutti i punti?</string>
     <string name="list_delete_tag_confirm">Elimina</string>
     <string name="list_tags_collapse">Meno</string>
+
+    <!-- Add/Edit Screen -->
+    <string name="addedit_delete_title">Elimina punto</string>
+    <string name="addedit_delete_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>
+    <string name="addedit_add_photo">Aggiungi foto</string>
+    <string name="addedit_camera">Fotocamera</string>
+    <string name="addedit_gallery">Galleria foto</string>
+    <string name="addedit_choose_emoji">Scegli un simbolo</string>
+    <string name="addedit_tap_change_icon">Tocca per cambiare l\'icona</string>
+    <string name="addedit_title_hint">Titolo *</string>
+    <string name="addedit_section_location">Posizione</string>
+    <string name="addedit_location_not_set">Posizione non impostata</string>
+    <string name="addedit_view_on_map">Vedi sulla mappa</string>
+    <string name="addedit_detect_gps">Rileva GPS</string>
+    <string name="addedit_add_tag">Aggiungi tag</string>
+    <string name="addedit_section_photos">Foto</string>
+    <string name="addedit_remove_photo">Rimuovi foto</string>
+    <string name="addedit_section_reminders">Promemoria</string>
+    <string name="addedit_add_reminder">Aggiungi promemoria</string>
+    <string name="addedit_section_rating">Valutazione</string>
+    <string name="addedit_stars">%d stelle</string>
+    <string name="addedit_map_tap_hint">Tocca la mappa per spostare il punto</string>
+    <string name="addedit_location_selected">Posizione selezionata sulla mappa</string>
+    <string name="addedit_gps_accuracy">Precisione: ±%d m</string>
+    <string name="addedit_gps_acquiring">Acquisizione GPS…</string>
+    <string name="addedit_use_gps">Usa GPS</string>
+    <string name="addedit_use_location">Usa posizione</string>
+    <string name="addedit_reminder_title_hint">Titolo promemoria</string>
+    <string name="addedit_reminder_type">Tipo</string>
+    <string name="addedit_reminder_once">Una volta</string>
+    <string name="addedit_reminder_yearly">Ogni anno</string>
+    <string name="addedit_reminder_period">Periodo</string>
+    <string name="addedit_reminder_start_date">Data inizio</string>
+    <string name="addedit_reminder_end_date">Data fine</string>
+    <string name="addedit_emoji_title">Scegli emoji</string>
+
+    <!-- Detail Screen -->
+    <string name="detail_title_fallback">Dettaglio</string>
+    <string name="detail_section_tags">Tag</string>
+    <string name="detail_section_info">Informazioni</string>
+    <string name="detail_latitude">Latitudine</string>
+    <string name="detail_longitude">Longitudine</string>
+    <string name="detail_created">Creato</string>
+    <string name="detail_updated">Modificato</string>
+    <string name="detail_section_photos">Foto (%d)</string>
+    <string name="detail_section_reminders">Promemoria (%d)</string>
+    <string name="detail_section_visits">Registro visite (%d)</string>
+    <string name="detail_visited_today">Sono stato qui oggi</string>
+    <string name="detail_save_to_gallery">Salva in galleria</string>
+    <string name="detail_photo_error">Impossibile caricare la foto</string>
+    <string name="detail_share_photo">Condividi foto</string>
+    <string name="detail_photo_saved">Foto salvata in galleria</string>
 
     <!-- Profile -->
     <string name="profile_last_backup">Ultimo backup: %s</string>

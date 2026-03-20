@@ -111,14 +111,15 @@ fun PointDetailScreen(
     viewModel: PointDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val fallbackTitle = stringResource(R.string.detail_title_fallback)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.point?.title ?: "Dettaglio") },
+                title = { Text(uiState.point?.title ?: fallbackTitle) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -126,7 +127,7 @@ fun PointDetailScreen(
                         IconButton(onClick = {
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
                         }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Modifica")
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.point_edit))
                         }
                     }
                 }
@@ -256,7 +257,7 @@ private fun PointDetailContent(
 
         // ── Tag ───────────────────────────────────────────────────────────────
         if (point.tags.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.Label, title = "Tag")
+            SectionHeader(icon = Icons.Filled.Label, title = stringResource(R.string.detail_section_tags))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 point.tags.forEach { tag ->
                     AssistChip(onClick = {}, label = { Text(tag) })
@@ -265,7 +266,7 @@ private fun PointDetailContent(
         }
 
         // ── Informazioni (coordinate + date) ──────────────────────────────────
-        SectionHeader(icon = Icons.Filled.LocationOn, title = "Informazioni")
+        SectionHeader(icon = Icons.Filled.LocationOn, title = stringResource(R.string.detail_section_info))
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -273,25 +274,25 @@ private fun PointDetailContent(
             ) {
                 InfoRow(
                     icon = Icons.Filled.LocationOn,
-                    label = "Latitudine",
+                    label = stringResource(R.string.detail_latitude),
                     value = "%.6f".format(point.latitude)
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 InfoRow(
                     icon = Icons.Filled.LocationOn,
-                    label = "Longitudine",
+                    label = stringResource(R.string.detail_longitude),
                     value = "%.6f".format(point.longitude)
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 InfoRow(
                     icon = Icons.Filled.CalendarToday,
-                    label = "Creato",
+                    label = stringResource(R.string.detail_created),
                     value = dateFormat.format(point.createdAt)
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 InfoRow(
                     icon = Icons.Filled.Edit,
-                    label = "Modificato",
+                    label = stringResource(R.string.detail_updated),
                     value = dateFormat.format(point.updatedAt)
                 )
             }
@@ -299,7 +300,7 @@ private fun PointDetailContent(
 
         // ── Foto ──────────────────────────────────────────────────────────────
         if (point.photoUrls.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.PhotoLibrary, title = "Foto (${point.photoUrls.size})")
+            SectionHeader(icon = Icons.Filled.PhotoLibrary, title = stringResource(R.string.detail_section_photos, point.photoUrls.size))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -321,7 +322,7 @@ private fun PointDetailContent(
 
         // ── Promemoria ────────────────────────────────────────────────────────
         if (reminders.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.Notifications, title = "Promemoria (${reminders.size})")
+            SectionHeader(icon = Icons.Filled.Notifications, title = stringResource(R.string.detail_section_reminders, reminders.size))
             val reminderDateFormat = remember { SimpleDateFormat("d MMM", Locale.ITALIAN) }
             reminders.forEach { reminder ->
                 val dateStr = when (reminder.type) {
@@ -361,7 +362,7 @@ private fun PointDetailContent(
                         ) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Rimuovi",
+                                contentDescription = stringResource(R.string.action_remove),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -372,7 +373,7 @@ private fun PointDetailContent(
         }
 
         // ── Registro visite ───────────────────────────────────────────────────
-        SectionHeader(icon = Icons.Filled.CheckCircle, title = "Registro visite (${visitLogs.size})")
+        SectionHeader(icon = Icons.Filled.CheckCircle, title = stringResource(R.string.detail_section_visits, visitLogs.size))
         val visitDateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ITALIAN) }
         if (visitLogs.isNotEmpty()) {
             visitLogs.forEach { visit ->
@@ -408,7 +409,7 @@ private fun PointDetailContent(
                         ) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Rimuovi",
+                                contentDescription = stringResource(R.string.action_remove),
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -467,7 +468,7 @@ private fun PointDetailContent(
         OutlinedButton(onClick = onLogVisitToday, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Sono stato qui oggi")
+            Text(stringResource(R.string.detail_visited_today))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -574,14 +575,14 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
             ) {
                 Row {
                     IconButton(onClick = { scope.launch { sharePhoto(context, url) } }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Condividi", tint = Color.White)
+                        Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.point_share), tint = Color.White)
                     }
                     IconButton(onClick = { scope.launch { saveToGallery(context, url) } }) {
-                        Icon(Icons.Filled.FileDownload, contentDescription = "Salva in galleria", tint = Color.White)
+                        Icon(Icons.Filled.FileDownload, contentDescription = stringResource(R.string.detail_save_to_gallery), tint = Color.White)
                     }
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Chiudi", tint = Color.White)
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)
                 }
             }
         }
@@ -600,7 +601,7 @@ private suspend fun loadBitmap(context: android.content.Context, url: String): a
 private suspend fun sharePhoto(context: android.content.Context, url: String) {
     val bitmap = loadBitmap(context, url) ?: run {
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Impossibile caricare la foto", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.detail_photo_error), Toast.LENGTH_SHORT).show()
         }
         return
     }
@@ -616,14 +617,14 @@ private suspend fun sharePhoto(context: android.content.Context, url: String) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     withContext(Dispatchers.Main) {
-        context.startActivity(Intent.createChooser(intent, "Condividi foto"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_share_photo)))
     }
 }
 
 private suspend fun saveToGallery(context: android.content.Context, url: String) {
     val bitmap = loadBitmap(context, url) ?: run {
         withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Impossibile caricare la foto", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.detail_photo_error), Toast.LENGTH_SHORT).show()
         }
         return
     }
@@ -651,6 +652,6 @@ private suspend fun saveToGallery(context: android.content.Context, url: String)
         }
     }
     withContext(Dispatchers.Main) {
-        Toast.makeText(context, "Foto salvata in galleria", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.detail_photo_saved), Toast.LENGTH_SHORT).show()
     }
 }

@@ -88,6 +88,7 @@ fun ListScreen(navController: NavController) {
     val viewModel: ListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val shareChooserLabel = stringResource(R.string.point_share)
     var showSortMenu by remember { mutableStateOf(false) }
     var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
@@ -105,7 +106,7 @@ fun ListScreen(navController: NavController) {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Condividi punto"))
+            context.startActivity(Intent.createChooser(intent, shareChooserLabel))
         }
     }
 
@@ -117,7 +118,7 @@ fun ListScreen(navController: NavController) {
             text = {
                 Column {
                     DropdownMenuItem(
-                        text = { Text("Vedi sulla mappa") },
+                        text = { Text(stringResource(R.string.list_view_on_map)) },
                         leadingIcon = { Icon(Icons.Filled.Map, null) },
                         onClick = {
                             contextMenuPoint = null
@@ -125,7 +126,7 @@ fun ListScreen(navController: NavController) {
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Apri in Google Maps") },
+                        text = { Text(stringResource(R.string.point_open_google_maps)) },
                         leadingIcon = { Icon(Icons.Filled.LocationOn, null) },
                         onClick = {
                             contextMenuPoint = null
@@ -134,7 +135,7 @@ fun ListScreen(navController: NavController) {
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Modifica") },
+                        text = { Text(stringResource(R.string.point_edit)) },
                         leadingIcon = { Icon(Icons.Filled.Edit, null) },
                         onClick = {
                             contextMenuPoint = null
@@ -142,7 +143,7 @@ fun ListScreen(navController: NavController) {
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Condividi") },
+                        text = { Text(stringResource(R.string.point_share)) },
                         leadingIcon = { Icon(Icons.Filled.Share, null) },
                         onClick = {
                             contextMenuPoint = null
@@ -150,7 +151,7 @@ fun ListScreen(navController: NavController) {
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Elimina", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(R.string.point_delete), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
                         onClick = {
                             contextMenuPoint = null
@@ -161,7 +162,7 @@ fun ListScreen(navController: NavController) {
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { contextMenuPoint = null }) {
-                    Text("Annulla")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -171,8 +172,8 @@ fun ListScreen(navController: NavController) {
     deleteConfirmPoint?.let { point ->
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { deleteConfirmPoint = null },
-            title = { Text("Elimina punto") },
-            text = { Text("Vuoi eliminare \"${point.title}\"? L'operazione non è reversibile.") },
+            title = { Text(stringResource(R.string.list_delete_point_title)) },
+            text = { Text(stringResource(R.string.list_delete_point_message, point.title)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
@@ -180,12 +181,12 @@ fun ListScreen(navController: NavController) {
                         deleteConfirmPoint = null
                     }
                 ) {
-                    Text("Elimina", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.point_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { deleteConfirmPoint = null }) {
-                    Text("Annulla")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -218,10 +219,10 @@ fun ListScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Il tuo diario") },
+                title = { Text(stringResource(R.string.list_title)) },
                 actions = {
                     IconButton(onClick = { showSortMenu = true }) {
-                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Ordina")
+                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.list_sort))
                     }
                     DropdownMenu(
                         expanded = showSortMenu,
@@ -247,7 +248,7 @@ fun ListScreen(navController: NavController) {
             FloatingActionButton(
                 onClick = { navController.navigate(Routes.AddEditPoint.createRoute()) }
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuovo punto")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_point_title))
             }
         }
     ) { padding ->
@@ -258,12 +259,12 @@ fun ListScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                placeholder = { Text("Cerca nei tuoi ricordi...") },
+                placeholder = { Text(stringResource(R.string.list_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
                         IconButton(onClick = { viewModel.updateQuery("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancella")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.list_search_clear))
                         }
                     }
                 },
@@ -458,16 +459,16 @@ private fun EmptyState(hasFilters: Boolean) {
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = if (hasFilters) "Nessun risultato" else "Il tuo diario è vuoto",
+                text = if (hasFilters) stringResource(R.string.list_empty_filtered) else stringResource(R.string.empty_list_title),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = if (hasFilters)
-                    "Prova a modificare la ricerca o i filtri"
+                    stringResource(R.string.list_empty_filtered_hint)
                 else
-                    "Inizia ad esplorare e a salvare\ni posti che ami 🗺️",
+                    stringResource(R.string.empty_list_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

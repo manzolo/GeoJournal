@@ -103,8 +103,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import it.manzolo.geojournal.R
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -234,16 +236,16 @@ fun AddEditScreen(
     if (uiState.showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = viewModel::toggleDeleteConfirm,
-            title = { Text("Elimina punto") },
-            text = { Text("Sei sicuro di voler eliminare questo punto? L'operazione non è reversibile.") },
+            title = { Text(stringResource(R.string.addedit_delete_title)) },
+            text = { Text(stringResource(R.string.addedit_delete_message)) },
             confirmButton = {
                 TextButton(
                     onClick = viewModel::delete,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Elimina") }
+                ) { Text(stringResource(R.string.point_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::toggleDeleteConfirm) { Text("Annulla") }
+                TextButton(onClick = viewModel::toggleDeleteConfirm) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -261,7 +263,7 @@ fun AddEditScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Aggiungi foto",
+                    stringResource(R.string.addedit_add_photo),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
@@ -281,7 +283,7 @@ fun AddEditScreen(
                 ) {
                     Icon(Icons.Filled.Camera, contentDescription = null)
                     Spacer(Modifier.width(12.dp))
-                    Text("Fotocamera", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.addedit_camera), style = MaterialTheme.typography.bodyLarge)
                 }
                 OutlinedButton(
                     onClick = {
@@ -294,7 +296,7 @@ fun AddEditScreen(
                 ) {
                     Icon(Icons.Filled.Image, contentDescription = null)
                     Spacer(Modifier.width(12.dp))
-                    Text("Galleria foto", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.addedit_gallery), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -304,10 +306,10 @@ fun AddEditScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(if (viewModel.isEditMode) "Modifica punto" else "Nuovo punto") },
+                title = { Text(if (viewModel.isEditMode) stringResource(R.string.edit_point_title) else stringResource(R.string.add_point_title)) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -318,13 +320,13 @@ fun AddEditScreen(
                             keyboardController?.hide()
                             viewModel.save()
                         }) {
-                            Icon(Icons.Filled.Check, contentDescription = "Salva",
+                            Icon(Icons.Filled.Check, contentDescription = stringResource(R.string.action_save),
                                 tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                     if (viewModel.isEditMode) {
                         IconButton(onClick = viewModel::toggleDeleteConfirm) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Elimina",
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.point_delete),
                                 tint = MaterialTheme.colorScheme.error)
                         }
                     }
@@ -371,11 +373,11 @@ fun AddEditScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        "Scegli un simbolo",
+                        stringResource(R.string.addedit_choose_emoji),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
-                        "Tocca per cambiare l'icona",
+                        stringResource(R.string.addedit_tap_change_icon),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -390,7 +392,7 @@ fun AddEditScreen(
                         if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
                     )
                 },
-                label = { Text("Titolo *") },
+                label = { Text(stringResource(R.string.addedit_title_hint)) },
                 modifier = Modifier.fillMaxWidth().focusRequester(titleFocusRequester),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -407,7 +409,7 @@ fun AddEditScreen(
                         if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
                     )
                 },
-                label = { Text("Descrizione") },
+                label = { Text(stringResource(R.string.field_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -427,7 +429,7 @@ fun AddEditScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Posizione",
+                    stringResource(R.string.addedit_section_location),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -439,7 +441,7 @@ fun AddEditScreen(
                         Text("%.5f, %.5f".format(uiState.latitude, uiState.longitude),
                             style = MaterialTheme.typography.bodyMedium)
                     } else {
-                        Text("Posizione non impostata",
+                        Text(stringResource(R.string.addedit_location_not_set),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -453,7 +455,7 @@ fun AddEditScreen(
                             navigateToMapFocus(navController, uiState.latitude, uiState.longitude)
                         }
                     ) {
-                        Icon(Icons.Filled.Map, contentDescription = "Vedi sulla mappa",
+                        Icon(Icons.Filled.Map, contentDescription = stringResource(R.string.addedit_view_on_map),
                             tint = MaterialTheme.colorScheme.primary)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
@@ -467,7 +469,7 @@ fun AddEditScreen(
                     Icon(Icons.Filled.LocationOn, contentDescription = null,
                         modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Rileva GPS")
+                    Text(stringResource(R.string.addedit_detect_gps))
                 }
             }
 
@@ -481,7 +483,7 @@ fun AddEditScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Tag",
+                    stringResource(R.string.field_tags),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -490,12 +492,12 @@ fun AddEditScreen(
             OutlinedTextField(
                 value = uiState.tagInput,
                 onValueChange = viewModel::updateTagInput,
-                label = { Text("Aggiungi tag") },
+                label = { Text(stringResource(R.string.addedit_add_tag)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 trailingIcon = {
                     IconButton(onClick = viewModel::addTag) {
-                        Icon(Icons.Filled.Add, contentDescription = "Aggiungi")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
                     }
                 },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -513,7 +515,7 @@ fun AddEditScreen(
                                     onClick = { viewModel.removeTag(tag) },
                                     modifier = Modifier.size(18.dp)
                                 ) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Rimuovi",
+                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
                                         modifier = Modifier.size(14.dp))
                                 }
                             }
@@ -543,7 +545,7 @@ fun AddEditScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Foto",
+                    stringResource(R.string.addedit_section_photos),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -577,7 +579,7 @@ fun AddEditScreen(
                                     .clickable { viewModel.removePhotoUri(uri) },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Filled.Close, contentDescription = "Rimuovi foto",
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.addedit_remove_photo),
                                     tint = Color.White, modifier = Modifier.size(14.dp))
                             }
                         }
@@ -590,7 +592,7 @@ fun AddEditScreen(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Aggiungi foto")
+                Text(stringResource(R.string.addedit_add_photo))
             }
 
             // --- Promemoria ---
@@ -604,7 +606,7 @@ fun AddEditScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        "Promemoria",
+                        stringResource(R.string.addedit_section_reminders),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -630,7 +632,7 @@ fun AddEditScreen(
                                         onClick = { viewModel.deleteReminder(reminder) },
                                         modifier = Modifier.size(18.dp)
                                     ) {
-                                        Icon(Icons.Filled.Close, contentDescription = "Rimuovi",
+                                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
                                             modifier = Modifier.size(14.dp))
                                     }
                                 }
@@ -644,7 +646,7 @@ fun AddEditScreen(
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Aggiungi promemoria")
+                    Text(stringResource(R.string.addedit_add_reminder))
                 }
             }
 
@@ -658,7 +660,7 @@ fun AddEditScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "Valutazione",
+                    stringResource(R.string.addedit_section_rating),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
@@ -672,7 +674,7 @@ fun AddEditScreen(
                     ) {
                         Icon(
                             imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = "$star stelle",
+                            contentDescription = stringResource(R.string.addedit_stars, star),
                             tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(30.dp)
@@ -824,7 +826,7 @@ private fun GpsPreviewDialog(
                     )
                     // Suggerimento in basso sulla mappa
                     Text(
-                        text = "Tocca la mappa per spostare il punto",
+                        text = stringResource(R.string.addedit_map_tap_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
                         modifier = Modifier
@@ -849,7 +851,7 @@ private fun GpsPreviewDialog(
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    "Posizione selezionata sulla mappa",
+                                    stringResource(R.string.addedit_location_selected),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -885,7 +887,7 @@ private fun GpsPreviewDialog(
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    "Precisione: ±${acc.toInt()} m",
+                                    stringResource(R.string.addedit_gps_accuracy, acc.toInt()),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = accColor
                                 )
@@ -900,7 +902,7 @@ private fun GpsPreviewDialog(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "Acquisizione GPS…",
+                                    stringResource(R.string.addedit_gps_acquiring),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -924,18 +926,18 @@ private fun GpsPreviewDialog(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("Usa GPS")
+                                Text(stringResource(R.string.addedit_use_gps))
                             }
                             Spacer(Modifier.width(4.dp))
                         }
-                        TextButton(onClick = onDismiss) { Text("Annulla") }
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
                                 effectivePos?.let { onLocationConfirmed(it.latitude, it.longitude) }
                             },
                             enabled = effectivePos != null
-                        ) { Text("Usa posizione") }
+                        ) { Text(stringResource(R.string.addedit_use_location)) }
                     }
                 }
             }
@@ -965,44 +967,44 @@ private fun AddReminderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Aggiungi promemoria") },
+        title = { Text(stringResource(R.string.addedit_add_reminder)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Title field
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Titolo promemoria") },
+                    label = { Text(stringResource(R.string.addedit_reminder_title_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
                 // Type selector
-                Text("Tipo", style = MaterialTheme.typography.labelMedium,
+                Text(stringResource(R.string.addedit_reminder_type), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
                         onClick = { selectedType = ReminderType.SINGLE },
                         selected = selectedType == ReminderType.SINGLE,
-                        label = { Text("Una volta") }
+                        label = { Text(stringResource(R.string.addedit_reminder_once)) }
                     )
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                         onClick = { selectedType = ReminderType.ANNUAL_RECURRING },
                         selected = selectedType == ReminderType.ANNUAL_RECURRING,
-                        label = { Text("Ogni anno") }
+                        label = { Text(stringResource(R.string.addedit_reminder_yearly)) }
                     )
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
                         onClick = { selectedType = ReminderType.DATE_RANGE },
                         selected = selectedType == ReminderType.DATE_RANGE,
-                        label = { Text("Periodo") }
+                        label = { Text(stringResource(R.string.addedit_reminder_period)) }
                     )
                 }
 
                 // Date picker — simplified: show current and allow increment/decrement days
-                Text("Data inizio", style = MaterialTheme.typography.labelMedium,
+                Text(stringResource(R.string.addedit_reminder_start_date), style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1013,7 +1015,7 @@ private fun AddReminderDialog(
                 }
 
                 if (selectedType == ReminderType.DATE_RANGE) {
-                    Text("Data fine", style = MaterialTheme.typography.labelMedium,
+                    Text(stringResource(R.string.addedit_reminder_end_date), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1042,10 +1044,10 @@ private fun AddReminderDialog(
                     }
                 },
                 enabled = title.isNotBlank()
-            ) { Text("Aggiungi") }
+            ) { Text(stringResource(R.string.action_add)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annulla") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
@@ -1059,7 +1061,7 @@ private fun EmojiPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scegli emoji") },
+        title = { Text(stringResource(R.string.addedit_emoji_title)) },
         text = {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(5),
@@ -1077,7 +1079,7 @@ private fun EmojiPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Annulla") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
