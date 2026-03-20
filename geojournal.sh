@@ -84,6 +84,12 @@ cmd_clean() {
     success "Clean completato"
 }
 
+cmd_test() {
+    header "Unit Test (JVM)"
+    run_gradle test
+    success "Tutti i test superati"
+}
+
 cmd_ksp() {
     header "KSP Code Generation (debug)"
     run_gradle kspDebugKotlin
@@ -498,6 +504,7 @@ cmd_help() {
     echo "  aab                 Build AAB release (Play Store)"
     echo "  ksp                 Solo generazione codice KSP (debug)"
     echo "  clean               Pulisce la build"
+    echo "  test                Esegue tutti gli unit test JVM"
     echo ""
     echo -e "${BOLD}Dispositivo:${RESET}"
     echo "  install             Installa APK debug su dispositivo/emulatore"
@@ -584,6 +591,7 @@ cmd_menu() {
 case "${1:-menu}" in
     info)                cmd_info ;;
     clean)               cmd_clean ;;
+    test)                cmd_test ;;
     ksp)                 cmd_ksp ;;
     debug)               cmd_debug ;;
     release)             cmd_release ;;

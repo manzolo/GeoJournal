@@ -22,6 +22,8 @@ osmDroid = "6.1.20"
 workManager = "2.10.0"
 accompanistPermissions = "0.36.0"
 coroutines = "1.8.1"
+mockk = "1.13.14"
+coroutines-test = "1.10.1"
 googleServicesAuthVersion = "21.2.0"
 credentialManager = "1.5.0"
 googleid = "1.2.0"
@@ -101,6 +103,9 @@ play-services-location = { group = "com.google.android.gms", name = "play-servic
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines-test" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
