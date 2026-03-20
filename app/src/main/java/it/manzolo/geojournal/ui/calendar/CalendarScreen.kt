@@ -43,13 +43,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.compose.ui.res.stringResource
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Date
 import java.util.Locale
 
@@ -60,7 +64,7 @@ fun CalendarScreen(navController: NavController) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Calendario") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.calendar_title)) }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -110,7 +114,7 @@ fun CalendarScreen(navController: NavController) {
                         Text("📅", style = MaterialTheme.typography.displaySmall)
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Seleziona un giorno per vedere\npromemoria e visite",
+                            stringResource(R.string.calendar_select_day_hint),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -128,7 +132,7 @@ private fun MonthHeader(
     onPrevious: () -> Unit,
     onNext: () -> Unit
 ) {
-    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ITALIAN)
+    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -137,7 +141,7 @@ private fun MonthHeader(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(onClick = onPrevious) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mese precedente")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.calendar_prev_month))
         }
         Text(
             text = month.format(formatter).replaceFirstChar { it.uppercaseChar() },
@@ -145,14 +149,14 @@ private fun MonthHeader(
             fontWeight = FontWeight.Bold
         )
         IconButton(onClick = onNext) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mese successivo")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.calendar_next_month))
         }
     }
 }
 
 @Composable
 private fun DayOfWeekHeader() {
-    val days = listOf("Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom")
+    val days = DayOfWeek.values().map { it.getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
         days.forEach { day ->
             Text(
@@ -275,8 +279,8 @@ private fun DayDetailPanel(
     visits: List<VisitLogEntry>,
     pointTitles: Map<String, String>
 ) {
-    val formatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.ITALIAN)
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.ITALIAN)
+    val formatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     LazyColumn(
         modifier = Modifier
@@ -295,7 +299,7 @@ private fun DayDetailPanel(
         if (reminders.isEmpty() && visits.isEmpty()) {
             item {
                 Text(
-                    "Nessun evento per questo giorno",
+                    stringResource(R.string.calendar_no_events),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -305,7 +309,7 @@ private fun DayDetailPanel(
         if (reminders.isNotEmpty()) {
             item {
                 Text(
-                    "🔔 Promemoria",
+                    stringResource(R.string.calendar_section_reminders),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -320,7 +324,7 @@ private fun DayDetailPanel(
         if (visits.isNotEmpty()) {
             item {
                 Text(
-                    "📍 Visite",
+                    stringResource(R.string.calendar_section_visits),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -335,11 +339,12 @@ private fun DayDetailPanel(
 
 @Composable
 private fun ReminderRow(reminder: Reminder) {
-    val dateFormat = SimpleDateFormat("d MMM", Locale.ITALIAN)
+    val dateFormat = SimpleDateFormat("d MMM", Locale.getDefault())
     val startStr = dateFormat.format(Date(reminder.startDate))
+    val yearlyLabel = stringResource(R.string.calendar_reminder_yearly)
     val dateStr = when (reminder.type) {
         ReminderType.DATE_RANGE -> reminder.endDate?.let { "$startStr → ${dateFormat.format(Date(it))}" } ?: startStr
-        ReminderType.ANNUAL_RECURRING -> "$startStr · ogni anno"
+        ReminderType.ANNUAL_RECURRING -> "$startStr · $yearlyLabel"
         ReminderType.SINGLE -> startStr
     }
 
@@ -372,7 +377,7 @@ private fun VisitRow(visit: VisitLogEntry, pointTitle: String?, timeFormat: Simp
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                pointTitle ?: "Luogo sconosciuto",
+                pointTitle ?: stringResource(R.string.calendar_unknown_place),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )

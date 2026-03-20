@@ -172,6 +172,17 @@
     <string name="detail_share_photo">Condividi foto</string>
     <string name="detail_photo_saved">Foto salvata in galleria</string>
 
+    <!-- Calendar Screen -->
+    <string name="calendar_title">Calendario</string>
+    <string name="calendar_select_day_hint">Seleziona un giorno per vedere\npromemoria e visite</string>
+    <string name="calendar_prev_month">Mese precedente</string>
+    <string name="calendar_next_month">Mese successivo</string>
+    <string name="calendar_no_events">Nessun evento per questo giorno</string>
+    <string name="calendar_section_reminders">🔔 Promemoria</string>
+    <string name="calendar_section_visits">📍 Visite</string>
+    <string name="calendar_reminder_yearly">ogni anno</string>
+    <string name="calendar_unknown_place">Luogo sconosciuto</string>
+
     <!-- Profile -->
     <string name="profile_last_backup">Ultimo backup: %s</string>
 
