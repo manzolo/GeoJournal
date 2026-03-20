@@ -25,6 +25,10 @@
     <string name="point_detail">Dettaglio</string>
     <string name="point_delete">Elimina</string>
     <string name="point_share">Condividi</string>
+    <string name="point_navigate_on_map">Portami lì sulla mappa</string>
+    <string name="point_open_google_maps">Apri in Google Maps</string>
+    <string name="point_share_location">Condividi posizione</string>
+    <string name="point_share_location_chooser">Condividi posizione</string>
 
     <!-- Add/Edit -->
     <string name="add_point_title">Nuovo punto</string>
@@ -94,6 +98,15 @@
     <string name="profile_backup_local_only_title">⚠️ Backup solo locale</string>
     <string name="profile_backup_local_only_body">Il backup automatico salva i dati solo nella memoria privata dell\'app. Se disinstalli l\'app perderai anche i backup. Configura un file su Drive per proteggerli davvero.</string>
     <string name="profile_backup_configure_drive">Configura Drive</string>
+
+    <!-- List Screen -->
+    <string name="list_delete_tag_title">Elimina tag</string>
+    <string name="list_delete_tag_message">Vuoi rimuovere il tag \"%s\" da tutti i punti?</string>
+    <string name="list_delete_tag_confirm">Elimina</string>
+    <string name="list_tags_collapse">Meno</string>
+
+    <!-- Profile -->
+    <string name="profile_last_backup">Ultimo backup: %s</string>
 
     <!-- Support / Buy Me a Coffee -->
     <string name="support_title">Supporta GeoJournal ☕</string>

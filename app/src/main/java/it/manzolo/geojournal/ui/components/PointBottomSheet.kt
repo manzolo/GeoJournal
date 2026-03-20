@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
@@ -26,6 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import it.manzolo.geojournal.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,7 +42,9 @@ fun PointBottomSheet(
     onDismiss: () -> Unit,
     onEditClick: (GeoPoint) -> Unit,
     onDetailClick: (GeoPoint) -> Unit,
-    onShareClick: ((GeoPoint) -> Unit)? = null
+    onShareClick: ((GeoPoint) -> Unit)? = null,
+    onNavigateOnMap: ((GeoPoint) -> Unit)? = null,
+    onOpenGoogleMaps: ((GeoPoint) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
@@ -116,7 +122,7 @@ fun PointBottomSheet(
                 ) {
                     Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Modifica")
+                    Text(stringResource(R.string.point_edit))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
@@ -125,7 +131,7 @@ fun PointBottomSheet(
                 ) {
                     Icon(Icons.Filled.OpenInFull, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Dettaglio")
+                    Text(stringResource(R.string.point_detail))
                 }
             }
             if (onShareClick != null) {
@@ -136,7 +142,29 @@ fun PointBottomSheet(
                 ) {
                     Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Condividi punto")
+                    Text(stringResource(R.string.point_share))
+                }
+            }
+            if (onNavigateOnMap != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { onNavigateOnMap(point) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_navigate_on_map))
+                }
+            }
+            if (onOpenGoogleMaps != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { onOpenGoogleMaps(point) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_open_google_maps))
                 }
             }
         }

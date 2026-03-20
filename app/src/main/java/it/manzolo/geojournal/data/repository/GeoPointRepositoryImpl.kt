@@ -190,4 +190,18 @@ class GeoPointRepositoryImpl @Inject constructor(
             // Best-effort: l'account Firebase verrà eliminato comunque
         }
     }
+
+    override suspend fun removeTagFromAllPoints(tag: String) {
+        val allPoints = dao.getAll()
+        allPoints
+            .filter { entity -> entity.tags.split("|").any { it == tag } }
+            .forEach { entity ->
+                val updatedTags = entity.tags.split("|")
+                    .filter { it.isNotEmpty() && it != tag }
+                    .joinToString("|")
+                val updated = entity.copy(tags = updatedTags, updatedAt = System.currentTimeMillis())
+                dao.update(updated)
+                syncPointToFirestore(updated.toDomain())
+            }
+    }
 }

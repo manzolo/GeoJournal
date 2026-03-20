@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Share
@@ -55,6 +57,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import it.manzolo.geojournal.R
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -83,10 +87,12 @@ import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import android.net.Uri
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
+import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -147,6 +153,7 @@ fun PointDetailScreen(
                 onLogVisitToday = viewModel::logVisitToday,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
+                navController = navController,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -162,8 +169,10 @@ private fun PointDetailContent(
     onLogVisitToday: () -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
+    navController: NavController,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var selectedPhoto by remember { mutableStateOf<String?>(null) }
 
     selectedPhoto?.let { url ->
@@ -408,6 +417,53 @@ private fun PointDetailContent(
                 }
             }
         }
+        val labelNavigateOnMap = stringResource(R.string.point_navigate_on_map)
+        val labelOpenGoogleMaps = stringResource(R.string.point_open_google_maps)
+        val labelShareLocation = stringResource(R.string.point_share_location)
+        val labelShareLocationChooser = stringResource(R.string.point_share_location_chooser)
+
+        OutlinedButton(
+            onClick = {
+                MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+                navController.navigate(Routes.Map.route) {
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(labelNavigateOnMap)
+        }
+
+        OutlinedButton(
+            onClick = {
+                val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
+                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(labelOpenGoogleMaps)
+        }
+
+        OutlinedButton(
+            onClick = {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
+                }
+                context.startActivity(Intent.createChooser(shareIntent, labelShareLocationChooser))
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(labelShareLocation)
+        }
+
         OutlinedButton(onClick = onLogVisitToday, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))

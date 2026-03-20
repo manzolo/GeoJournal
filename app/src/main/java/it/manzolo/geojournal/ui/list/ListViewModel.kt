@@ -99,4 +99,8 @@ class ListViewModel @Inject constructor(
     fun toggleTag(tag: String) = _selectedTags.update { if (tag in it) it - tag else it + tag }
     fun setSortOrder(order: SortOrder) = _sortOrder.update { order }
     fun deletePoint(point: GeoPoint) = viewModelScope.launch { repository.delete(point) }
+    fun deleteTag(tag: String) = viewModelScope.launch {
+        _selectedTags.update { it - tag }
+        repository.removeTagFromAllPoints(tag)
+    }
 }

@@ -14,6 +14,9 @@ interface GeoPointDao {
     @Query("SELECT * FROM geo_points ORDER BY created_at DESC")
     fun observeAll(): Flow<List<GeoPointEntity>>
 
+    @Query("SELECT * FROM geo_points ORDER BY created_at DESC")
+    suspend fun getAll(): List<GeoPointEntity>
+
     @Query("SELECT * FROM geo_points WHERE id = :id")
     suspend fun getById(id: String): GeoPointEntity?
 

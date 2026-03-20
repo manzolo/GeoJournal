@@ -204,14 +204,22 @@ fun MapScreen(
             onMarkerClick = { viewModel.onPointSelected(it) },
             onClusterTooClose = { clusterPickerRef.value = it }
         )
-        // Feature 4: zoom iniziale su tutti i punti (solo al primo caricamento)
+        // Zoom iniziale: preferisce posizione utente, altrimenti centroide dei punti
         if (uiState.points.isNotEmpty() && !uiState.hasAppliedInitialZoom && uiState.focusTarget == null) {
-            fitAllPoints(mapView, uiState.points)
-            delay(600)
-            val z = mapView.zoomLevelDouble
-            if (z < 15) mapView.controller.setZoom(15.0)
-            else if (z > 18) mapView.controller.setZoom(18.0)
-            viewModel.markInitialFitDone()
+            viewModel.markInitialFitDone() // segna subito per evitare riesecuzioni
+            val userLoc = if (locationPermission.status.isGranted) getFreshLocation(context) else null
+            // Controlla che nessun focusTarget sia arrivato mentre si attendeva il GPS
+            if (viewModel.uiState.value.focusTarget == null) {
+                if (userLoc != null) {
+                    mapView.controller.setCenter(OsmGeoPoint(userLoc.first, userLoc.second))
+                    mapView.controller.setZoom(15.0)
+                } else {
+                    val avgLat = uiState.points.map { it.latitude }.average()
+                    val avgLon = uiState.points.map { it.longitude }.average()
+                    mapView.controller.setCenter(OsmGeoPoint(avgLat, avgLon))
+                    mapView.controller.setZoom(13.0)
+                }
+            }
         }
     }
 
@@ -314,6 +322,7 @@ fun MapScreen(
             if (locationPermission.status.isGranted && uiState.focusTarget == null) {
                 getFreshLocation(context)?.let { (lat, lon) ->
                     mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                    if (mapView.zoomLevelDouble < 13.0) mapView.controller.setZoom(15.0)
                 }
             }
         }
@@ -347,6 +356,15 @@ fun MapScreen(
                 onShareClick = { point ->
                     viewModel.onBottomSheetDismiss()
                     viewModel.prepareShare(point)
+                },
+                onNavigateOnMap = { point ->
+                    viewModel.onBottomSheetDismiss()
+                    MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+                },
+                onOpenGoogleMaps = { point ->
+                    viewModel.onBottomSheetDismiss()
+                    val uri = android.net.Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${android.net.Uri.encode(point.title)})")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                 }
             )
         }

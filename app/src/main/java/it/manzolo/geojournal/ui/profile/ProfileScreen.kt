@@ -69,6 +69,7 @@ fun ProfileScreen(
     val backupState by backupViewModel.state.collectAsState()
     val autoBackupEnabled by backupViewModel.autoBackupEnabled.collectAsState()
     val driveBackupUri by backupViewModel.driveBackupUri.collectAsState()
+    val lastLocalBackupTimestamp by backupViewModel.lastLocalBackupTimestamp.collectAsState()
     val context = LocalContext.current
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showImportConfirm by remember { mutableStateOf(false) }
@@ -459,7 +460,23 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Riga "Ultimo backup"
+                if (lastLocalBackupTimestamp > 0L) {
+                    val backupDateStr = remember(lastLocalBackupTimestamp) {
+                        java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(lastLocalBackupTimestamp))
+                    }
+                    Text(
+                        text = stringResource(R.string.profile_last_backup, backupDateStr),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 val isWorking = backupState is BackupViewModel.State.Working
                 Row(

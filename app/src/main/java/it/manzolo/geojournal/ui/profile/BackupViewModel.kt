@@ -48,6 +48,10 @@ class BackupViewModel @Inject constructor(
         .map { it.driveBackupUri }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
+    val lastLocalBackupTimestamp: StateFlow<Long> = userPrefsRepository.preferences
+        .map { it.lastLocalBackupTimestamp }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
     init {
         viewModelScope.launch {
             if (userPrefsRepository.preferences.first().autoBackupEnabled) {
@@ -83,8 +87,11 @@ class BackupViewModel @Inject constructor(
     fun export(uri: Uri) {
         viewModelScope.launch {
             _state.value = State.Working
-            _state.value = runCatching { State.ExportOk(backupManager.exportToUri(uri)) }
-                .getOrElse { State.Error(it.message ?: "Errore durante l'esportazione") }
+            _state.value = runCatching {
+                val count = backupManager.exportToUri(uri)
+                userPrefsRepository.setLastLocalBackup(System.currentTimeMillis())
+                State.ExportOk(count)
+            }.getOrElse { State.Error(it.message ?: "Errore durante l'esportazione") }
         }
     }
 

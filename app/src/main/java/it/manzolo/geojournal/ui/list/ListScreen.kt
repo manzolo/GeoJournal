@@ -59,6 +59,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import it.manzolo.geojournal.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
@@ -88,6 +92,8 @@ fun ListScreen(navController: NavController) {
     var showSortMenu by remember { mutableStateOf(false) }
     var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
+    var deleteTagConfirm by remember { mutableStateOf<String?>(null) }
+    var tagsExpanded by remember { mutableStateOf(false) }
 
     // Emette il file .geoj da condividere via share sheet
     LaunchedEffect(Unit) {
@@ -186,6 +192,30 @@ fun ListScreen(navController: NavController) {
         )
     }
 
+    // Dialog conferma eliminazione tag
+    deleteTagConfirm?.let { tag ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deleteTagConfirm = null },
+            title = { Text(stringResource(R.string.list_delete_tag_title)) },
+            text = { Text(stringResource(R.string.list_delete_tag_message, tag)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        viewModel.deleteTag(tag)
+                        deleteTagConfirm = null
+                    }
+                ) {
+                    Text(stringResource(R.string.list_delete_tag_confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { deleteTagConfirm = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -248,18 +278,45 @@ fun ListScreen(navController: NavController) {
             )
 
             if (state.allTags.isNotEmpty()) {
+                val visibleTags = if (tagsExpanded) state.allTags else state.allTags.take(5)
+                val hiddenCount = state.allTags.size - 5
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     modifier = Modifier.padding(bottom = 12.dp)
                 ) {
-                    items(state.allTags) { tag ->
+                    items(visibleTags) { tag ->
                         FilterChip(
+                            modifier = Modifier.pointerInput(tag) {
+                                detectTapGestures(
+                                    onLongPress = { deleteTagConfirm = tag }
+                                )
+                            },
                             selected = tag in state.selectedTags,
                             onClick = { viewModel.toggleTag(tag) },
                             label = { Text(tag) },
                             shape = RoundedCornerShape(16.dp)
                         )
+                    }
+                    if (!tagsExpanded && hiddenCount > 0) {
+                        item {
+                            FilterChip(
+                                selected = false,
+                                onClick = { tagsExpanded = true },
+                                label = { Text("+$hiddenCount") },
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        }
+                    }
+                    if (tagsExpanded && state.allTags.size > 5) {
+                        item {
+                            FilterChip(
+                                selected = false,
+                                onClick = { tagsExpanded = false },
+                                label = { Text(stringResource(R.string.list_tags_collapse)) },
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        }
                     }
                 }
             }
