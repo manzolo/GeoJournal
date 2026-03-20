@@ -135,17 +135,24 @@ fun MapScreen(
     // Punti del cluster troppo vicini da separare visivamente → mostra il picker
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
 
-    // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni)
+    // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
+    // Come centro iniziale usa l'ultima posizione GPS nota (sincrona) se disponibile,
+    // per evitare il salto visivo da Milano alla posizione reale.
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
+        val lastKnown = getLastKnownLocation(context)
+        val initialCenter = if (lastKnown != null)
+            OsmGeoPoint(lastKnown.latitude, lastKnown.longitude)
+        else
+            OsmGeoPoint(uiState.userLatitude, uiState.userLongitude)
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             zoomController.setVisibility(
                 org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
             )
-            controller.setZoom(uiState.zoomLevel)
-            controller.setCenter(OsmGeoPoint(uiState.userLatitude, uiState.userLongitude))
+            controller.setZoom(if (lastKnown != null) 15.0 else uiState.zoomLevel)
+            controller.setCenter(initialCenter)
         }
     }
 
@@ -321,7 +328,9 @@ fun MapScreen(
         LaunchedEffect(locationPermission.status.isGranted) {
             if (locationPermission.status.isGranted && uiState.focusTarget == null) {
                 getFreshLocation(context)?.let { (lat, lon) ->
-                    mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                    // setCenter senza animazione: la mappa è già nell'area giusta
+                    // (inizializzata con lastKnownLocation), questo è solo un raffinamento.
+                    mapView.controller.setCenter(OsmGeoPoint(lat, lon))
                     if (mapView.zoomLevelDouble < 13.0) mapView.controller.setZoom(15.0)
                 }
             }
