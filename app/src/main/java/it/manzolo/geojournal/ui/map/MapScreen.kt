@@ -2,6 +2,7 @@ package it.manzolo.geojournal.ui.map
 
 import android.Manifest
 import android.content.Context
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
@@ -105,6 +106,16 @@ fun MapScreen(
     val coroutineScope = rememberCoroutineScope()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Richiedi permesso POST_NOTIFICATIONS su Android 13+ (necessario per i reminder)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermission = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        LaunchedEffect(Unit) {
+            if (!notificationPermission.status.isGranted) {
+                notificationPermission.launchPermissionRequest()
+            }
+        }
+    }
     val parkingPointTitle = stringResource(R.string.map_parking_point_title)
 
     // Feature 6: snackbar conferma parcheggio
