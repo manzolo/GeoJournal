@@ -27,6 +27,7 @@
     <string name="point_share">Share</string>
     <string name="point_navigate_on_map">Take me there on the map</string>
     <string name="point_open_google_maps">Open in Google Maps</string>
+    <string name="point_share_google_maps">Share location on Google Maps</string>
     <string name="point_share_location">Share location</string>
     <string name="point_share_location_chooser">Share location</string>
 

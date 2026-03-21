@@ -365,14 +365,19 @@ fun MapScreen(
                     viewModel.onBottomSheetDismiss()
                     viewModel.prepareShare(point)
                 },
-                onNavigateOnMap = { point ->
-                    viewModel.onBottomSheetDismiss()
-                    MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
-                },
                 onOpenGoogleMaps = { point ->
                     viewModel.onBottomSheetDismiss()
                     val uri = android.net.Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${android.net.Uri.encode(point.title)})")
                     context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                },
+                onShareGoogleMaps = { point ->
+                    viewModel.onBottomSheetDismiss()
+                    val url = "https://maps.google.com/?q=${point.latitude},${point.longitude}"
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, url)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, null))
                 }
             )
         }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AssistChip
@@ -43,8 +42,8 @@ fun PointBottomSheet(
     onEditClick: (GeoPoint) -> Unit,
     onDetailClick: (GeoPoint) -> Unit,
     onShareClick: ((GeoPoint) -> Unit)? = null,
-    onNavigateOnMap: ((GeoPoint) -> Unit)? = null,
-    onOpenGoogleMaps: ((GeoPoint) -> Unit)? = null
+    onOpenGoogleMaps: ((GeoPoint) -> Unit)? = null,
+    onShareGoogleMaps: ((GeoPoint) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
@@ -145,17 +144,6 @@ fun PointBottomSheet(
                     Text(stringResource(R.string.point_share))
                 }
             }
-            if (onNavigateOnMap != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { onNavigateOnMap(point) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_navigate_on_map))
-                }
-            }
             if (onOpenGoogleMaps != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
@@ -165,6 +153,17 @@ fun PointBottomSheet(
                     Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.point_open_google_maps))
+                }
+            }
+            if (onShareGoogleMaps != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { onShareGoogleMaps(point) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_share_google_maps))
                 }
             }
         }
