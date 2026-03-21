@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
@@ -97,6 +98,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -351,6 +353,8 @@ fun AddEditScreen(
 
         val hasLocation = uiState.latitude != 0.0 || uiState.longitude != 0.0
         var showCoords by remember { mutableStateOf(false) }
+        val clipboardManager = LocalClipboardManager.current
+        val mapsUrlNotFound = stringResource(R.string.addedit_maps_url_not_found)
 
         Column(
             modifier = Modifier
@@ -484,6 +488,17 @@ fun AddEditScreen(
                         Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.addedit_detect_gps))
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val text = clipboardManager.getText()?.text ?: ""
+                            viewModel.importFromMapsUrl(text, mapsUrlNotFound)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_paste_maps_url))
                     }
                 }
             }

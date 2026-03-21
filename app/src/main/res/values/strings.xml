@@ -156,6 +156,8 @@
     <string name="addedit_reminder_start_date">Data inizio</string>
     <string name="addedit_reminder_end_date">Data fine</string>
     <string name="addedit_emoji_title">Scegli emoji</string>
+    <string name="addedit_paste_maps_url">Incolla URL Google Maps</string>
+    <string name="addedit_maps_url_not_found">Nessun URL Google Maps valido trovato negli appunti</string>
 
     <!-- Detail Screen -->
     <string name="detail_title_fallback">Dettaglio</string>
@@ -207,6 +209,11 @@
     <string name="empty_map_subtitle">Tocca il pulsante + per aggiungere il tuo primo luogo speciale!</string>
     <string name="empty_list_title">Il tuo diario è vuoto</string>
     <string name="empty_list_subtitle">Inizia ad esplorare e a salvare i posti che ami 🗺️</string>
+
+    <!-- Import dialog (.geoj) -->
+    <string name="maps_import_confirm">Importa</string>
+    <string name="maps_import_geoj_title">Importa punto</string>
+    <string name="maps_import_geoj_text">Vuoi importare questo punto GeoJournal nel tuo diario?</string>
 
     <!-- Firebase placeholder notice -->
     <string name="firebase_not_configured">Firebase non configurato. Aggiungi google-services.json per abilitare la sincronizzazione.</string>

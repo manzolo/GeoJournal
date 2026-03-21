@@ -32,6 +32,7 @@ class MainViewModel @Inject constructor(
     private val _pendingGeojUri = MutableStateFlow<Uri?>(null)
     val pendingGeojUri: StateFlow<Uri?> = _pendingGeojUri.asStateFlow()
 
+
     private val _geojImportMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val geojImportMessage: SharedFlow<String> = _geojImportMessage.asSharedFlow()
 

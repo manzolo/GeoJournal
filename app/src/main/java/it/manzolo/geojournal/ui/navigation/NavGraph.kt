@@ -49,7 +49,12 @@ fun AppNavGraph(
         }
         composable(
             route = Routes.AddEditPoint.route,
-            arguments = listOf(navArgument("pointId") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("pointId") { type = NavType.StringType },
+                navArgument("title") { type = NavType.StringType; defaultValue = ""; nullable = true },
+                navArgument("lat") { type = NavType.StringType; defaultValue = ""; nullable = true },
+                navArgument("lon") { type = NavType.StringType; defaultValue = ""; nullable = true },
+            )
         ) {
             AddEditScreen(navController = navController)
         }

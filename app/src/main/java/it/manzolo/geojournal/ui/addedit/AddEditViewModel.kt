@@ -67,6 +67,10 @@ class AddEditViewModel @Inject constructor(
     val isEditMode: Boolean = pointId != "new"
     fun getPointIdForReminder(): String = existingId
 
+    private val prefillTitle: String = savedStateHandle.get<String>("title") ?: ""
+    private val prefillLat: Double = savedStateHandle.get<String>("lat")?.toDoubleOrNull() ?: 0.0
+    private val prefillLon: Double = savedStateHandle.get<String>("lon")?.toDoubleOrNull() ?: 0.0
+
     private val _uiState = MutableStateFlow(AddEditUiState())
     val uiState: StateFlow<AddEditUiState> = _uiState.asStateFlow()
 
@@ -76,7 +80,14 @@ class AddEditViewModel @Inject constructor(
     private var tagSuggestionsJob: Job? = null
 
     init {
-        if (isEditMode) loadPoint() else _uiState.update { it.copy(isLoading = false) }
+        if (isEditMode) loadPoint() else _uiState.update {
+            it.copy(
+                isLoading = false,
+                title = prefillTitle,
+                latitude = prefillLat,
+                longitude = prefillLon
+            )
+        }
         observeTagSuggestions()
     }
 
@@ -129,6 +140,56 @@ class AddEditViewModel @Inject constructor(
             reminderRepository.observeByGeoPointId(pointId)
                 .collect { list -> _uiState.update { it.copy(reminders = list) } }
         }
+    }
+
+    fun importFromMapsUrl(url: String, notFoundMsg: String) {
+        if (!url.contains("google.com/maps") && !url.contains("maps.google.com")) {
+            _uiState.update { it.copy(error = notFoundMsg) }
+            return
+        }
+        val (name, lat, lon) = parseMapsUrl(url) ?: run {
+            _uiState.update { it.copy(error = notFoundMsg) }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                latitude = lat,
+                longitude = lon,
+                title = if (it.title.isBlank()) name else it.title,
+                error = null
+            )
+        }
+    }
+
+    private data class MapsCoords(val title: String, val lat: Double, val lon: Double)
+
+    private fun parseMapsUrl(url: String): MapsCoords? {
+        var name = ""
+        val placeMatch = Regex("/maps/place/([^/@?#]+)").find(url)
+        if (placeMatch != null) {
+            name = Uri.decode(placeMatch.groupValues[1].replace("+", " ")).trim()
+        }
+        val coordMatches = Regex("!3d([\\-0-9.]+)!4d([\\-0-9.]+)").findAll(url).toList()
+        if (coordMatches.isNotEmpty()) {
+            val last = coordMatches.last()
+            val lat = last.groupValues[1].toDoubleOrNull() ?: return null
+            val lon = last.groupValues[2].toDoubleOrNull() ?: return null
+            return MapsCoords(name.ifEmpty { "Google Maps" }, lat, lon)
+        }
+        val atMatch = Regex("@([\\-0-9.]+),([\\-0-9.]+)").find(url)
+        if (atMatch != null) {
+            val lat = atMatch.groupValues[1].toDoubleOrNull() ?: return null
+            val lon = atMatch.groupValues[2].toDoubleOrNull() ?: return null
+            return MapsCoords(name.ifEmpty { "Google Maps" }, lat, lon)
+        }
+        val q = Uri.parse(url).getQueryParameter("q") ?: return null
+        val parts = q.split(",")
+        if (parts.size >= 2) {
+            val lat = parts[0].toDoubleOrNull() ?: return null
+            val lon = parts[1].toDoubleOrNull() ?: return null
+            return MapsCoords(q, lat, lon)
+        }
+        return null
     }
 
     fun updateTitle(value: String) = _uiState.update { it.copy(title = value) }

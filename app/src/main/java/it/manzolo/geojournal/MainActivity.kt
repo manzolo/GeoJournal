@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        handleGeojIntent(intent)
+        handleExternalIntent(intent)
         setContent {
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
             GeoJournalTheme(darkTheme = isDarkTheme) {
@@ -92,17 +92,17 @@ class MainActivity : ComponentActivity() {
                     pendingGeojUri?.let { uri ->
                         AlertDialog(
                             onDismissRequest = { mainViewModel.clearPendingGeojUri() },
-                            title = { Text("Importa punto") },
-                            text = { Text("Vuoi importare questo punto GeoJournal nel tuo diario?") },
+                            title = { Text(stringResource(R.string.maps_import_geoj_title)) },
+                            text = { Text(stringResource(R.string.maps_import_geoj_text)) },
                             confirmButton = {
                                 Button(onClick = {
                                     mainViewModel.importGeojPoint(uri)
                                     mainViewModel.clearPendingGeojUri()
-                                }) { Text("Importa") }
+                                }) { Text(stringResource(R.string.maps_import_confirm)) }
                             },
                             dismissButton = {
                                 TextButton(onClick = { mainViewModel.clearPendingGeojUri() }) {
-                                    Text("Annulla")
+                                    Text(stringResource(R.string.action_cancel))
                                 }
                             }
                         )
@@ -114,31 +114,25 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleGeojIntent(intent)
+        handleExternalIntent(intent)
     }
 
-    private fun handleGeojIntent(intent: Intent?) {
+    private fun handleExternalIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return
-        val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
+        handleGeojUri(uri, intent)
+    }
 
-        // MIME type custom: è sicuramente un nostro file
+    private fun handleGeojUri(uri: Uri, intent: Intent) {
+        val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
         if (intent.type == "application/x-geojournal-point" ||
             resolvedMime == "application/x-geojournal-point"
-        ) {
-            mainViewModel.setPendingGeojUri(uri)
-            return
-        }
-
-        // file:// URI: il path contiene direttamente il nome file
+        ) { mainViewModel.setPendingGeojUri(uri); return }
         if (uri.scheme == "file") {
-            if (uri.path?.endsWith(".geoj", ignoreCase = true) == true) {
+            if (uri.path?.endsWith(".geoj", ignoreCase = true) == true)
                 mainViewModel.setPendingGeojUri(uri)
-            }
             return
         }
-
-        // content:// URI (application/octet-stream, application/zip, ecc.)
         if (isGeojUri(uri)) mainViewModel.setPendingGeojUri(uri)
     }
 
@@ -181,19 +175,19 @@ private fun GeoJournalBottomNav(navController: NavController) {
         bottomNavItems.forEach { item ->
             val selected = currentRoute == item.route
             NavigationBarItem(
-                icon = { 
+                icon = {
                     Icon(
-                        item.icon, 
+                        item.icon,
                         contentDescription = stringResource(item.labelRes),
                         tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    ) 
+                    )
                 },
-                label = { 
+                label = {
                     Text(
                         stringResource(item.labelRes),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                    ) 
+                    )
                 },
                 selected = selected,
                 onClick = {
