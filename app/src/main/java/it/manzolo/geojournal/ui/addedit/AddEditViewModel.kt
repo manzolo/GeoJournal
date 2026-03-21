@@ -143,7 +143,9 @@ class AddEditViewModel @Inject constructor(
     }
 
     fun importFromMapsUrl(url: String, notFoundMsg: String) {
-        if (!url.contains("google.com/maps") && !url.contains("maps.google.com")) {
+        val isGoogleMaps = Regex("google\\.[a-zA-Z]+/maps").containsMatchIn(url)
+            || url.contains("maps.google.")
+        if (!isGoogleMaps) {
             _uiState.update { it.copy(error = notFoundMsg) }
             return
         }
