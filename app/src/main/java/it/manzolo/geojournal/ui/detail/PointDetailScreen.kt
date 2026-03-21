@@ -43,7 +43,10 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -180,6 +183,8 @@ private fun PointDetailContent(
         PhotoViewerDialog(url = url, onDismiss = { selectedPhoto = null })
     }
 
+    var showCoords by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -223,8 +228,7 @@ private fun PointDetailContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             (1..5).forEach { star ->
                                 Icon(
-                                    imageVector = if (star <= point.rating) Icons.Filled.Star
-                                                  else Icons.Filled.StarBorder,
+                                    imageVector = if (star <= point.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
                                     contentDescription = null,
                                     tint = if (star <= point.rating) MaterialTheme.colorScheme.primary
                                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
@@ -232,240 +236,212 @@ private fun PointDetailContent(
                                 )
                             }
                             Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "${point.rating}/5",
+                            Text("${point.rating}/5",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
             if (point.description.isNotBlank()) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
-                )
-                Text(
-                    text = point.description,
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f))
+                Text(text = point.description,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
             }
         }
 
         // ── Tag ───────────────────────────────────────────────────────────────
         if (point.tags.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.Label, title = stringResource(R.string.detail_section_tags))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                point.tags.forEach { tag ->
-                    AssistChip(onClick = {}, label = { Text(tag) })
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.Filled.Label, title = stringResource(R.string.detail_section_tags))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        point.tags.forEach { tag ->
+                            AssistChip(onClick = {}, label = { Text(tag) })
+                        }
+                    }
                 }
             }
         }
 
-        // ── Informazioni (coordinate + date) ──────────────────────────────────
-        SectionHeader(icon = Icons.Filled.LocationOn, title = stringResource(R.string.detail_section_info))
+        // ── Posizione + date ──────────────────────────────────────────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                InfoRow(
-                    icon = Icons.Filled.LocationOn,
-                    label = stringResource(R.string.detail_latitude),
-                    value = "%.6f".format(point.latitude)
-                )
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionHeader(icon = Icons.Filled.LocationOn,
+                        title = stringResource(R.string.detail_section_info),
+                        modifier = Modifier.weight(1f))
+                    IconButton(onClick = { showCoords = !showCoords }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Info, contentDescription = "Coordinate",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (showCoords) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                AnimatedVisibility(visible = showCoords) {
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_latitude),
+                            "%.6f".format(point.latitude))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_longitude),
+                            "%.6f".format(point.longitude))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+                InfoRow(Icons.Filled.CalendarToday, stringResource(R.string.detail_created),
+                    dateFormat.format(point.createdAt))
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow(
-                    icon = Icons.Filled.LocationOn,
-                    label = stringResource(R.string.detail_longitude),
-                    value = "%.6f".format(point.longitude)
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow(
-                    icon = Icons.Filled.CalendarToday,
-                    label = stringResource(R.string.detail_created),
-                    value = dateFormat.format(point.createdAt)
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow(
-                    icon = Icons.Filled.Edit,
-                    label = stringResource(R.string.detail_updated),
-                    value = dateFormat.format(point.updatedAt)
-                )
+                InfoRow(Icons.Filled.Edit, stringResource(R.string.detail_updated),
+                    dateFormat.format(point.updatedAt))
             }
         }
 
         // ── Foto ──────────────────────────────────────────────────────────────
         if (point.photoUrls.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.PhotoLibrary, title = stringResource(R.string.detail_section_photos, point.photoUrls.size))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                maxItemsInEachRow = 3
-            ) {
-                point.photoUrls.forEach { url ->
-                    AsyncImage(
-                        model = if (url.startsWith("/")) File(url) else url,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { selectedPhoto = url },
-                        contentScale = ContentScale.Crop
-                    )
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.Filled.PhotoLibrary,
+                        title = stringResource(R.string.detail_section_photos, point.photoUrls.size))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        maxItemsInEachRow = 3
+                    ) {
+                        point.photoUrls.forEach { url ->
+                            AsyncImage(
+                                model = if (url.startsWith("/")) File(url) else url,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { selectedPhoto = url },
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
                 }
             }
         }
 
         // ── Promemoria ────────────────────────────────────────────────────────
         if (reminders.isNotEmpty()) {
-            SectionHeader(icon = Icons.Filled.Notifications, title = stringResource(R.string.detail_section_reminders, reminders.size))
             val reminderDateFormat = remember { SimpleDateFormat("d MMM", Locale.ITALIAN) }
-            reminders.forEach { reminder ->
-                val dateStr = when (reminder.type) {
-                    ReminderType.DATE_RANGE -> reminder.endDate?.let {
-                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
-                    } ?: reminderDateFormat.format(Date(reminder.startDate))
-                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
-                    ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
-                }
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Filled.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                reminder.title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                dateStr,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.Filled.Notifications,
+                        title = stringResource(R.string.detail_section_reminders, reminders.size))
+                    reminders.forEach { reminder ->
+                        val dateStr = when (reminder.type) {
+                            ReminderType.DATE_RANGE -> reminder.endDate?.let {
+                                "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
+                            } ?: reminderDateFormat.format(Date(reminder.startDate))
+                            ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
+                            ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
                         }
-                        IconButton(
-                            onClick = { onDeleteReminder(reminder) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.action_remove),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Notifications, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(reminder.title, style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold)
+                                Text(dateStr, style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            IconButton(onClick = { onDeleteReminder(reminder) }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
+                        if (reminder != reminders.last()) HorizontalDivider()
                     }
                 }
             }
         }
 
         // ── Registro visite ───────────────────────────────────────────────────
-        SectionHeader(icon = Icons.Filled.CheckCircle, title = stringResource(R.string.detail_section_visits, visitLogs.size))
         val visitDateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.ITALIAN) }
-        if (visitLogs.isNotEmpty()) {
-            visitLogs.forEach { visit ->
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                visitDateFormat.format(Date(visit.visitedAt)),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            if (visit.note.isNotBlank()) {
-                                Text(
-                                    visit.note,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionHeader(icon = Icons.Filled.CheckCircle,
+                        title = stringResource(R.string.detail_section_visits, visitLogs.size),
+                        modifier = Modifier.weight(1f))
+                    OutlinedButton(onClick = onLogVisitToday) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.detail_visited_today),
+                            style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (visitLogs.isNotEmpty()) {
+                    visitLogs.forEachIndexed { i, visit ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(visitDateFormat.format(Date(visit.visitedAt)),
+                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                if (visit.note.isNotBlank()) {
+                                    Text(visit.note, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            IconButton(onClick = { onDeleteVisitLog(visit) }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        IconButton(
-                            onClick = { onDeleteVisitLog(visit) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.action_remove),
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        if (i < visitLogs.lastIndex) HorizontalDivider()
                     }
                 }
             }
         }
-        val labelNavigateOnMap = stringResource(R.string.point_navigate_on_map)
-        val labelOpenGoogleMaps = stringResource(R.string.point_open_google_maps)
-        val labelShareLocation = stringResource(R.string.point_share_location)
-        val labelShareLocationChooser = stringResource(R.string.point_share_location_chooser)
 
-        OutlinedButton(
-            onClick = {
-                MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
-                navController.popBackStack(Routes.Map.route, inclusive = false)
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(labelNavigateOnMap)
-        }
-
-        OutlinedButton(
-            onClick = {
-                val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
-                context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(labelOpenGoogleMaps)
-        }
-
-        OutlinedButton(
-            onClick = {
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
+        // ── Azioni ────────────────────────────────────────────────────────────
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+                        navController.popBackStack(Routes.Map.route, inclusive = false)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_navigate_on_map))
                 }
-                context.startActivity(Intent.createChooser(shareIntent, labelShareLocationChooser))
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(labelShareLocation)
-        }
-
-        OutlinedButton(onClick = onLogVisitToday, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.detail_visited_today))
+                OutlinedButton(
+                    onClick = {
+                        val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
+                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_open_google_maps))
+                }
+                OutlinedButton(
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, null))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_share_location))
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -473,10 +449,10 @@ private fun PointDetailContent(
 }
 
 @Composable
-private fun SectionHeader(icon: ImageVector, title: String) {
+private fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifier) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = 4.dp)
+        modifier = modifier.padding(top = 4.dp)
     ) {
         Icon(
             imageVector = icon,

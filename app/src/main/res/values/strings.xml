@@ -132,6 +132,7 @@
     <string name="addedit_title_hint">Titolo *</string>
     <string name="addedit_section_location">Posizione</string>
     <string name="addedit_location_not_set">Posizione non impostata</string>
+    <string name="addedit_location_set">Posizione rilevata</string>
     <string name="addedit_view_on_map">Vedi sulla mappa</string>
     <string name="addedit_detect_gps">Rileva GPS</string>
     <string name="addedit_add_tag">Aggiungi tag</string>

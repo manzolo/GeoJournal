@@ -42,8 +42,10 @@ import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
@@ -60,8 +62,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -345,6 +349,9 @@ fun AddEditScreen(
             return@Scaffold
         }
 
+        val hasLocation = uiState.latitude != 0.0 || uiState.longitude != 0.0
+        var showCoords by remember { mutableStateOf(false) }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -355,342 +362,332 @@ fun AddEditScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            // --- Emoji ---
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clickable { viewModel.toggleEmojiPicker() }
+            // ── Hero card: emoji + titolo ─────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clickable { viewModel.toggleEmojiPicker() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        stringResource(R.string.addedit_choose_emoji),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Text(
-                        stringResource(R.string.addedit_tap_change_icon),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Spacer(modifier = Modifier.width(16.dp))
+                    OutlinedTextField(
+                        value = uiState.title,
+                        onValueChange = { v ->
+                            viewModel.updateTitle(
+                                if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                            )
+                        },
+                        label = { Text(stringResource(R.string.addedit_title_hint)) },
+                        modifier = Modifier.weight(1f).focusRequester(titleFocusRequester),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            capitalization = KeyboardCapitalization.Sentences
+                        )
                     )
                 }
             }
 
-            // --- Titolo ---
-            OutlinedTextField(
-                value = uiState.title,
-                onValueChange = { v ->
-                    viewModel.updateTitle(
-                        if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+            // ── Descrizione ───────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = uiState.description,
+                        onValueChange = { v ->
+                            viewModel.updateDescription(
+                                if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                            )
+                        },
+                        label = { Text(stringResource(R.string.field_description)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 6,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            capitalization = KeyboardCapitalization.Sentences
+                        )
                     )
-                },
-                label = { Text(stringResource(R.string.addedit_title_hint)) },
-                modifier = Modifier.fillMaxWidth().focusRequester(titleFocusRequester),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                    capitalization = KeyboardCapitalization.Sentences
-                )
-            )
-
-            // --- Descrizione ---
-            OutlinedTextField(
-                value = uiState.description,
-                onValueChange = { v ->
-                    viewModel.updateDescription(
-                        if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
-                    )
-                },
-                label = { Text(stringResource(R.string.field_description)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 5,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Next,
-                    capitalization = KeyboardCapitalization.Sentences
-                )
-            )
-
-            // --- GPS ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.LocationOn,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.addedit_section_location),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    if (uiState.latitude != 0.0 || uiState.longitude != 0.0) {
-                        Text("%.5f, %.5f".format(uiState.latitude, uiState.longitude),
-                            style = MaterialTheme.typography.bodyMedium)
+
+            // ── Posizione GPS ─────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.LocationOn, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_section_location),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f))
+                        // ⓘ mostra/nasconde coordinate grezze
+                        if (hasLocation) {
+                            IconButton(onClick = { showCoords = !showCoords },
+                                modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Info, contentDescription = "Coordinate",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = if (showCoords) MaterialTheme.colorScheme.primary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        // Vedi sulla mappa (solo edit mode)
+                        if (viewModel.isEditMode && hasLocation) {
+                            IconButton(onClick = { navigateToMapFocus(navController, uiState.latitude, uiState.longitude) },
+                                modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Map, contentDescription = stringResource(R.string.addedit_view_on_map),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                    // Stato posizione
+                    if (hasLocation) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.addedit_location_set),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                        AnimatedVisibility(visible = showCoords) {
+                            Text("%.6f, %.6f".format(uiState.latitude, uiState.longitude),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 22.dp))
+                        }
                     } else {
                         Text(stringResource(R.string.addedit_location_not_set),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                // Vedi sulla mappa (solo in edit mode con coordinate valide)
-                if (viewModel.isEditMode &&
-                    (uiState.latitude != 0.0 || uiState.longitude != 0.0)) {
-                    IconButton(
+                    OutlinedButton(
                         onClick = {
-                            navigateToMapFocus(navController, uiState.latitude, uiState.longitude)
-                        }
+                            if (locationPermission.status.isGranted) showGpsPreview = true
+                            else locationPermission.launchPermissionRequest()
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.Map, contentDescription = stringResource(R.string.addedit_view_on_map),
-                            tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_detect_gps))
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-                OutlinedButton(
-                    onClick = {
-                        if (locationPermission.status.isGranted) showGpsPreview = true
-                        else locationPermission.launchPermissionRequest()
-                    }
-                ) {
-                    Icon(Icons.Filled.LocationOn, contentDescription = null,
-                        modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.addedit_detect_gps))
                 }
             }
 
-            // --- Tag ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Label,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.field_tags),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            OutlinedTextField(
-                value = uiState.tagInput,
-                onValueChange = viewModel::updateTagInput,
-                label = { Text(stringResource(R.string.addedit_add_tag)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(onClick = viewModel::addTag) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+            // ── Tag ───────────────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Label, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.field_tags),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
                     }
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
-            )
-            if (uiState.tags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
-                        InputChip(
-                            selected = false,
-                            onClick = {},
-                            label = { Text(tag) },
-                            trailingIcon = {
-                                IconButton(
-                                    onClick = { viewModel.removeTag(tag) },
-                                    modifier = Modifier.size(18.dp)
-                                ) {
-                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                        modifier = Modifier.size(14.dp))
-                                }
+                    OutlinedTextField(
+                        value = uiState.tagInput,
+                        onValueChange = viewModel::updateTagInput,
+                        label = { Text(stringResource(R.string.addedit_add_tag)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = viewModel::addTag) {
+                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
                             }
-                        )
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
+                    )
+                    if (uiState.tags.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
+                                InputChip(
+                                    selected = false,
+                                    onClick = {},
+                                    label = { Text(tag) },
+                                    trailingIcon = {
+                                        IconButton(onClick = { viewModel.removeTag(tag) },
+                                            modifier = Modifier.size(18.dp)) {
+                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     }
-                }
-            }
-            // Feature 3: suggerimenti tag esistenti
-            if (uiState.suggestedTags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.suggestedTags.forEach { tag ->
-                        SuggestionChip(
-                            onClick = { viewModel.addTagFromSuggestion(tag) },
-                            label = { Text(tag) }
-                        )
-                    }
-                }
-            }
-
-            // --- Foto ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.PhotoLibrary,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.addedit_section_photos),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            if (uiState.photoUris.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    maxItemsInEachRow = 3
-                ) {
-                    uiState.photoUris.forEach { uri ->
-                        Box(modifier = Modifier.size(90.dp)) {
-                            AsyncImage(
-                                model = when {
-                                    uri.startsWith("/") -> File(uri)
-                                    uri.startsWith("content://") -> android.net.Uri.parse(uri)
-                                    else -> uri
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(4.dp)
-                                    .size(22.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.55f))
-                                    .clickable { viewModel.removePhotoUri(uri) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.addedit_remove_photo),
-                                    tint = Color.White, modifier = Modifier.size(14.dp))
+                    if (uiState.suggestedTags.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.suggestedTags.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = { viewModel.addTagFromSuggestion(tag) },
+                                    label = { Text(tag) }
+                                )
                             }
                         }
                     }
                 }
             }
-            OutlinedButton(
-                onClick = { showPhotoSourceDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.addedit_add_photo))
-            }
 
-            // --- Promemoria ---
-            run {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.Notifications,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.addedit_section_reminders),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                if (uiState.reminders.isNotEmpty()) {
-                    val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        uiState.reminders.forEach { reminder ->
-                            val dateStr = when (reminder.type) {
-                                ReminderType.DATE_RANGE -> reminder.endDate?.let {
-                                    "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
-                                } ?: reminderDateFormat.format(Date(reminder.startDate))
-                                ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
-                                ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
-                            }
-                            InputChip(
-                                selected = false,
-                                onClick = {},
-                                label = { Text("🔔 ${reminder.title} · $dateStr") },
-                                trailingIcon = {
-                                    IconButton(
-                                        onClick = { viewModel.deleteReminder(reminder) },
-                                        modifier = Modifier.size(18.dp)
+            // ── Foto ──────────────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_section_photos),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (uiState.photoUris.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            maxItemsInEachRow = 3
+                        ) {
+                            uiState.photoUris.forEach { uri ->
+                                Box(modifier = Modifier.size(90.dp)) {
+                                    AsyncImage(
+                                        model = when {
+                                            uri.startsWith("/") -> File(uri)
+                                            uri.startsWith("content://") -> android.net.Uri.parse(uri)
+                                            else -> uri
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .size(22.dp)
+                                            .clip(CircleShape)
+                                            .background(Color.Black.copy(alpha = 0.55f))
+                                            .clickable { viewModel.removePhotoUri(uri) },
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                            modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.addedit_remove_photo),
+                                            tint = Color.White, modifier = Modifier.size(14.dp))
                                     }
                                 }
-                            )
+                            }
                         }
                     }
-                }
-                OutlinedButton(
-                    onClick = viewModel::toggleReminderSheet,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.addedit_add_reminder))
+                    OutlinedButton(
+                        onClick = { showPhotoSourceDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.addedit_add_photo))
+                    }
                 }
             }
 
-            // --- Valutazione ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Star,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(R.string.addedit_section_rating),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                (1..5).forEach { star ->
-                    IconButton(
-                        onClick = { viewModel.updateRating(star) },
-                        modifier = Modifier.size(40.dp)
+            // ── Promemoria ────────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Notifications, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_section_reminders),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (uiState.reminders.isNotEmpty()) {
+                        val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.reminders.forEach { reminder ->
+                                val dateStr = when (reminder.type) {
+                                    ReminderType.DATE_RANGE -> reminder.endDate?.let {
+                                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
+                                    } ?: reminderDateFormat.format(Date(reminder.startDate))
+                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
+                                    ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
+                                }
+                                InputChip(
+                                    selected = false,
+                                    onClick = {},
+                                    label = { Text("🔔 ${reminder.title} · $dateStr") },
+                                    trailingIcon = {
+                                        IconButton(onClick = { viewModel.deleteReminder(reminder) },
+                                            modifier = Modifier.size(18.dp)) {
+                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = viewModel::toggleReminderSheet,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
-                            contentDescription = stringResource(R.string.addedit_stars, star),
-                            tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
-                                   else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(30.dp)
-                        )
+                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.addedit_add_reminder))
                     }
                 }
-                if (uiState.rating > 0) {
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "${uiState.rating}/5",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            }
+
+            // ── Valutazione ───────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Star, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_section_rating),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        (1..5).forEach { star ->
+                            IconButton(
+                                onClick = { viewModel.updateRating(star) },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                    contentDescription = stringResource(R.string.addedit_stars, star),
+                                    tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
+                                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
+                        if (uiState.rating > 0) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "${uiState.rating}/5",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
