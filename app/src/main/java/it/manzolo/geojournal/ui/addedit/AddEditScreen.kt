@@ -116,6 +116,9 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
@@ -760,6 +763,10 @@ private fun GpsPreviewDialog(
         }
     }
 
+    // True dopo che l'utente scrolla la mappa: blocca il ricentramento GPS
+    // (il marker continua ad aggiornarsi, ma la camera non segue più)
+    var userScrolled by remember { mutableStateOf(false) }
+
     // MapView OSMDroid — tapOverlay aggiunto una sola volta
     val mapView = remember {
         MapView(context).apply {
@@ -767,6 +774,13 @@ private fun GpsPreviewDialog(
             setMultiTouchControls(true)
             controller.setZoom(16.0)
             overlays.add(tapOverlay)   // index 0; i marker vengono inseriti a index 0 → tapOverlay sempre a index superiore → priorità eventi
+            addMapListener(object : MapListener {
+                override fun onScroll(event: ScrollEvent): Boolean {
+                    userScrolled = true
+                    return false
+                }
+                override fun onZoom(event: ZoomEvent): Boolean = false
+            })
         }
     }
     var firstFix by remember { mutableStateOf(true) }
@@ -800,16 +814,17 @@ private fun GpsPreviewDialog(
                                 })
                                 mv.invalidate()
                             } else {
-                                // Modalità GPS: marker segue la posizione
+                                // Modalità GPS: ricentra solo finché l'utente non ha scrollato
                                 location?.let { loc ->
                                     val gp = OsmGeoPoint(loc.latitude, loc.longitude)
                                     if (firstFix) {
                                         mv.controller.setZoom(17.0)
                                         mv.controller.setCenter(gp)
                                         firstFix = false
-                                    } else {
+                                    } else if (!userScrolled) {
                                         mv.controller.setCenter(gp)
                                     }
+                                    // Il marker si aggiorna sempre (mostra precisione GPS)
                                     mv.overlays.removeAll { it is Marker }
                                     mv.overlays.add(0, Marker(mv).apply {
                                         position = gp

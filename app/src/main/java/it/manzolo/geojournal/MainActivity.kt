@@ -198,7 +198,7 @@ private fun GeoJournalBottomNav(navController: NavController) {
                 selected = selected,
                 onClick = {
                     navController.navigate(item.route) {
-                        popUpTo(navController.graph.startDestinationId) {
+                        popUpTo(Routes.Map.route) {
                             saveState = true
                         }
                         launchSingleTop = true

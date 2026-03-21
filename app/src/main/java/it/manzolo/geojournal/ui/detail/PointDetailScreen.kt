@@ -426,10 +426,7 @@ private fun PointDetailContent(
         OutlinedButton(
             onClick = {
                 MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
-                navController.navigate(Routes.Map.route) {
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navController.popBackStack(Routes.Map.route, inclusive = false)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
