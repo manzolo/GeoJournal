@@ -75,8 +75,11 @@ class MainActivity : ComponentActivity() {
                     val showBottomNav = currentRoute != Routes.Login.route
 
                     LaunchedEffect(Unit) {
-                        mainViewModel.navigateToPoint.collect { geoPointId ->
-                            navController.navigate(Routes.PointDetail.createRoute(geoPointId))
+                        mainViewModel.navigateToMap.collect {
+                            navController.navigate(Routes.Map.route) {
+                                popUpTo(Routes.Map.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
                         }
                     }
 

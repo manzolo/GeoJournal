@@ -171,6 +171,7 @@
     <string name="detail_section_photos">Foto (%d)</string>
     <string name="detail_section_reminders">Promemoria (%d)</string>
     <string name="detail_section_visits">Registro visite (%d)</string>
+    <string name="detail_section_rating">Valutazione</string>
     <string name="detail_visited_today">Sono stato qui oggi</string>
     <string name="detail_save_to_gallery">Salva in galleria</string>
     <string name="detail_photo_error">Impossibile caricare la foto</string>
@@ -189,7 +190,11 @@
     <string name="calendar_unknown_place">Luogo sconosciuto</string>
 
     <!-- Profile -->
-    <string name="profile_last_backup">Ultimo backup: %s</string>
+    <string name="profile_last_backup">Ultimo backup locale: %s</string>
+    <string name="profile_backup_info_title">Come funziona il backup</string>
+    <string name="profile_backup_info_body">Il timestamp indica quando GeoJournal ha scritto il file nel buffer di Google Drive.\n\nLa sincronizzazione con i server Google avviene in modo autonomo e può richiedere qualche minuto, solitamente quando il dispositivo è connesso al Wi-Fi.\n\nSe il file non appare subito su Drive, aprendo l\'app Drive la sincronizzazione viene avviata.</string>
+    <string name="point_info_created">Creato: %s</string>
+    <string name="point_info_updated">Modificato: %s</string>
 
     <!-- Support / Buy Me a Coffee -->
     <string name="support_title">Supporta GeoJournal ☕</string>

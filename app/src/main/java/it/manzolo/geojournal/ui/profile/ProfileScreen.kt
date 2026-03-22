@@ -17,7 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.IconButton
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -462,17 +464,44 @@ fun ProfileScreen(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Riga "Ultimo backup"
+                // Riga "Ultimo backup locale" + (i)
+                var showBackupInfoDialog by remember { mutableStateOf(false) }
+                if (showBackupInfoDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showBackupInfoDialog = false },
+                        title = { Text(stringResource(R.string.profile_backup_info_title)) },
+                        text = { Text(stringResource(R.string.profile_backup_info_body)) },
+                        confirmButton = {
+                            TextButton(onClick = { showBackupInfoDialog = false }) {
+                                Text(stringResource(R.string.action_close))
+                            }
+                        }
+                    )
+                }
                 if (lastLocalBackupTimestamp > 0L) {
                     val backupDateStr = remember(lastLocalBackupTimestamp) {
                         java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
                             .format(java.util.Date(lastLocalBackupTimestamp))
                     }
-                    Text(
-                        text = stringResource(R.string.profile_last_backup, backupDateStr),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.profile_last_backup, backupDateStr),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { showBackupInfoDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = stringResource(R.string.profile_backup_info_title),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 

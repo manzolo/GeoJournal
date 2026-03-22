@@ -14,9 +14,19 @@ Leggi `app/build.gradle.kts` e incrementa:
 
 Se i test falliscono, interrompi immediatamente e segnala l'errore. Non proseguire.
 
-## Step 3 — Commit bump
+## Step 3 — Commit modifiche pendenti + bump
 
-Fai il commit SOLO di `app/build.gradle.kts`:
+**Step 3a** — Se ci sono modifiche pendenti (escluso `app/build.gradle.kts`), committale prima:
+
+```bash
+git add -A
+git reset HEAD app/build.gradle.kts
+git diff --cached --quiet || git commit -m "<descrizione sintetica delle modifiche>"
+```
+
+Usa `git diff --cached --name-only` per capire cosa stai committando e scegli un messaggio adeguato (es. `feat: ...`, `fix: ...`, `refactor: ...`).
+
+**Step 3b** — Poi committa solo il bump di versione:
 
 ```bash
 git add app/build.gradle.kts

@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
@@ -183,7 +183,7 @@ private fun PointDetailContent(
         PhotoViewerDialog(url = url, onDismiss = { selectedPhoto = null })
     }
 
-    var showCoords by remember { mutableStateOf(false) }
+    var showDates by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -194,7 +194,7 @@ private fun PointDetailContent(
     ) {
         Spacer(modifier = Modifier.height(4.dp))
 
-        // ── Hero card: emoji + titolo + rating + descrizione ──────────────────
+        // ── Hero card: emoji + titolo + descrizione ───────────────────────────
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.elevatedCardColors(
@@ -216,32 +216,13 @@ private fun PointDetailContent(
                     Text(point.emoji, style = MaterialTheme.typography.displaySmall)
                 }
                 Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = point.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    if (point.rating > 0) {
-                        Spacer(Modifier.height(6.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            (1..5).forEach { star ->
-                                Icon(
-                                    imageVector = if (star <= point.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                    contentDescription = null,
-                                    tint = if (star <= point.rating) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(6.dp))
-                            Text("${point.rating}/5",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                Text(
+                    text = point.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
             }
             if (point.description.isNotBlank()) {
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
@@ -253,49 +234,35 @@ private fun PointDetailContent(
             }
         }
 
-        // ── Tag ───────────────────────────────────────────────────────────────
-        if (point.tags.isNotEmpty()) {
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionHeader(icon = Icons.Filled.Label, title = stringResource(R.string.detail_section_tags))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        point.tags.forEach { tag ->
-                            AssistChip(onClick = {}, label = { Text(tag) })
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Posizione + date ──────────────────────────────────────────────────
+        // ── Posizione: coordinate sempre visibili, date dietro (i) ────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionHeader(icon = Icons.Filled.LocationOn,
                         title = stringResource(R.string.detail_section_info),
                         modifier = Modifier.weight(1f))
-                    IconButton(onClick = { showCoords = !showCoords }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Info, contentDescription = "Coordinate",
+                    IconButton(onClick = { showDates = !showDates }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Filled.Info, contentDescription = stringResource(R.string.detail_created),
                             modifier = Modifier.size(18.dp),
-                            tint = if (showCoords) MaterialTheme.colorScheme.primary
+                            tint = if (showDates) MaterialTheme.colorScheme.primary
                                    else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                AnimatedVisibility(visible = showCoords) {
+                InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_latitude),
+                    "%.6f".format(point.latitude))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_longitude),
+                    "%.6f".format(point.longitude))
+                AnimatedVisibility(visible = showDates) {
                     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_latitude),
-                            "%.6f".format(point.latitude))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_longitude),
-                            "%.6f".format(point.longitude))
+                        InfoRow(Icons.Filled.CalendarToday, stringResource(R.string.detail_created),
+                            dateFormat.format(point.createdAt))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        InfoRow(Icons.Filled.Edit, stringResource(R.string.detail_updated),
+                            dateFormat.format(point.updatedAt))
                     }
                 }
-                InfoRow(Icons.Filled.CalendarToday, stringResource(R.string.detail_created),
-                    dateFormat.format(point.createdAt))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow(Icons.Filled.Edit, stringResource(R.string.detail_updated),
-                    dateFormat.format(point.updatedAt))
             }
         }
 
@@ -397,6 +364,44 @@ private fun PointDetailContent(
                             }
                         }
                         if (i < visitLogs.lastIndex) HorizontalDivider()
+                    }
+                }
+            }
+        }
+
+        // ── Tag ───────────────────────────────────────────────────────────────
+        if (point.tags.isNotEmpty()) {
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.AutoMirrored.Filled.Label, title = stringResource(R.string.detail_section_tags))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        point.tags.forEach { tag ->
+                            AssistChip(onClick = {}, label = { Text(tag) })
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Valutazione ───────────────────────────────────────────────────────
+        if (point.rating > 0) {
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.Filled.Star, title = stringResource(R.string.detail_section_rating))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        (1..5).forEach { star ->
+                            Icon(
+                                imageVector = if (star <= point.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = null,
+                                tint = if (star <= point.rating) MaterialTheme.colorScheme.primary
+                                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text("${point.rating}/5",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }

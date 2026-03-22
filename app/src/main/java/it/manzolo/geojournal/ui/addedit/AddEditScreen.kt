@@ -418,7 +418,7 @@ fun AddEditScreen(
                         minLines = 3,
                         maxLines = 6,
                         keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Next,
+                            imeAction = ImeAction.Default,
                             capitalization = KeyboardCapitalization.Sentences
                         )
                     )
@@ -456,6 +456,19 @@ fun AddEditScreen(
                                     tint = MaterialTheme.colorScheme.primary)
                             }
                         }
+                        // Incolla URL Google Maps
+                        IconButton(
+                            onClick = {
+                                val text = clipboardManager.getText()?.text ?: ""
+                                viewModel.importFromMapsUrl(text, mapsUrlNotFound)
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Filled.ContentPaste,
+                                contentDescription = stringResource(R.string.addedit_paste_maps_url),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     // Stato posizione
                     if (hasLocation) {
@@ -489,74 +502,6 @@ fun AddEditScreen(
                         Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.addedit_detect_gps))
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            val text = clipboardManager.getText()?.text ?: ""
-                            viewModel.importFromMapsUrl(text, mapsUrlNotFound)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Filled.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.addedit_paste_maps_url))
-                    }
-                }
-            }
-
-            // ── Tag ───────────────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Label, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.field_tags),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    OutlinedTextField(
-                        value = uiState.tagInput,
-                        onValueChange = viewModel::updateTagInput,
-                        label = { Text(stringResource(R.string.addedit_add_tag)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        trailingIcon = {
-                            IconButton(onClick = viewModel::addTag) {
-                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
-                    )
-                    if (uiState.tags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
-                                InputChip(
-                                    selected = false,
-                                    onClick = {},
-                                    label = { Text(tag) },
-                                    trailingIcon = {
-                                        IconButton(onClick = { viewModel.removeTag(tag) },
-                                            modifier = Modifier.size(18.dp)) {
-                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                                modifier = Modifier.size(14.dp))
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    if (uiState.suggestedTags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            uiState.suggestedTags.forEach { tag ->
-                                SuggestionChip(
-                                    onClick = { viewModel.addTagFromSuggestion(tag) },
-                                    label = { Text(tag) }
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -622,15 +567,6 @@ fun AddEditScreen(
             // ── Promemoria ────────────────────────────────────────────────
             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.addedit_section_reminders),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
                     if (uiState.reminders.isNotEmpty()) {
                         val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
                         val reminderTimeFormat = remember { SimpleDateFormat("HH:mm", Locale.ITALIAN) }
@@ -666,6 +602,63 @@ fun AddEditScreen(
                         Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringResource(R.string.addedit_add_reminder))
+                    }
+                }
+            }
+
+            // ── Tag ───────────────────────────────────────────────────────
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Label, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.field_tags),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    OutlinedTextField(
+                        value = uiState.tagInput,
+                        onValueChange = viewModel::updateTagInput,
+                        label = { Text(stringResource(R.string.addedit_add_tag)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = viewModel::addTag) {
+                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
+                    )
+                    if (uiState.tags.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
+                                InputChip(
+                                    selected = false,
+                                    onClick = {},
+                                    label = { Text(tag) },
+                                    trailingIcon = {
+                                        IconButton(onClick = { viewModel.removeTag(tag) },
+                                            modifier = Modifier.size(18.dp)) {
+                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    if (uiState.suggestedTags.isNotEmpty()) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            uiState.suggestedTags.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = { viewModel.addTagFromSuggestion(tag) },
+                                    label = { Text(tag) }
+                                )
+                            }
+                        }
                     }
                 }
             }

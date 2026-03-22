@@ -9,7 +9,6 @@ import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -72,29 +71,47 @@ class MapViewModel @Inject constructor(
         observeFocusRequests()
     }
 
+    // ID del punto da selezionare (bottom sheet) quando arriva da notifica o da lista,
+    // mantenuto finché i punti non sono caricati da Room
+    private var pendingSelectPointId: String? = null
+
     /**
      * Collects focus requests emitted via [FocusRequest.send] da qualsiasi schermata.
-     * Non dipende dal back stack o dal savedStateHandle: nessuna race condition possibile.
+     * Salva il pointId in pendingSelectPointId: se i punti non sono ancora caricati
+     * quando il focus arriva, la selezione viene ritentata in observePoints().
      */
     private fun observeFocusRequests() {
         viewModelScope.launch {
-            FocusRequest.events.collect { target ->
-                _uiState.update { it.copy(focusTarget = target) }
+            FocusRequest.pending.collect { target ->
+                if (target != null) {
+                    pendingSelectPointId = target.pointId
+                    _uiState.update { it.copy(focusTarget = target) }
+                    FocusRequest.consume()
+                    trySelectPendingPoint()
+                }
             }
         }
     }
 
-    /** Canale singleton per richiedere il focus sulla mappa da qualsiasi schermata. */
+    private fun trySelectPendingPoint() {
+        val id = pendingSelectPointId ?: return
+        val point = _uiState.value.points.find { it.id == id } ?: return
+        pendingSelectPointId = null
+        _uiState.update { it.copy(selectedPoint = point, isBottomSheetVisible = true) }
+    }
+
+    /** Canale singleton per richiedere il focus sulla mappa da qualsiasi schermata.
+     *  Usa StateFlow per garantire la consegna anche se MapViewModel
+     *  viene creato dopo l'emissione (es. cold start da notifica). */
     object FocusRequest {
-        private val _events = MutableSharedFlow<FocusTarget>(
-            extraBufferCapacity = 1,
-            onBufferOverflow = BufferOverflow.DROP_OLDEST
-        )
-        val events: SharedFlow<FocusTarget> = _events.asSharedFlow()
+        private val _pending = MutableStateFlow<FocusTarget?>(null)
+        val pending: StateFlow<FocusTarget?> = _pending.asStateFlow()
 
         fun send(lat: Double, lon: Double, pointId: String? = null) {
-            _events.tryEmit(FocusTarget(lat, lon, pointId))
+            _pending.value = FocusTarget(lat, lon, pointId)
         }
+
+        fun consume() { _pending.value = null }
     }
 
     private fun observePoints() {
@@ -103,6 +120,7 @@ class MapViewModel @Inject constructor(
                 .catch { e -> _uiState.update { it.copy(error = e.message, isLoading = false) } }
                 .collect { points ->
                     _uiState.update { it.copy(points = points, isLoading = false) }
+                    trySelectPendingPoint()
                 }
         }
     }

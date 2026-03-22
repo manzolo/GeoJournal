@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,11 +51,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private val _navigateToPoint = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    val navigateToPoint: SharedFlow<String> = _navigateToPoint.asSharedFlow()
+    private val _navigateToMap = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val navigateToMap: SharedFlow<Unit> = _navigateToMap.asSharedFlow()
 
     fun onNotificationOpenPoint(geoPointId: String) {
-        viewModelScope.launch { _navigateToPoint.emit(geoPointId) }
+        viewModelScope.launch {
+            val point = geoPointRepository.getById(geoPointId) ?: return@launch
+            MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+            _navigateToMap.emit(Unit)
+        }
     }
 
     private val _startDestination = MutableStateFlow<String?>(null)
