@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -224,11 +226,23 @@ private fun DayCell(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val bgColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        isToday -> MaterialTheme.colorScheme.primaryContainer
-        else -> Color.Transparent
+    val isTodayColor = MaterialTheme.colorScheme.primaryContainer
+    
+    val backgroundModifier = if (isSelected) {
+        Modifier.background(
+            androidx.compose.ui.graphics.Brush.linearGradient(
+                colors = listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.tertiary
+                )
+            )
+        )
+    } else if (isToday) {
+        Modifier.background(isTodayColor)
+    } else {
+        Modifier.background(Color.Transparent)
     }
+
     val textColor = when {
         isSelected -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurface
@@ -239,7 +253,7 @@ private fun DayCell(
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(CircleShape)
-            .background(bgColor)
+            .then(backgroundModifier)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -352,12 +366,21 @@ private fun ReminderRow(reminder: Reminder) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+            .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.primary)
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
             Text(reminder.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(dateStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -370,12 +393,21 @@ private fun VisitRow(visit: VisitLogEntry, pointTitle: String?, timeFormat: Simp
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
+            .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.tertiary)
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
+        ) {
             Text(
                 pointTitle ?: stringResource(R.string.calendar_unknown_place),
                 style = MaterialTheme.typography.bodyMedium,

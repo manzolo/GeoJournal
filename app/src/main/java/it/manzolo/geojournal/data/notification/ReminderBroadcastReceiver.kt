@@ -69,12 +69,12 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         endDate: Long?,
         geoPointId: String?
     ) {
-        val dateFormat = SimpleDateFormat("d MMM", Locale.ITALIAN)
+        val dateFormat = SimpleDateFormat("d MMM", Locale.getDefault())
         val body = when {
             type == ReminderType.DATE_RANGE.name && endDate != null ->
-                "Periodo fino al ${dateFormat.format(Date(endDate))}"
-            type == ReminderType.ANNUAL_RECURRING.name -> "Promemoria annuale"
-            else -> "Promemoria"
+                context.getString(R.string.reminder_period_until, dateFormat.format(Date(endDate)))
+            type == ReminderType.ANNUAL_RECURRING.name -> context.getString(R.string.reminder_type_annual)
+            else -> context.getString(R.string.reminder_generic)
         }
 
         val contentIntent = if (geoPointId != null) {

@@ -106,6 +106,21 @@
     <string name="action_remove">Rimuovi</string>
     <string name="action_close">Chiudi</string>
 
+    <!-- Sort orders -->
+    <string name="sort_newest">Più recenti</string>
+    <string name="sort_oldest">Più vecchi</string>
+    <string name="sort_title_az">Titolo A-Z</string>
+
+    <!-- Reminders -->
+    <string name="reminder_annual_suffix">ogni anno</string>
+    <string name="reminder_period_until">Periodo fino al %s</string>
+    <string name="reminder_type_annual">Promemoria annuale</string>
+    <string name="reminder_generic">Promemoria</string>
+
+    <!-- Notification channel -->
+    <string name="notif_channel_reminders_name">Promemoria luoghi</string>
+    <string name="notif_channel_reminders_desc">Notifiche per i tuoi luoghi speciali</string>
+
     <!-- List Screen -->
     <string name="list_title">Il tuo diario</string>
     <string name="list_archive_point">Archivia</string>
@@ -138,6 +153,7 @@
 
     <!-- Add/Edit Screen -->
     <string name="addedit_error_no_location">Imposta una posizione prima di salvare il punto.</string>
+    <string name="addedit_error_title_required">Il titolo è obbligatorio</string>
     <string name="addedit_delete_title">Elimina punto</string>
     <string name="addedit_delete_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>
     <string name="addedit_add_photo">Aggiungi foto</string>
@@ -225,6 +241,7 @@
     <!-- Errors -->
     <string name="error_generic">Si è verificato un errore. Riprova.</string>
     <string name="error_network">Nessuna connessione internet.</string>
+    <string name="error_point_not_found">Punto non trovato</string>
 
     <!-- Empty states -->
     <string name="empty_map_title">Nessun punto sulla mappa</string>

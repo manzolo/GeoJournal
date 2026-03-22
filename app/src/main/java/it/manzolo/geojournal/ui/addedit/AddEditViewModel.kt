@@ -135,7 +135,7 @@ class AddEditViewModel @Inject constructor(
                     )
                 }
             } else {
-                _uiState.update { it.copy(isLoading = false, error = "Punto non trovato") }
+                _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.error_point_not_found)) }
             }
         }
         viewModelScope.launch {
@@ -269,7 +269,7 @@ class AddEditViewModel @Inject constructor(
             return
         }
         if (state.title.isBlank()) {
-            _uiState.update { it.copy(error = "Il titolo è obbligatorio") }
+            _uiState.update { it.copy(error = context.getString(R.string.addedit_error_title_required)) }
             return
         }
         viewModelScope.launch {

@@ -9,6 +9,7 @@ import androidx.work.Configuration
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.HiltAndroidApp
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.notification.ReminderBroadcastReceiver
@@ -42,10 +43,10 @@ class MainApplication : Application(), Configuration.Provider {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 ReminderBroadcastReceiver.CHANNEL_ID,
-                "Promemoria luoghi",
+                getString(R.string.notif_channel_reminders_name),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Notifiche per i tuoi luoghi speciali"
+                description = getString(R.string.notif_channel_reminders_desc)
             }
             getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)

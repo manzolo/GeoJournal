@@ -383,13 +383,24 @@ fun AddEditScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        shape = CircleShape,
+                        color = Color.Transparent,
                         modifier = Modifier
                             .size(72.dp)
                             .clickable { viewModel.toggleEmojiPicker() }
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize()
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primaryContainer,
+                                            MaterialTheme.colorScheme.tertiaryContainer
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
                         }
                     }
@@ -404,6 +415,7 @@ fun AddEditScreen(
                         label = { Text(stringResource(R.string.addedit_title_hint)) },
                         modifier = Modifier.weight(1f).focusRequester(titleFocusRequester),
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next,
                             capitalization = KeyboardCapitalization.Sentences
@@ -413,7 +425,10 @@ fun AddEditScreen(
             }
 
             // ── Descrizione ───────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = uiState.description,
@@ -426,6 +441,7 @@ fun AddEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 6,
+                        shape = RoundedCornerShape(16.dp),
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Default,
                             capitalization = KeyboardCapitalization.Sentences
@@ -435,7 +451,10 @@ fun AddEditScreen(
             }
 
             // ── Posizione GPS ─────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.LocationOn, contentDescription = null,
@@ -516,7 +535,10 @@ fun AddEditScreen(
             }
 
             // ── Foto ──────────────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.PhotoLibrary, contentDescription = null,
@@ -542,16 +564,16 @@ fun AddEditScreen(
                                             else -> uri
                                         },
                                         contentDescription = null,
-                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
                                         contentScale = ContentScale.Crop
                                     )
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
                                             .padding(4.dp)
-                                            .size(22.dp)
+                                            .size(24.dp)
                                             .clip(CircleShape)
-                                            .background(Color.Black.copy(alpha = 0.55f))
+                                            .background(Color.Black.copy(alpha = 0.6f))
                                             .clickable { viewModel.removePhotoUri(uri) },
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -574,7 +596,10 @@ fun AddEditScreen(
             }
 
             // ── Promemoria ────────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (uiState.reminders.isNotEmpty()) {
                         val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
@@ -586,7 +611,7 @@ fun AddEditScreen(
                                     ReminderType.DATE_RANGE -> reminder.endDate?.let {
                                         "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))} · $timeStr"
                                     } ?: "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
-                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno · $timeStr"
+                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ${stringResource(R.string.reminder_annual_suffix)} · $timeStr"
                                     ReminderType.SINGLE -> "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
                                 }
                                 InputChip(
@@ -616,7 +641,10 @@ fun AddEditScreen(
             }
 
             // ── Tag ───────────────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Label, contentDescription = null,
@@ -633,6 +661,7 @@ fun AddEditScreen(
                         label = { Text(stringResource(R.string.addedit_add_tag)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         trailingIcon = {
                             IconButton(onClick = viewModel::addTag) {
                                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
@@ -673,7 +702,10 @@ fun AddEditScreen(
             }
 
             // ── Valutazione ───────────────────────────────────────────────
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Star, contentDescription = null,

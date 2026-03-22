@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -145,15 +146,16 @@ fun PointDetailScreen(
         )
     }
 
-    // Feature 4: dialog conferma archivio
+    // Feature 4: dialog conferma archivio / ripristino
     if (uiState.showArchiveConfirm) {
+        val isArchived = uiState.point?.isArchived == true
         AlertDialog(
             onDismissRequest = viewModel::toggleArchiveConfirm,
-            title = { Text(stringResource(R.string.point_archive_confirm_title)) },
-            text = { Text(stringResource(R.string.point_archive_confirm_message)) },
+            title = { Text(stringResource(if (isArchived) R.string.point_unarchive else R.string.point_archive_confirm_title)) },
+            text = { if (!isArchived) Text(stringResource(R.string.point_archive_confirm_message)) },
             confirmButton = {
-                TextButton(onClick = viewModel::archivePoint) {
-                    Text(stringResource(R.string.point_archive))
+                TextButton(onClick = if (isArchived) viewModel::unarchivePoint else viewModel::archivePoint) {
+                    Text(stringResource(if (isArchived) R.string.point_unarchive else R.string.point_archive))
                 }
             },
             dismissButton = {
@@ -208,7 +210,7 @@ fun PointDetailScreen(
                 onLogVisitToday = viewModel::logVisitToday,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
-                onArchive = viewModel::toggleArchiveConfirm,
+                onArchiveToggle = viewModel::toggleArchiveConfirm,
                 navController = navController,
                 modifier = Modifier.padding(innerPadding)
             )
@@ -225,7 +227,7 @@ private fun PointDetailContent(
     onLogVisitToday: () -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
-    onArchive: () -> Unit,
+    onArchiveToggle: () -> Unit,
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
@@ -250,40 +252,77 @@ private fun PointDetailContent(
         // ── Hero card: emoji + titolo + descrizione ───────────────────────────
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-            ),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Column {
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.BottomStart
                 ) {
-                    Text(point.emoji, style = MaterialTheme.typography.displaySmall)
+                    val photoUrl = point.photoUrls.firstOrNull()
+                    if (photoUrl != null) {
+                        AsyncImage(
+                            model = if (photoUrl.startsWith("/")) File(photoUrl) else photoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        // Gradient overlay per leggibilità header
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+                                        startY = 100f
+                                    )
+                                )
+                        )
+                    }
+                    
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(point.emoji, style = MaterialTheme.typography.displaySmall)
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Text(
+                            text = point.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (photoUrl != null) Color.White else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
-                Spacer(Modifier.width(16.dp))
-                Text(
-                    text = point.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            if (point.description.isNotBlank()) {
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f))
-                Text(text = point.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+                
+                if (point.description.isNotBlank()) {
+                    Text(
+                        text = point.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             }
         }
 
@@ -358,7 +397,7 @@ private fun PointDetailContent(
                             ReminderType.DATE_RANGE -> reminder.endDate?.let {
                                 "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
                             } ?: reminderDateFormat.format(Date(reminder.startDate))
-                            ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
+                            ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ${context.getString(R.string.reminder_annual_suffix)}"
                             ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -424,7 +463,10 @@ private fun PointDetailContent(
 
         // ── Tag ───────────────────────────────────────────────────────────────
         if (point.tags.isNotEmpty()) {
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionHeader(icon = Icons.AutoMirrored.Filled.Label, title = stringResource(R.string.detail_section_tags))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -438,7 +480,10 @@ private fun PointDetailContent(
 
         // ── Valutazione ───────────────────────────────────────────────────────
         if (point.rating > 0) {
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f))
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionHeader(icon = Icons.Filled.Star, title = stringResource(R.string.detail_section_rating))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -462,50 +507,61 @@ private fun PointDetailContent(
 
         // ── Azioni ────────────────────────────────────────────────────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
-                        navController.popBackStack(Routes.Map.route, inclusive = false)
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_navigate_on_map))
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = {
+                            MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+                            navController.popBackStack(Routes.Map.route, inclusive = false)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.point_navigate_on_map), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = {
+                            val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
+                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.point_open_google_maps), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
                 }
-                OutlinedButton(
-                    onClick = {
-                        val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
-                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_open_google_maps))
-                }
-                OutlinedButton(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, null))
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_share_location))
-                }
-                OutlinedButton(
-                    onClick = onArchive,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_archive))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, null))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.point_share_location), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = onArchiveToggle,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            imageVector = if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             }
         }

@@ -1,9 +1,11 @@
 package it.manzolo.geojournal.ui.detail
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.VisitLogEntry
@@ -31,11 +33,14 @@ data class PointDetailUiState(
 
 @HiltViewModel
 class PointDetailViewModel @Inject constructor(
+    application: Application,
     private val repository: GeoPointRepository,
     private val visitLogRepository: VisitLogRepository,
     private val reminderRepository: ReminderRepository,
     savedStateHandle: SavedStateHandle
-) : ViewModel() {
+) : AndroidViewModel(application) {
+
+    private val context get() = getApplication<Application>()
 
     private val pointId: String = savedStateHandle.get<String>("pointId") ?: ""
 
@@ -49,17 +54,17 @@ class PointDetailViewModel @Inject constructor(
     private fun loadPoint() {
         viewModelScope.launch {
             var wasLoaded = false
-            repository.observeActive()
+            repository.observeAll()
                 .map { list -> list.find { it.id == pointId } }
                 .collect { point ->
                     if (point != null) {
                         wasLoaded = true
                         _uiState.update { it.copy(point = point, isLoading = false) }
                     } else if (wasLoaded) {
-                        // Il punto era caricato ed è scomparso (eliminato o archiviato): naviga indietro
+                        // Il punto è stato eliminato: naviga indietro
                         _uiState.update { it.copy(isDeleted = true) }
                     } else {
-                        _uiState.update { it.copy(isLoading = false, error = "Punto non trovato") }
+                        _uiState.update { it.copy(isLoading = false, error = context.getString(R.string.error_point_not_found)) }
                     }
                 }
         }
@@ -103,7 +108,16 @@ class PointDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(showArchiveConfirm = false) }
             repository.archivePoint(pointId)
-            // observeActive() non lo vedrà più → wasLoaded=true → isDeleted=true → naviga indietro
+            // Naviga indietro esplicitamente (il punto è ancora in observeAll ma archiviato)
+            _uiState.update { it.copy(isDeleted = true) }
+        }
+    }
+
+    fun unarchivePoint() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showArchiveConfirm = false) }
+            repository.unarchivePoint(pointId)
+            // Rimane sul dettaglio: il punto torna attivo e observeAll() lo aggiorna
         }
     }
 }

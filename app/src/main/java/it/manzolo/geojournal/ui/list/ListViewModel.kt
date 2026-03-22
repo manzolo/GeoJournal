@@ -1,8 +1,10 @@
 package it.manzolo.geojournal.ui.list
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
@@ -22,10 +24,10 @@ import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
-enum class SortOrder(val label: String) {
-    NEWEST("Più recenti"),
-    OLDEST("Più vecchi"),
-    TITLE_AZ("Titolo A-Z")
+enum class SortOrder(@StringRes val labelRes: Int) {
+    NEWEST(R.string.sort_newest),
+    OLDEST(R.string.sort_oldest),
+    TITLE_AZ(R.string.sort_title_az)
 }
 
 data class ListUiState(

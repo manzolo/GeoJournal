@@ -75,6 +75,10 @@ import androidx.compose.ui.draw.clip
 import it.manzolo.geojournal.ui.theme.Terracotta
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import java.io.File
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -283,7 +287,7 @@ fun ListScreen(navController: NavController) {
                     ) {
                         SortOrder.entries.forEach { order ->
                             DropdownMenuItem(
-                                text = { Text(order.label) },
+                                text = { Text(stringResource(order.labelRes)) },
                                 onClick = {
                                     viewModel.setSortOrder(order)
                                     showSortMenu = false
@@ -424,27 +428,45 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val photoUrl = point.photoUrls.firstOrNull()
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.tertiaryContainer
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
+                if (photoUrl != null) {
+                    AsyncImage(
+                        model = if (photoUrl.startsWith("/")) File(photoUrl) else photoUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    // Semi-transparent overlay for emoji
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)))
+                }
                 Text(
                     text = point.emoji,
-                    style = MaterialTheme.typography.headlineSmall
+                    style = MaterialTheme.typography.headlineMedium
                 )
             }
             Spacer(Modifier.width(16.dp))
@@ -466,10 +488,10 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                
+                Spacer(Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
                         Icons.Default.Schedule,
@@ -483,8 +505,8 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(Modifier.weight(1f))
                     if (point.rating > 0) {
-                        Spacer(Modifier.width(12.dp))
                         Icon(
                             Icons.Default.Star,
                             contentDescription = null,
