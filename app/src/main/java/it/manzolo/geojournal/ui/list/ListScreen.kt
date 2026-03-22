@@ -461,13 +461,12 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
-                    // Semi-transparent overlay for emoji
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)))
+                } else {
+                    Text(
+                        text = point.emoji,
+                        style = MaterialTheme.typography.headlineMedium
+                    )
                 }
-                Text(
-                    text = point.emoji,
-                    style = MaterialTheme.typography.headlineMedium
-                )
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {

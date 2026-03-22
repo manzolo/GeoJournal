@@ -141,11 +141,35 @@ import java.util.Locale
 import java.util.UUID
 
 private val EMOJI_LIST = listOf(
-    "📍", "🗺️", "🏔️", "🌊", "🌳", "🏠", "🏰", "🍕", "☕", "🍷",
-    "🎨", "🏛️", "⛪", "🏖️", "🌆", "🌄", "🌉", "🛤️", "🏕️", "⛺",
-    "🎭", "🎪", "🎡", "🌸", "🌺", "🌻", "🌼", "🌞", "⭐", "🌟",
-    "💫", "🔥", "💎", "🎯", "🎵", "📸", "🧗", "🚴", "🏊", "⛷️",
-    "🐘", "🦁", "🐬", "🦋", "🌮", "🏺", "🗿", "🏟️", "🛕", "🕌"
+    // Luoghi e navigazione
+    "📍", "🗺️", "🧭", "📌", "🚩", "🏁", "🔍", "🌐",
+    // Natura e paesaggi
+    "🏔️", "⛰️", "🗻", "🌋", "🏕️", "⛺", "🌊", "🏖️",
+    "🏝️", "🌅", "🌄", "🌆", "🌇", "🌉", "🌁", "🌃",
+    "🌳", "🌲", "🌴", "🌵", "🍀", "🌿", "🌾", "🍂",
+    "🌸", "🌺", "🌻", "🌼", "🌹", "🌷", "💐", "🍄",
+    // Edifici e strutture
+    "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏨",
+    "🏩", "🏪", "🏫", "🏬", "🏭", "🏯", "🏰", "🗼",
+    "🗽", "🗺️", "⛪", "🕌", "🛕", "🕍", "🏛️", "🏟️",
+    // Trasporti
+    "🚗", "🚕", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒",
+    "✈️", "🚂", "🚢", "⛵", "🚁", "🛶", "🚲", "🛤️",
+    // Cibo e bevande
+    "🍕", "🍔", "🌮", "🌯", "🍜", "🍣", "🍦", "🎂",
+    "☕", "🍷", "🍺", "🥂", "🧃", "🍹", "🥐", "🍰",
+    // Attività e sport
+    "🧗", "🚴", "🏊", "⛷️", "🏄", "🎿", "🤿", "🧘",
+    "🎯", "⛳", "🎣", "🏕️", "🏋️", "🤸", "🚵", "🧜",
+    // Arte e cultura
+    "🎨", "🎭", "🎪", "🎡", "🎠", "🎢", "🎵", "🎶",
+    "📸", "🎬", "🎤", "🎸", "🎹", "📚", "🖼️", "🎭",
+    // Animali
+    "🐘", "🦁", "🐬", "🦋", "🐦", "🦅", "🐺", "🦊",
+    "🐸", "🐢", "🦎", "🐧", "🦜", "🦩", "🦚", "🐾",
+    // Simboli e altro
+    "⭐", "🌟", "💫", "✨", "🔥", "💎", "🏺", "🗿",
+    "🌞", "🌙", "❄️", "⛅", "🌈", "💧", "🌊", "🎯"
 )
 
 private fun createCameraUri(context: Context): Uri {
@@ -1151,15 +1175,15 @@ private fun EmojiPickerDialog(
         title = { Text(stringResource(R.string.addedit_emoji_title)) },
         text = {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                modifier = Modifier.height(280.dp)
+                columns = GridCells.Fixed(8),
+                modifier = Modifier.height(360.dp)
             ) {
                 items(EMOJI_LIST) { emoji ->
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(52.dp).clickable { onEmojiSelected(emoji) }
+                        modifier = Modifier.size(40.dp).clickable { onEmojiSelected(emoji) }
                     ) {
-                        Text(text = emoji, style = MaterialTheme.typography.titleLarge,
+                        Text(text = emoji, style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center)
                     }
                 }
