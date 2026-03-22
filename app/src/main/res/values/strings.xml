@@ -218,6 +218,8 @@
     <string name="calendar_prev_month">Mese precedente</string>
     <string name="calendar_next_month">Mese successivo</string>
     <string name="calendar_no_events">Nessun evento per questo giorno</string>
+    <string name="calendar_no_events_month">Nessun evento questo mese</string>
+    <string name="calendar_today">Oggi</string>
     <string name="calendar_section_reminders">🔔 Promemoria</string>
     <string name="calendar_section_visits">📍 Visite</string>
     <string name="calendar_reminder_yearly">ogni anno</string>

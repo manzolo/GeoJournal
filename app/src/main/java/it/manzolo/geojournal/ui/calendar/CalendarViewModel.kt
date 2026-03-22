@@ -29,6 +29,8 @@ data class CalendarUiState(
     val selectedDay: LocalDate? = null,
     val remindersForDay: List<Reminder> = emptyList(),
     val visitsForDay: List<VisitLogEntry> = emptyList(),
+    val remindersForMonth: List<Pair<LocalDate, Reminder>> = emptyList(),
+    val visitsForMonth: List<VisitLogEntry> = emptyList(),
     // map geoPointId -> title for display
     val pointTitles: Map<String, String> = emptyMap()
 )
@@ -109,6 +111,12 @@ class CalendarViewModel @Inject constructor(
             visits.filter { v -> v.visitedAt.toLocalDate() == day }
         } ?: emptyList()
 
+        val remindersForMonth = reminders
+            .mapNotNull { r -> r.occurrenceDaysInMonth(month).minOrNull()?.let { date -> date to r } }
+            .sortedBy { it.first }
+
+        val visitsForMonth = visits.sortedBy { it.visitedAt }
+
         CalendarUiState(
             currentMonth = month,
             reminderDays = reminderDays,
@@ -116,6 +124,8 @@ class CalendarViewModel @Inject constructor(
             selectedDay = selectedDay,
             remindersForDay = remindersForDay,
             visitsForDay = visitsForDay,
+            remindersForMonth = remindersForMonth,
+            visitsForMonth = visitsForMonth,
             pointTitles = pointTitles
         )
     }.stateIn(
@@ -127,6 +137,7 @@ class CalendarViewModel @Inject constructor(
     fun selectDay(day: LocalDate?) = _selectedDay.update { day }
     fun nextMonth() { _currentMonth.update { it.plusMonths(1) }; _selectedDay.update { null } }
     fun previousMonth() { _currentMonth.update { it.minusMonths(1) }; _selectedDay.update { null } }
+    fun goToToday() { _currentMonth.update { YearMonth.now() }; _selectedDay.update { LocalDate.now() } }
 
     private fun YearMonth.startEpoch(): Long =
         atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()

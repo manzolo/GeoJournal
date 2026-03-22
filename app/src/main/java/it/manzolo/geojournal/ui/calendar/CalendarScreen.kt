@@ -1,8 +1,5 @@
 package it.manzolo.geojournal.ui.calendar
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,8 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import it.manzolo.geojournal.ui.navigation.Routes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -33,9 +29,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,14 +49,24 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
+import it.manzolo.geojournal.ui.navigation.Routes
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Date
 import java.util.Locale
+
+// Elemento unificato per la vista mensile
+private sealed class MonthEventItem {
+    data class DateHeader(val date: LocalDate) : MonthEventItem()
+    data class ReminderItem(val reminder: Reminder) : MonthEventItem()
+    data class VisitItem(val visit: VisitLogEntry) : MonthEventItem()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +86,8 @@ fun CalendarScreen(navController: NavController) {
             MonthHeader(
                 month = state.currentMonth,
                 onPrevious = viewModel::previousMonth,
-                onNext = viewModel::nextMonth
+                onNext = viewModel::nextMonth,
+                onToday = viewModel::goToToday
             )
 
             // Day-of-week headers
@@ -97,36 +106,27 @@ fun CalendarScreen(navController: NavController) {
 
             HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
 
-            // Day detail panel
-            AnimatedVisibility(
-                visible = state.selectedDay != null,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
+            val onNavigateToPoint: (String) -> Unit = { pointId ->
+                navController.navigate(Routes.PointDetail.createRoute(pointId))
+            }
+
+            if (state.selectedDay != null) {
+                // Vista giorno: solo gli eventi del giorno selezionato
                 DayDetailPanel(
                     day = state.selectedDay,
                     reminders = state.remindersForDay,
                     visits = state.visitsForDay,
                     pointTitles = state.pointTitles,
-                    onNavigateToPoint = { pointId ->
-                        navController.navigate(Routes.PointDetail.createRoute(pointId))
-                    }
+                    onNavigateToPoint = onNavigateToPoint
                 )
-            }
-
-            if (state.selectedDay == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("📅", style = MaterialTheme.typography.displaySmall)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.calendar_select_day_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+            } else {
+                // Vista mese: tutti gli eventi del mese corrente
+                MonthEventsPanel(
+                    reminders = state.remindersForMonth,
+                    visits = state.visitsForMonth,
+                    pointTitles = state.pointTitles,
+                    onNavigateToPoint = onNavigateToPoint
+                )
             }
         }
     }
@@ -136,9 +136,11 @@ fun CalendarScreen(navController: NavController) {
 private fun MonthHeader(
     month: YearMonth,
     onPrevious: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onToday: () -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
+    val isCurrentMonth = month == YearMonth.now()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -149,11 +151,25 @@ private fun MonthHeader(
         IconButton(onClick = onPrevious) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.calendar_prev_month))
         }
-        Text(
-            text = month.format(formatter).replaceFirstChar { it.uppercaseChar() },
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = month.format(formatter).replaceFirstChar { it.uppercaseChar() },
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            if (!isCurrentMonth) {
+                TextButton(
+                    onClick = onToday,
+                    modifier = Modifier.height(24.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.calendar_today),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+        }
         IconButton(onClick = onNext) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.calendar_next_month))
         }
@@ -185,9 +201,8 @@ private fun MonthGrid(
     onDayClick: (LocalDate) -> Unit
 ) {
     val firstDayOfMonth = month.atDay(1)
-    // Monday=1, so offset = (dayOfWeek.value - 1) where Monday=1
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value // Mon=1, Sun=7
-    val offset = firstDayOfWeek - 1 // cells before the 1st
+    val offset = firstDayOfWeek - 1
     val daysInMonth = month.lengthOfMonth()
     val totalCells = offset + daysInMonth
     val rows = (totalCells + 6) / 7
@@ -231,7 +246,7 @@ private fun DayCell(
     onClick: () -> Unit
 ) {
     val isTodayColor = MaterialTheme.colorScheme.primaryContainer
-    
+
     val backgroundModifier = if (isSelected) {
         Modifier.background(
             androidx.compose.ui.graphics.Brush.linearGradient(
@@ -284,6 +299,84 @@ private fun DayCell(
                             .clip(CircleShape)
                             .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.tertiary)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthEventsPanel(
+    reminders: List<Pair<LocalDate, Reminder>>,
+    visits: List<VisitLogEntry>,
+    pointTitles: Map<String, String>,
+    onNavigateToPoint: (String) -> Unit
+) {
+    val zone = ZoneId.systemDefault()
+    val dateFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    // Costruisci lista unificata ordinata per data con header di data
+    val items = remember(reminders, visits) {
+        val events = buildList {
+            reminders.forEach { (date, reminder) ->
+                add(date to MonthEventItem.ReminderItem(reminder))
+            }
+            visits.forEach { visit ->
+                val date = Instant.ofEpochMilli(visit.visitedAt).atZone(zone).toLocalDate()
+                add(date to MonthEventItem.VisitItem(visit))
+            }
+        }.sortedWith(compareBy({ it.first }, { if (it.second is MonthEventItem.VisitItem) (it.second as MonthEventItem.VisitItem).visit.visitedAt else 0L }))
+
+        buildList {
+            var lastDate: LocalDate? = null
+            events.forEach { (date, item) ->
+                if (date != lastDate) {
+                    add(MonthEventItem.DateHeader(date))
+                    lastDate = date
+                }
+                add(item)
+            }
+        }
+    }
+
+    if (items.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📅", style = MaterialTheme.typography.displaySmall)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.calendar_no_events_month),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            items(items) { item ->
+                when (item) {
+                    is MonthEventItem.DateHeader -> {
+                        Text(
+                            text = item.date.format(dateFormatter).replaceFirstChar { it.uppercaseChar() },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                        )
+                    }
+                    is MonthEventItem.ReminderItem -> {
+                        ReminderRow(item.reminder, onClick = { onNavigateToPoint(item.reminder.geoPointId) })
+                    }
+                    is MonthEventItem.VisitItem -> {
+                        VisitRow(item.visit, pointTitles[item.visit.geoPointId], timeFormat) {
+                            onNavigateToPoint(item.visit.geoPointId)
+                        }
+                    }
                 }
             }
         }
@@ -350,7 +443,9 @@ private fun DayDetailPanel(
                 )
             }
             items(visits) { visit ->
-                VisitRow(visit, pointTitles[visit.geoPointId], timeFormat)
+                VisitRow(visit, pointTitles[visit.geoPointId], timeFormat) {
+                    onNavigateToPoint(visit.geoPointId)
+                }
             }
         }
     }
@@ -394,13 +489,14 @@ private fun ReminderRow(reminder: Reminder, onClick: () -> Unit) {
 }
 
 @Composable
-private fun VisitRow(visit: VisitLogEntry, pointTitle: String?, timeFormat: SimpleDateFormat) {
+private fun VisitRow(visit: VisitLogEntry, pointTitle: String?, timeFormat: SimpleDateFormat, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f))
+            .clickable(onClick = onClick)
             .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
     ) {
         Box(

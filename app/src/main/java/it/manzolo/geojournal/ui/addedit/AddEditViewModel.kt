@@ -234,6 +234,12 @@ class AddEditViewModel @Inject constructor(
 
     fun addPhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris + uri) }
     fun removePhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris - uri) }
+    fun movePhotoLeft(uri: String) = _uiState.update {
+        val list = it.photoUris.toMutableList()
+        val idx = list.indexOf(uri)
+        if (idx > 0) { list.add(idx - 1, list.removeAt(idx)) }
+        it.copy(photoUris = list)
+    }
 
     fun toggleReminderSheet() = _uiState.update { it.copy(showReminderSheet = !it.showReminderSheet) }
     fun updateRating(stars: Int) = _uiState.update { it.copy(rating = if (it.rating == stars) 0 else stars) }

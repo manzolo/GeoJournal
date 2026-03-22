@@ -597,7 +597,7 @@ fun AddEditScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             maxItemsInEachRow = 3
                         ) {
-                            uiState.photoUris.forEach { uri ->
+                            uiState.photoUris.forEachIndexed { index, uri ->
                                 Box(modifier = Modifier.size(90.dp)) {
                                     AsyncImage(
                                         model = when {
@@ -609,6 +609,7 @@ fun AddEditScreen(
                                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
                                         contentScale = ContentScale.Crop
                                     )
+                                    // "×" rimuovi — top-right
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
@@ -621,6 +622,37 @@ fun AddEditScreen(
                                     ) {
                                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.addedit_remove_photo),
                                             tint = Color.White, modifier = Modifier.size(14.dp))
+                                    }
+                                    if (index == 0) {
+                                        // Badge "copertina" — top-left
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopStart)
+                                                .padding(4.dp)
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFFFB300).copy(alpha = 0.9f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Filled.Star, contentDescription = null,
+                                                tint = Color.White, modifier = Modifier.size(12.dp))
+                                        }
+                                    } else {
+                                        // "←" sposta a sinistra — bottom-left
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(4.dp)
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.6f))
+                                                .clickable { viewModel.movePhotoLeft(uri) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                                                contentDescription = null,
+                                                tint = Color.White, modifier = Modifier.size(14.dp))
+                                        }
                                     }
                                 }
                             }
