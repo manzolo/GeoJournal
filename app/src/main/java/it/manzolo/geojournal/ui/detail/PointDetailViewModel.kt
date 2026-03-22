@@ -9,6 +9,7 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.VisitLogEntry
+import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.domain.repository.VisitLogRepository
@@ -37,6 +38,7 @@ class PointDetailViewModel @Inject constructor(
     private val repository: GeoPointRepository,
     private val visitLogRepository: VisitLogRepository,
     private val reminderRepository: ReminderRepository,
+    private val reminderScheduler: ReminderScheduler,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
@@ -107,6 +109,8 @@ class PointDetailViewModel @Inject constructor(
     fun archivePoint() {
         viewModelScope.launch {
             _uiState.update { it.copy(showArchiveConfirm = false) }
+            // Cancella gli alarm dei promemoria prima di archiviare
+            _uiState.value.reminders.forEach { reminderScheduler.cancelReminder(it) }
             repository.archivePoint(pointId)
             // Naviga indietro esplicitamente (il punto è ancora in observeAll ma archiviato)
             _uiState.update { it.copy(isDeleted = true) }
@@ -117,6 +121,8 @@ class PointDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(showArchiveConfirm = false) }
             repository.unarchivePoint(pointId)
+            // Riprogramma i promemoria ancora attivi
+            _uiState.value.reminders.forEach { reminderScheduler.scheduleReminder(it) }
             // Rimane sul dettaglio: il punto torna attivo e observeAll() lo aggiorna
         }
     }

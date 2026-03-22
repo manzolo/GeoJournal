@@ -15,10 +15,10 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders")
     suspend fun getAll(): List<ReminderEntity>
 
-    @Query("SELECT * FROM reminders WHERE is_active = 1")
+    @Query("SELECT r.* FROM reminders r INNER JOIN geo_points g ON r.geo_point_id = g.id WHERE r.is_active = 1 AND g.is_archived = 0")
     suspend fun getActiveReminders(): List<ReminderEntity>
 
-    @Query("SELECT * FROM reminders WHERE is_active = 1")
+    @Query("SELECT r.* FROM reminders r INNER JOIN geo_points g ON r.geo_point_id = g.id WHERE r.is_active = 1 AND g.is_archived = 0")
     fun observeAllActive(): Flow<List<ReminderEntity>>
 
     @Query("SELECT * FROM reminders WHERE start_date BETWEEN :startEpoch AND :endEpoch OR (end_date IS NOT NULL AND end_date BETWEEN :startEpoch AND :endEpoch) OR (start_date <= :startEpoch AND end_date >= :endEpoch)")
