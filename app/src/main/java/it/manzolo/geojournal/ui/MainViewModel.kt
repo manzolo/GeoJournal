@@ -50,6 +50,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private val _navigateToPoint = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val navigateToPoint: SharedFlow<String> = _navigateToPoint.asSharedFlow()
+
+    fun onNotificationOpenPoint(geoPointId: String) {
+        viewModelScope.launch { _navigateToPoint.emit(geoPointId) }
+    }
+
     private val _startDestination = MutableStateFlow<String?>(null)
     val startDestination: StateFlow<String?> = _startDestination.asStateFlow()
 

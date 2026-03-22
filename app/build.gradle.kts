@@ -15,8 +15,8 @@ android {
         applicationId = "it.manzolo.geojournal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 57
-        versionName = "0.4.29"
+        versionCode = 58
+        versionName = "0.4.30"
         
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

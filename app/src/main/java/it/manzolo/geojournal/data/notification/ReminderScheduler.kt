@@ -78,11 +78,17 @@ class ReminderScheduler @Inject constructor(
         val now = System.currentTimeMillis()
         val todayCal = Calendar.getInstance()
 
+        // Usa ora/minuto salvati nel startDate; fallback a 9:00 per reminder vecchi (00:00)
+        val storedHour = startCal.get(Calendar.HOUR_OF_DAY)
+        val storedMinute = startCal.get(Calendar.MINUTE)
+        val triggerHour = if (storedHour == 0 && storedMinute == 0) 9 else storedHour
+        val triggerMinute = if (storedHour == 0 && storedMinute == 0) 0 else storedMinute
+
         val trigger = Calendar.getInstance().apply {
             set(Calendar.MONTH, startCal.get(Calendar.MONTH))
             set(Calendar.DAY_OF_MONTH, startCal.get(Calendar.DAY_OF_MONTH))
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
+            set(Calendar.HOUR_OF_DAY, triggerHour)
+            set(Calendar.MINUTE, triggerMinute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
@@ -93,26 +99,20 @@ class ReminderScheduler @Inject constructor(
             startCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) &&
             startCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH)
 
-        // Per ANNUAL: "oggi" = stesso giorno/mese indipendentemente dall'anno
-        val isAnnualToday =
-            startCal.get(Calendar.MONTH) == todayCal.get(Calendar.MONTH) &&
-            startCal.get(Calendar.DAY_OF_MONTH) == todayCal.get(Calendar.DAY_OF_MONTH)
-
         return when (reminder.type) {
             ReminderType.SINGLE, ReminderType.DATE_RANGE -> {
                 trigger.set(Calendar.YEAR, startCal.get(Calendar.YEAR))
                 when {
                     trigger.timeInMillis > now -> trigger.timeInMillis
-                    isStartDateToday -> now + 60_000L  // oggi ma 9:00 già passate → tra 1 minuto
+                    isStartDateToday -> now + 60_000L  // oggi ma orario già passato → tra 1 minuto
                     else -> null                        // data passata, non schedulare
                 }
             }
             ReminderType.ANNUAL_RECURRING -> {
-                when {
-                    trigger.timeInMillis > now -> trigger.timeInMillis
-                    isAnnualToday -> now + 60_000L      // impostato oggi → tra 1 minuto
-                    else -> { trigger.add(Calendar.YEAR, 1); trigger.timeInMillis }
-                }
+                // Se il trigger è già passato, programma per l'anno prossimo
+                // (non usare +60s per evitare loop infinito dopo lo scatto)
+                if (trigger.timeInMillis > now) trigger.timeInMillis
+                else { trigger.add(Calendar.YEAR, 1); trigger.timeInMillis }
             }
         }
     }

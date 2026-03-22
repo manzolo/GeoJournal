@@ -86,6 +86,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -632,14 +633,16 @@ fun AddEditScreen(
                     }
                     if (uiState.reminders.isNotEmpty()) {
                         val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+                        val reminderTimeFormat = remember { SimpleDateFormat("HH:mm", Locale.ITALIAN) }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             uiState.reminders.forEach { reminder ->
+                                val timeStr = reminderTimeFormat.format(Date(reminder.startDate))
                                 val dateStr = when (reminder.type) {
                                     ReminderType.DATE_RANGE -> reminder.endDate?.let {
-                                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))}"
-                                    } ?: reminderDateFormat.format(Date(reminder.startDate))
-                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno"
-                                    ReminderType.SINGLE -> reminderDateFormat.format(Date(reminder.startDate))
+                                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))} · $timeStr"
+                                    } ?: "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
+                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ogni anno · $timeStr"
+                                    ReminderType.SINGLE -> "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
                                 }
                                 InputChip(
                                     selected = false,
@@ -983,13 +986,15 @@ private fun AddReminderDialog(
 ) {
     var title by remember { mutableStateOf(defaultTitle) }
     var selectedType by remember { mutableStateOf(ReminderType.SINGLE) }
-    // startDate as millis — default to today
+    // startDate as millis — default to today at midnight (time handled separately)
     val todayMillis = remember { Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
     }.timeInMillis }
     var startDateMillis by remember { mutableLongStateOf(todayMillis) }
     var endDateMillis by remember { mutableLongStateOf(todayMillis + 86400000L * 7) }
+    var selectedHour by remember { mutableIntStateOf(9) }
+    var selectedMinute by remember { mutableIntStateOf(0) }
     val dateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
 
     AlertDialog(
@@ -1052,18 +1057,39 @@ private fun AddReminderDialog(
                         TextButton(onClick = { endDateMillis += 86400000L }) { Text("›") }
                     }
                 }
+
+                // Time picker
+                Text(stringResource(R.string.addedit_reminder_time), style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { selectedHour = (selectedHour - 1 + 24) % 24 }) { Text("‹") }
+                    Text(String.format("%02d", selectedHour), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedHour = (selectedHour + 1) % 24 }) { Text("›") }
+                    Text(":", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedMinute = (selectedMinute - 5 + 60) % 60 }) { Text("‹") }
+                    Text(String.format("%02d", selectedMinute), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedMinute = (selectedMinute + 5) % 60 }) { Text("›") }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
                     if (title.isNotBlank()) {
+                        val startWithTime = Calendar.getInstance().apply {
+                            timeInMillis = startDateMillis
+                            set(Calendar.HOUR_OF_DAY, selectedHour)
+                            set(Calendar.MINUTE, selectedMinute)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
                         onConfirm(
                             Reminder(
                                 id = UUID.randomUUID().toString(),
                                 geoPointId = geoPointId,
                                 title = title.trim(),
-                                startDate = startDateMillis,
+                                startDate = startWithTime,
                                 endDate = if (selectedType == ReminderType.DATE_RANGE) endDateMillis else null,
                                 type = selectedType
                             )

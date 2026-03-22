@@ -155,6 +155,7 @@
     <string name="addedit_reminder_period">Period</string>
     <string name="addedit_reminder_start_date">Start date</string>
     <string name="addedit_reminder_end_date">End date</string>
+    <string name="addedit_reminder_time">Time</string>
     <string name="addedit_emoji_title">Choose emoji</string>
     <string name="addedit_paste_maps_url">Paste Google Maps URL</string>
     <string name="addedit_maps_url_not_found">No valid Google Maps URL found in clipboard</string>

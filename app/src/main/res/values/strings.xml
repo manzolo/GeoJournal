@@ -155,6 +155,7 @@
     <string name="addedit_reminder_period">Periodo</string>
     <string name="addedit_reminder_start_date">Data inizio</string>
     <string name="addedit_reminder_end_date">Data fine</string>
+    <string name="addedit_reminder_time">Orario</string>
     <string name="addedit_emoji_title">Scegli emoji</string>
     <string name="addedit_paste_maps_url">Incolla URL Google Maps</string>
     <string name="addedit_maps_url_not_found">Nessun URL Google Maps valido trovato negli appunti</string>

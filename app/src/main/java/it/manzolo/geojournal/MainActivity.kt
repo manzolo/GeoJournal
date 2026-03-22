@@ -39,6 +39,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import it.manzolo.geojournal.data.notification.ReminderBroadcastReceiver
 import it.manzolo.geojournal.ui.MainViewModel
 import it.manzolo.geojournal.ui.navigation.AppNavGraph
 import it.manzolo.geojournal.ui.navigation.Routes
@@ -72,6 +73,12 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val showBottomNav = currentRoute != Routes.Login.route
+
+                    LaunchedEffect(Unit) {
+                        mainViewModel.navigateToPoint.collect { geoPointId ->
+                            navController.navigate(Routes.PointDetail.createRoute(geoPointId))
+                        }
+                    }
 
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
@@ -118,6 +125,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleExternalIntent(intent: Intent?) {
+        if (intent?.action == ReminderBroadcastReceiver.ACTION_OPEN_POINT) {
+            val geoPointId = intent.getStringExtra(ReminderBroadcastReceiver.EXTRA_GEO_POINT_ID)
+            if (geoPointId != null) {
+                mainViewModel.onNotificationOpenPoint(geoPointId)
+            }
+            return
+        }
         if (intent?.action != Intent.ACTION_VIEW) return
         val uri = intent.data ?: return
         handleGeojUri(uri, intent)
