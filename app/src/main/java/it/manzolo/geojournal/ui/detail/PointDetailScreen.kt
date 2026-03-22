@@ -234,7 +234,7 @@ private fun PointDetailContent(
             }
         }
 
-        // ── Posizione: coordinate sempre visibili, date dietro (i) ────────────
+        // ── Posizione: coordinate e date tutte dietro (i) ────────────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -248,13 +248,13 @@ private fun PointDetailContent(
                                    else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_latitude),
-                    "%.6f".format(point.latitude))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_longitude),
-                    "%.6f".format(point.longitude))
                 AnimatedVisibility(visible = showDates) {
                     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_latitude),
+                            "%.6f".format(point.latitude))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        InfoRow(Icons.Filled.LocationOn, stringResource(R.string.detail_longitude),
+                            "%.6f".format(point.longitude))
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         InfoRow(Icons.Filled.CalendarToday, stringResource(R.string.detail_created),
                             dateFormat.format(point.createdAt))
