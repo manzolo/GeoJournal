@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import it.manzolo.geojournal.ui.navigation.Routes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -106,7 +107,10 @@ fun CalendarScreen(navController: NavController) {
                     day = state.selectedDay,
                     reminders = state.remindersForDay,
                     visits = state.visitsForDay,
-                    pointTitles = state.pointTitles
+                    pointTitles = state.pointTitles,
+                    onNavigateToPoint = { pointId ->
+                        navController.navigate(Routes.PointDetail.createRoute(pointId))
+                    }
                 )
             }
 
@@ -291,7 +295,8 @@ private fun DayDetailPanel(
     day: LocalDate?,
     reminders: List<Reminder>,
     visits: List<VisitLogEntry>,
-    pointTitles: Map<String, String>
+    pointTitles: Map<String, String>,
+    onNavigateToPoint: (String) -> Unit
 ) {
     val formatter = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -330,7 +335,7 @@ private fun DayDetailPanel(
                 )
             }
             items(reminders) { reminder ->
-                ReminderRow(reminder)
+                ReminderRow(reminder, onClick = { onNavigateToPoint(reminder.geoPointId) })
             }
             item { Spacer(Modifier.height(8.dp)) }
         }
@@ -352,7 +357,7 @@ private fun DayDetailPanel(
 }
 
 @Composable
-private fun ReminderRow(reminder: Reminder) {
+private fun ReminderRow(reminder: Reminder, onClick: () -> Unit) {
     val dateFormat = SimpleDateFormat("d MMM", Locale.getDefault())
     val startStr = dateFormat.format(Date(reminder.startDate))
     val yearlyLabel = stringResource(R.string.calendar_reminder_yearly)
@@ -368,6 +373,7 @@ private fun ReminderRow(reminder: Reminder) {
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+            .clickable(onClick = onClick)
             .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
     ) {
         Box(

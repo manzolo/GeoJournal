@@ -125,8 +125,8 @@ class CalendarViewModel @Inject constructor(
     )
 
     fun selectDay(day: LocalDate?) = _selectedDay.update { day }
-    fun nextMonth() = _currentMonth.update { it.plusMonths(1) }
-    fun previousMonth() = _currentMonth.update { it.minusMonths(1) }
+    fun nextMonth() { _currentMonth.update { it.plusMonths(1) }; _selectedDay.update { null } }
+    fun previousMonth() { _currentMonth.update { it.minusMonths(1) }; _selectedDay.update { null } }
 
     private fun YearMonth.startEpoch(): Long =
         atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
