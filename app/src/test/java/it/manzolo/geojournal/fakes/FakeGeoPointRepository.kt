@@ -13,6 +13,20 @@ class FakeGeoPointRepository : GeoPointRepository {
 
     override fun observeAll(): Flow<List<GeoPoint>> = _points
 
+    override fun observeActive(): Flow<List<GeoPoint>> =
+        _points.map { list -> list.filter { !it.isArchived } }
+
+    override fun observeArchived(): Flow<List<GeoPoint>> =
+        _points.map { list -> list.filter { it.isArchived } }
+
+    override suspend fun archivePoint(id: String) {
+        _points.update { list -> list.map { if (it.id == id) it.copy(isArchived = true) else it } }
+    }
+
+    override suspend fun unarchivePoint(id: String) {
+        _points.update { list -> list.map { if (it.id == id) it.copy(isArchived = false) else it } }
+    }
+
     override fun getAllUsedTags(): Flow<List<String>> =
         _points.map { list -> list.flatMap { it.tags }.distinct().sorted() }
 

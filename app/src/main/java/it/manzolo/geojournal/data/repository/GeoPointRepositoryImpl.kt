@@ -26,6 +26,24 @@ class GeoPointRepositoryImpl @Inject constructor(
     override fun observeAll(): Flow<List<GeoPoint>> =
         dao.observeAll().map { entities -> entities.map { it.toDomain() } }
 
+    override fun observeActive(): Flow<List<GeoPoint>> =
+        dao.observeActive().map { entities -> entities.map { it.toDomain() } }
+
+    override fun observeArchived(): Flow<List<GeoPoint>> =
+        dao.observeArchived().map { entities -> entities.map { it.toDomain() } }
+
+    override suspend fun archivePoint(id: String) {
+        dao.setArchived(id, true)
+        val point = dao.getById(id)?.toDomain() ?: return
+        syncPointToFirestore(point)
+    }
+
+    override suspend fun unarchivePoint(id: String) {
+        dao.setArchived(id, false)
+        val point = dao.getById(id)?.toDomain() ?: return
+        syncPointToFirestore(point)
+    }
+
     override fun getAllUsedTags(): Flow<List<String>> =
         dao.observeAllTagStrings().map { tagStrings ->
             tagStrings.flatMap { it.split("|") }
@@ -75,7 +93,8 @@ class GeoPointRepositoryImpl @Inject constructor(
                 "updatedAt" to point.updatedAt.time,
                 "isShared" to point.isShared,
                 "ownerId" to uid,
-                "rating" to point.rating
+                "rating" to point.rating,
+                "isArchived" to point.isArchived
             )
             firestore
                 .collection("users")
@@ -148,7 +167,8 @@ class GeoPointRepositoryImpl @Inject constructor(
                 ownerId = uid,
                 isShared = getBoolean("isShared") ?: false,
                 syncedToFirestore = true,
-                rating = getLong("rating")?.toInt() ?: 0
+                rating = getLong("rating")?.toInt() ?: 0,
+                isArchived = getBoolean("isArchived") ?: false
             )
         } catch (_: Exception) { null }
     }

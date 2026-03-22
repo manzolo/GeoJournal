@@ -114,6 +114,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import it.manzolo.geojournal.R
+import it.manzolo.geojournal.ui.navigation.Routes
 import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -215,7 +216,15 @@ fun AddEditScreen(
     LaunchedEffect(uiState.isSaved, uiState.isDeleted) {
         if (uiState.isSaved || uiState.isDeleted) {
             viewModel.onNavigated()
-            navController.popBackStack()
+            if (uiState.isSaved && !viewModel.isEditMode) {
+                // Nuovo punto: vai alla mappa centrata sul punto appena creato
+                navController.navigate(Routes.Map.route) {
+                    popUpTo(Routes.Map.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            } else {
+                navController.popBackStack()
+            }
         }
     }
     LaunchedEffect(uiState.error) {

@@ -31,7 +31,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -46,8 +48,10 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +64,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import it.manzolo.geojournal.R
 import androidx.compose.runtime.collectAsState
@@ -116,6 +121,49 @@ fun PointDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val fallbackTitle = stringResource(R.string.detail_title_fallback)
 
+    // Feature 1: naviga indietro automaticamente se il punto è eliminato/archiviato
+    LaunchedEffect(uiState.isDeleted) {
+        if (uiState.isDeleted) navController.popBackStack()
+    }
+
+    // Feature 2: dialog conferma eliminazione
+    if (uiState.showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = viewModel::toggleDeleteConfirm,
+            title = { Text(stringResource(R.string.point_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.addedit_delete_message)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::deletePoint) {
+                    Text(stringResource(R.string.point_delete_confirm_button), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::toggleDeleteConfirm) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // Feature 4: dialog conferma archivio
+    if (uiState.showArchiveConfirm) {
+        AlertDialog(
+            onDismissRequest = viewModel::toggleArchiveConfirm,
+            title = { Text(stringResource(R.string.point_archive_confirm_title)) },
+            text = { Text(stringResource(R.string.point_archive_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = viewModel::archivePoint) {
+                    Text(stringResource(R.string.point_archive))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::toggleArchiveConfirm) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -131,6 +179,9 @@ fun PointDetailScreen(
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
                         }) {
                             Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.point_edit))
+                        }
+                        IconButton(onClick = viewModel::toggleDeleteConfirm) {
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.point_delete), tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -157,6 +208,7 @@ fun PointDetailScreen(
                 onLogVisitToday = viewModel::logVisitToday,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
+                onArchive = viewModel::toggleArchiveConfirm,
                 navController = navController,
                 modifier = Modifier.padding(innerPadding)
             )
@@ -173,6 +225,7 @@ private fun PointDetailContent(
     onLogVisitToday: () -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
+    onArchive: () -> Unit,
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
@@ -445,6 +498,14 @@ private fun PointDetailContent(
                     Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.point_share_location))
+                }
+                OutlinedButton(
+                    onClick = onArchive,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_archive))
                 }
             }
         }

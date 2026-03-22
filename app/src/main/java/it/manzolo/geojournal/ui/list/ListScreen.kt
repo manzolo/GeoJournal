@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.FileProvider
@@ -92,6 +94,7 @@ fun ListScreen(navController: NavController) {
     var showSortMenu by remember { mutableStateOf(false) }
     var contextMenuPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
+    var archiveConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteTagConfirm by remember { mutableStateOf<String?>(null) }
     var tagsExpanded by remember { mutableStateOf(false) }
 
@@ -150,6 +153,25 @@ fun ListScreen(navController: NavController) {
                             viewModel.prepareShare(point)
                         }
                     )
+                    if (state.showArchived) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.list_unarchive_point)) },
+                            leadingIcon = { Icon(Icons.Filled.Unarchive, null) },
+                            onClick = {
+                                contextMenuPoint = null
+                                viewModel.unarchivePoint(point)
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.list_archive_point)) },
+                            leadingIcon = { Icon(Icons.Filled.Archive, null) },
+                            onClick = {
+                                contextMenuPoint = null
+                                archiveConfirmPoint = point
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.point_delete), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
@@ -162,6 +184,30 @@ fun ListScreen(navController: NavController) {
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { contextMenuPoint = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // Dialog conferma archivio
+    archiveConfirmPoint?.let { point ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { archiveConfirmPoint = null },
+            title = { Text(stringResource(R.string.list_archive_confirm_title)) },
+            text = { Text(stringResource(R.string.list_archive_confirm_message, point.title)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        viewModel.archivePoint(point)
+                        archiveConfirmPoint = null
+                    }
+                ) {
+                    Text(stringResource(R.string.list_archive_point))
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { archiveConfirmPoint = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
@@ -221,6 +267,13 @@ fun ListScreen(navController: NavController) {
             TopAppBar(
                 title = { Text(stringResource(R.string.list_title)) },
                 actions = {
+                    IconButton(onClick = viewModel::toggleArchiveView) {
+                        Icon(
+                            imageVector = if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                            contentDescription = stringResource(R.string.list_show_archived),
+                            tint = if (state.showArchived) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     IconButton(onClick = { showSortMenu = true }) {
                         Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.list_sort))
                     }
@@ -337,7 +390,10 @@ fun ListScreen(navController: NavController) {
                     }
                 }
                 state.points.isEmpty() -> {
-                    EmptyState(hasFilters = state.query.isNotEmpty() || state.selectedTags.isNotEmpty())
+                    EmptyState(
+                        hasFilters = state.query.isNotEmpty() || state.selectedTags.isNotEmpty(),
+                        isArchiveView = state.showArchived
+                    )
                 }
                 else -> {
                     LazyColumn(
@@ -450,25 +506,34 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
 }
 
 @Composable
-private fun EmptyState(hasFilters: Boolean) {
+private fun EmptyState(hasFilters: Boolean, isArchiveView: Boolean = false) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = if (hasFilters) "🔍" else "📋",
+                text = when {
+                    hasFilters -> "🔍"
+                    isArchiveView -> "📦"
+                    else -> "📋"
+                },
                 style = MaterialTheme.typography.displayMedium
             )
             Spacer(Modifier.height(16.dp))
             Text(
-                text = if (hasFilters) stringResource(R.string.list_empty_filtered) else stringResource(R.string.empty_list_title),
+                text = when {
+                    hasFilters -> stringResource(R.string.list_empty_filtered)
+                    isArchiveView -> stringResource(R.string.list_archived_empty)
+                    else -> stringResource(R.string.empty_list_title)
+                },
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = if (hasFilters)
-                    stringResource(R.string.list_empty_filtered_hint)
-                else
-                    stringResource(R.string.empty_list_subtitle),
+                text = when {
+                    hasFilters -> stringResource(R.string.list_empty_filtered_hint)
+                    isArchiveView -> stringResource(R.string.list_archived_empty_hint)
+                    else -> stringResource(R.string.empty_list_subtitle)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center

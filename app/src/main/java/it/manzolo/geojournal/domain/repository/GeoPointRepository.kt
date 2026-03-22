@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.Flow
 
 interface GeoPointRepository {
     fun observeAll(): Flow<List<GeoPoint>>
+    fun observeActive(): Flow<List<GeoPoint>>
+    fun observeArchived(): Flow<List<GeoPoint>>
+    suspend fun archivePoint(id: String)
+    suspend fun unarchivePoint(id: String)
     fun getAllUsedTags(): Flow<List<String>>
     suspend fun getById(id: String): GeoPoint?
     suspend fun count(): Int

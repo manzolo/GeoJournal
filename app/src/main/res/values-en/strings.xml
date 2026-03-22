@@ -108,6 +108,13 @@
 
     <!-- List Screen -->
     <string name="list_title">My journal</string>
+    <string name="list_archive_point">Archive</string>
+    <string name="list_unarchive_point">Restore</string>
+    <string name="list_archive_confirm_title">Archive point</string>
+    <string name="list_archive_confirm_message">Archive \"%s\"? It will be hidden from the map and list.</string>
+    <string name="list_show_archived">Archive</string>
+    <string name="list_archived_empty">The archive is empty</string>
+    <string name="list_archived_empty_hint">Archived points will appear here</string>
     <string name="list_sort">Sort</string>
     <string name="list_search_placeholder">Search your memories…</string>
     <string name="list_search_clear">Clear</string>
@@ -121,7 +128,16 @@
     <string name="list_delete_tag_confirm">Delete</string>
     <string name="list_tags_collapse">Less</string>
 
+    <!-- Point Detail actions -->
+    <string name="point_delete_confirm_title">Delete point</string>
+    <string name="point_delete_confirm_button">Delete</string>
+    <string name="point_archive">Archive point</string>
+    <string name="point_unarchive">Restore point</string>
+    <string name="point_archive_confirm_title">Archive point</string>
+    <string name="point_archive_confirm_message">The point will be hidden from the map and list. You can restore it from the Archive section.</string>
+
     <!-- Add/Edit Screen -->
+    <string name="addedit_error_no_location">Set a location before saving the point.</string>
     <string name="addedit_delete_title">Delete point</string>
     <string name="addedit_delete_message">Are you sure you want to delete this point? This action cannot be undone.</string>
     <string name="addedit_add_photo">Add photo</string>

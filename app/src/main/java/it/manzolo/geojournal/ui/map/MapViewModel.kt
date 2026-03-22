@@ -116,7 +116,7 @@ class MapViewModel @Inject constructor(
 
     private fun observePoints() {
         viewModelScope.launch {
-            repository.observeAll()
+            repository.observeActive()
                 .catch { e -> _uiState.update { it.copy(error = e.message, isLoading = false) } }
                 .collect { points ->
                     _uiState.update { it.copy(points = points, isLoading = false) }

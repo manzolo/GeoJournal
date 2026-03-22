@@ -14,6 +14,15 @@ interface GeoPointDao {
     @Query("SELECT * FROM geo_points ORDER BY created_at DESC")
     fun observeAll(): Flow<List<GeoPointEntity>>
 
+    @Query("SELECT * FROM geo_points WHERE is_archived = 0 ORDER BY created_at DESC")
+    fun observeActive(): Flow<List<GeoPointEntity>>
+
+    @Query("SELECT * FROM geo_points WHERE is_archived = 1 ORDER BY created_at DESC")
+    fun observeArchived(): Flow<List<GeoPointEntity>>
+
+    @Query("UPDATE geo_points SET is_archived = :archived WHERE id = :id")
+    suspend fun setArchived(id: String, archived: Boolean)
+
     @Query("SELECT * FROM geo_points ORDER BY created_at DESC")
     suspend fun getAll(): List<GeoPointEntity>
 

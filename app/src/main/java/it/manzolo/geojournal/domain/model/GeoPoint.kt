@@ -17,5 +17,6 @@ data class GeoPoint(
     val updatedAt: Date = Date(),
     val ownerId: String = "",
     val isShared: Boolean = false,
-    val rating: Int = 0   // 0 = non valutato, 1-5 stelle
+    val rating: Int = 0,  // 0 = non valutato, 1-5 stelle
+    val isArchived: Boolean = false
 )

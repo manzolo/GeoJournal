@@ -108,6 +108,13 @@
 
     <!-- List Screen -->
     <string name="list_title">Il tuo diario</string>
+    <string name="list_archive_point">Archivia</string>
+    <string name="list_unarchive_point">Ripristina</string>
+    <string name="list_archive_confirm_title">Archivia punto</string>
+    <string name="list_archive_confirm_message">Archivia \"%s\"? Sarà nascosto dalla mappa e dalla lista.</string>
+    <string name="list_show_archived">Archivio</string>
+    <string name="list_archived_empty">L\'archivio è vuoto</string>
+    <string name="list_archived_empty_hint">I punti archiviati appariranno qui</string>
     <string name="list_sort">Ordina</string>
     <string name="list_search_placeholder">Cerca nei tuoi ricordi…</string>
     <string name="list_search_clear">Cancella</string>
@@ -121,7 +128,16 @@
     <string name="list_delete_tag_confirm">Elimina</string>
     <string name="list_tags_collapse">Meno</string>
 
+    <!-- Point Detail actions -->
+    <string name="point_delete_confirm_title">Elimina punto</string>
+    <string name="point_delete_confirm_button">Elimina</string>
+    <string name="point_archive">Archivia punto</string>
+    <string name="point_unarchive">Ripristina punto</string>
+    <string name="point_archive_confirm_title">Archivia punto</string>
+    <string name="point_archive_confirm_message">Il punto sarà nascosto dalla mappa e dalla lista. Potrai ripristinarlo dalla sezione Archivio.</string>
+
     <!-- Add/Edit Screen -->
+    <string name="addedit_error_no_location">Imposta una posizione prima di salvare il punto.</string>
     <string name="addedit_delete_title">Elimina punto</string>
     <string name="addedit_delete_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>
     <string name="addedit_add_photo">Aggiungi foto</string>

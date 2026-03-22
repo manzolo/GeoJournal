@@ -8,7 +8,9 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
+import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
@@ -262,6 +264,10 @@ class AddEditViewModel @Inject constructor(
 
     fun save() {
         val state = _uiState.value
+        if (state.latitude == 0.0 && state.longitude == 0.0) {
+            _uiState.update { it.copy(error = context.getString(R.string.addedit_error_no_location)) }
+            return
+        }
         if (state.title.isBlank()) {
             _uiState.update { it.copy(error = "Il titolo è obbligatorio") }
             return
@@ -291,6 +297,8 @@ class AddEditViewModel @Inject constructor(
                     reminderRepository.save(r)
                     scheduler.scheduleReminder(r)
                 }
+                // Nuovo punto: centra la mappa su di esso dopo il salvataggio
+                MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
             }
             _uiState.update { it.copy(isLoading = false, isSaved = true) }
         }

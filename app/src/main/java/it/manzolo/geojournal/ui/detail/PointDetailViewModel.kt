@@ -23,7 +23,10 @@ data class PointDetailUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val visitLogs: List<VisitLogEntry> = emptyList(),
-    val reminders: List<Reminder> = emptyList()
+    val reminders: List<Reminder> = emptyList(),
+    val isDeleted: Boolean = false,
+    val showDeleteConfirm: Boolean = false,
+    val showArchiveConfirm: Boolean = false
 )
 
 @HiltViewModel
@@ -45,12 +48,18 @@ class PointDetailViewModel @Inject constructor(
 
     private fun loadPoint() {
         viewModelScope.launch {
-            repository.observeAll()
+            var wasLoaded = false
+            repository.observeActive()
                 .map { list -> list.find { it.id == pointId } }
                 .collect { point ->
-                    _uiState.update {
-                        if (point != null) it.copy(point = point, isLoading = false)
-                        else it.copy(isLoading = false, error = "Punto non trovato")
+                    if (point != null) {
+                        wasLoaded = true
+                        _uiState.update { it.copy(point = point, isLoading = false) }
+                    } else if (wasLoaded) {
+                        // Il punto era caricato ed è scomparso (eliminato o archiviato): naviga indietro
+                        _uiState.update { it.copy(isDeleted = true) }
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "Punto non trovato") }
                     }
                 }
         }
@@ -76,5 +85,25 @@ class PointDetailViewModel @Inject constructor(
 
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch { reminderRepository.delete(reminder) }
+    }
+
+    fun toggleDeleteConfirm() = _uiState.update { it.copy(showDeleteConfirm = !it.showDeleteConfirm) }
+
+    fun deletePoint() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showDeleteConfirm = false) }
+            repository.deleteById(pointId)
+            // La navigazione back viene gestita da loadPoint() tramite wasLoaded+isDeleted
+        }
+    }
+
+    fun toggleArchiveConfirm() = _uiState.update { it.copy(showArchiveConfirm = !it.showArchiveConfirm) }
+
+    fun archivePoint() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(showArchiveConfirm = false) }
+            repository.archivePoint(pointId)
+            // observeActive() non lo vedrà più → wasLoaded=true → isDeleted=true → naviga indietro
+        }
     }
 }

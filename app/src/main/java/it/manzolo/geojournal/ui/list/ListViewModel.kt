@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,9 +34,11 @@ data class ListUiState(
     val query: String = "",
     val selectedTags: Set<String> = emptySet(),
     val sortOrder: SortOrder = SortOrder.NEWEST,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val showArchived: Boolean = false
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ListViewModel @Inject constructor(
     private val repository: GeoPointRepository,
@@ -54,13 +58,17 @@ class ListViewModel @Inject constructor(
     private val _query = MutableStateFlow("")
     private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
     private val _sortOrder = MutableStateFlow(SortOrder.NEWEST)
+    private val _showArchived = MutableStateFlow(false)
 
     val uiState: StateFlow<ListUiState> = combine(
-        repository.observeAll(),
+        _showArchived.flatMapLatest { archived ->
+            if (archived) repository.observeArchived() else repository.observeActive()
+        },
         _query,
         _selectedTags,
-        _sortOrder
-    ) { all, query, selectedTags, sortOrder ->
+        _sortOrder,
+        _showArchived
+    ) { all, query, selectedTags, sortOrder, showArchived ->
         val allTags = all.flatMap { it.tags }.distinct().sorted()
 
         val filtered = all
@@ -87,7 +95,8 @@ class ListViewModel @Inject constructor(
             query = query,
             selectedTags = selectedTags,
             sortOrder = sortOrder,
-            isLoading = false
+            isLoading = false,
+            showArchived = showArchived
         )
     }.stateIn(
         scope = viewModelScope,
@@ -98,7 +107,10 @@ class ListViewModel @Inject constructor(
     fun updateQuery(q: String) = _query.update { q }
     fun toggleTag(tag: String) = _selectedTags.update { if (tag in it) it - tag else it + tag }
     fun setSortOrder(order: SortOrder) = _sortOrder.update { order }
+    fun toggleArchiveView() = _showArchived.update { !it }
     fun deletePoint(point: GeoPoint) = viewModelScope.launch { repository.delete(point) }
+    fun archivePoint(point: GeoPoint) = viewModelScope.launch { repository.archivePoint(point.id) }
+    fun unarchivePoint(point: GeoPoint) = viewModelScope.launch { repository.unarchivePoint(point.id) }
     fun deleteTag(tag: String) = viewModelScope.launch {
         _selectedTags.update { it - tag }
         repository.removeTagFromAllPoints(tag)
