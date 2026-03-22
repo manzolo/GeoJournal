@@ -178,6 +178,8 @@
     <string name="addedit_location_selected">Posizione selezionata sulla mappa</string>
     <string name="addedit_gps_accuracy">Precisione: ±%d m</string>
     <string name="addedit_gps_acquiring">Acquisizione GPS…</string>
+    <string name="addedit_gps_tap_to_select">Tocca la mappa per selezionare la posizione</string>
+    <string name="addedit_gps_permission_settings">Permesso GPS disabilitato. Per usare il GPS abilitalo nelle impostazioni dell\'app.</string>
     <string name="addedit_use_gps">Usa GPS</string>
     <string name="addedit_use_location">Usa posizione</string>
     <string name="addedit_reminder_title_hint">Titolo promemoria</string>

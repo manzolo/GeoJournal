@@ -314,6 +314,7 @@ class AddEditViewModel @Inject constructor(
     }
 
     fun clearError() = _uiState.update { it.copy(error = null) }
+    fun showError(msg: String) = _uiState.update { it.copy(error = msg) }
     fun onNavigated() = _uiState.update { it.copy(isSaved = false, isDeleted = false) }
 
     // ─── Photo resolution ────────────────────────────────────────────────────

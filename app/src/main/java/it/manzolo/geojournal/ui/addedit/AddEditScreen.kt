@@ -119,6 +119,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -192,6 +193,7 @@ fun AddEditScreen(
     val titleFocusRequester = remember { FocusRequester() }
     var showGpsPreview by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var permissionLaunchedOnce by remember { mutableStateOf(false) }
 
     // Feature 2: auto-focus sul campo Titolo solo per nuovi punti
     LaunchedEffect(Unit) {
@@ -202,10 +204,15 @@ fun AddEditScreen(
         }
     }
 
-    // Location permission — apre il dialog preview se concesso
+    val gpsPermissionSettingsMsg = stringResource(R.string.addedit_gps_permission_settings)
+
+    // Location permission — apre il dialog preview se concesso; se negato apre in modalità manuale
     val locationPermission = rememberPermissionState(
         Manifest.permission.ACCESS_FINE_LOCATION,
-        onPermissionResult = { granted -> if (granted) showGpsPreview = true }
+        onPermissionResult = { granted ->
+            // In entrambi i casi apri il dialog: con GPS se concesso, solo mappa se negato
+            showGpsPreview = true
+        }
     )
 
     // Camera
@@ -261,6 +268,7 @@ fun AddEditScreen(
     // GPS preview dialog
     if (showGpsPreview) {
         GpsPreviewDialog(
+            hasLocationPermission = locationPermission.status.isGranted,
             onLocationConfirmed = { lat, lon ->
                 viewModel.updateLocation(lat, lon)
                 showGpsPreview = false
@@ -546,8 +554,18 @@ fun AddEditScreen(
                     }
                     OutlinedButton(
                         onClick = {
-                            if (locationPermission.status.isGranted) showGpsPreview = true
-                            else locationPermission.launchPermissionRequest()
+                            when {
+                                locationPermission.status.isGranted -> showGpsPreview = true
+                                !permissionLaunchedOnce || locationPermission.status.shouldShowRationale -> {
+                                    permissionLaunchedOnce = true
+                                    locationPermission.launchPermissionRequest()
+                                }
+                                else -> {
+                                    // Permesso disabilitato permanentemente: apri in modalità solo-mappa
+                                    showGpsPreview = true
+                                    viewModel.showError(gpsPermissionSettingsMsg)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -800,6 +818,7 @@ private fun navigateToMapFocus(navController: NavController, lat: Double, lon: D
 @SuppressLint("MissingPermission")
 @Composable
 private fun GpsPreviewDialog(
+    hasLocationPermission: Boolean,
     onLocationConfirmed: (Double, Double) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -811,8 +830,9 @@ private fun GpsPreviewDialog(
     val manualTapState = remember { mutableStateOf<OsmGeoPoint?>(null) }
     var manualTapPosition by manualTapState
 
-    // Avvia aggiornamenti continui — si fermano al dismiss (onDispose)
+    // Avvia aggiornamenti continui solo se il permesso è disponibile
     DisposableEffect(Unit) {
+        if (!hasLocationPermission) return@DisposableEffect onDispose { }
         val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_000L)
             .setMinUpdateIntervalMillis(500L)
             .build()
@@ -929,7 +949,7 @@ private fun GpsPreviewDialog(
                 Column(modifier = Modifier.padding(16.dp)) {
                     when {
                         manualTapPosition != null -> {
-                            // Posizione manuale
+                            // Posizione manuale selezionata sulla mappa
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Filled.LocationOn,
@@ -981,6 +1001,23 @@ private fun GpsPreviewDialog(
                                 )
                             }
                         }
+                        !hasLocationPermission -> {
+                            // Nessun permesso GPS: solo selezione manuale
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Filled.Map,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.addedit_gps_tap_to_select),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                         else -> {
                             // In attesa del primo fix GPS
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1005,8 +1042,8 @@ private fun GpsPreviewDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // "Usa GPS" visibile solo in modalità manuale
-                        if (manualTapPosition != null) {
+                        // "Usa GPS" visibile solo in modalità manuale E solo se il permesso è disponibile
+                        if (manualTapPosition != null && hasLocationPermission) {
                             TextButton(onClick = { manualTapPosition = null }) {
                                 Icon(
                                     Icons.Filled.GpsFixed,
