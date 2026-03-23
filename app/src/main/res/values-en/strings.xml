@@ -270,6 +270,7 @@
     <string name="onboarding_cloud_title">Synced to the cloud</string>
     <string name="onboarding_cloud_body">With a Google account your data is synced to Firebase. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console: I do not view your data and have no interest in doing so, but technically I could. If maximum privacy matters to you, use guest mode.</string>
     <string name="onboarding_cloud_badge">Automatic backup · Multi-device</string>
+    <string name="onboarding_open_source_note">🔓 GeoJournal is open source (AGPL-3.0): the code is public on GitHub and anyone can verify what it does with your data. You don\'t have to take my word for it.</string>
     <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
     <string name="onboarding_cta">Got it</string>
     <string name="profile_data_info_button">How we handle your data</string>

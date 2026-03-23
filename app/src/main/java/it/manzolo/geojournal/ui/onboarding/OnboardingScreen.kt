@@ -100,6 +100,15 @@ fun OnboardingScreen(
                 iconTint = MaterialTheme.colorScheme.primary
             )
 
+            // Open source note
+            Text(
+                text = stringResource(R.string.onboarding_open_source_note),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
             // Crashlytics note
             Text(
                 text = stringResource(R.string.onboarding_crashlytics_note),

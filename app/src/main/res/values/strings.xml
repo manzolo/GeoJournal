@@ -273,6 +273,7 @@
     <string name="onboarding_cloud_title">Sincronizzato sul cloud</string>
     <string name="onboarding_cloud_body">Con un account Google i dati vengono sincronizzati su Firebase. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase: non consulto i tuoi dati e non ho alcun interesse a farlo, ma tecnicamente potrei. Se la massima privacy è importante per te, usa la modalità ospite.</string>
     <string name="onboarding_cloud_badge">Backup automatico · Multi-device</string>
+    <string name="onboarding_open_source_note">🔓 GeoJournal è open source (AGPL-3.0): il codice è pubblico su GitHub e chiunque può verificare cosa fa con i tuoi dati. Non devi fidarti solo della mia parola.</string>
     <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite. Non contengono dati personali.</string>
     <string name="onboarding_cta">Ho capito</string>
     <string name="profile_data_info_button">Informazioni su come gestiamo i dati</string>
