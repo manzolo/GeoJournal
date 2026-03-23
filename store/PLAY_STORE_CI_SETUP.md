@@ -39,18 +39,24 @@ Questo passo è **obbligatorio**: senza di esso il workflow CI fallisce con "Goo
 
 ---
 
-## Passo 2 — Collega il Service Account a Google Play Console
+## Passo 2 — Aggiungi il Service Account a Google Play Console
+
+> ⚠️ La vecchia sezione "Setup → API access" non esiste più nella nuova UI di Play Console.
+> Il service account si aggiunge come utente tramite "Utenti e autorizzazioni".
 
 1. Vai su [play.google.com/console](https://play.google.com/console)
-2. Menu in alto a sinistra → **Setup → API access**
-3. Nella sezione "Google Cloud project" clicca **View in Google Cloud Console**
-   (questo collega Play Console al tuo progetto Google Cloud)
-4. Torna su Play Console → **Setup → API access**
-5. Nella lista "Service accounts" troverai l'account appena creato
-6. Clicca **Grant access** accanto ad esso
-7. Assegna il ruolo: **Release Manager**
-   (permette di caricare AAB e gestire le release, senza accesso a dati finanziari)
-8. Clicca **Invite user** → **Send invite**
+2. Dalla **Home dell'account** (non dentro una singola app), clicca **Utenti e autorizzazioni** nella barra sinistra
+3. Clicca i **tre puntini ⋮** in alto a destra → **Invita nuovi utenti**
+4. Nel campo email inserisci l'indirizzo del service account (es. `geojournal-play-deploy@<project-id>.iam.gserviceaccount.com`)
+5. Sotto **"Autorizzazioni account"**, nella sezione **Release**, spunta:
+   - ✅ **Rilascio di app per i canali di test**
+   - ✅ **Rilascio per il canale di produzione** (opzionale, per ora basta quello sopra)
+6. Clicca **Invita utente** — lo stato diventerà "Attivo"
+7. Clicca **Gestisci →** accanto al service account appena aggiunto
+8. Nella sezione **"Autorizzazioni app"**, aggiungi la tua app e verifica che i permessi Release siano abilitati anche a livello app
+
+> ℹ️ **Non assegnare ruoli IAM in Google Cloud Console** al service account per il Play Store —
+> i permessi Play si gestiscono esclusivamente da Play Console.
 
 ---
 
