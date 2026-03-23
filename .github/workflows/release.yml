@@ -1,4 +1,4 @@
-name: Release APK
+name: Release
 
 on:
   push:
@@ -55,13 +55,14 @@ jobs:
         run: |
           echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > ${{ runner.temp }}/release.jks
 
-      - name: Build release APK
+      - name: Build release APK + AAB
         env:
           RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: |
+          ./gradlew assembleRelease bundleRelease
 
       - name: Rename APK
         run: |
@@ -84,3 +85,13 @@ jobs:
           prerelease: false
           files: app/build/outputs/apk/release/geojournal-${{ steps.version.outputs.name }}.apk
           generate_release_notes: true
+
+      - name: Upload AAB to Google Play (Internal track)
+        if: startsWith(github.ref, 'refs/tags/') && secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON != ''
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: it.manzolo.geojournal
+          releaseFiles: app/build/outputs/bundle/release/app-release.aab
+          track: internal
+          status: completed
