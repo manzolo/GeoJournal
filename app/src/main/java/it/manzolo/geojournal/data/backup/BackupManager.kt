@@ -155,6 +155,7 @@ class BackupManager @Inject constructor(
                         }))
                         p.audioUrl?.let { put("audioUrl", it) }
                         put("rating", p.rating)
+                        put("isArchived", p.isArchived)
                     })
                 }
             })
@@ -254,7 +255,8 @@ class BackupManager @Inject constructor(
                 isShared    = obj.optBoolean("isShared", false),
                 createdAt   = Date(obj.getLong("createdAt")),
                 updatedAt   = Date(obj.getLong("updatedAt")),
-                rating      = obj.optInt("rating", 0)
+                rating      = obj.optInt("rating", 0),
+                isArchived  = obj.optBoolean("isArchived", false)
             )
             geoPointRepository.save(point)
             pointCount++
