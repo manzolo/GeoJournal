@@ -29,6 +29,16 @@ tramite GitHub Actions, usando un Service Account Google.
 
 ---
 
+## Passo 1b — Abilita l'Android Publisher API
+
+Questo passo è **obbligatorio**: senza di esso il workflow CI fallisce con "Google Play Android Developer API has not been used in project".
+
+1. Vai su [console.cloud.google.com/apis/library](https://console.cloud.google.com/apis/library)
+2. Cerca **"Google Play Android Developer API"**
+3. Clicca **Abilita** (se non è già abilitata)
+
+---
+
 ## Passo 2 — Collega il Service Account a Google Play Console
 
 1. Vai su [play.google.com/console](https://play.google.com/console)
