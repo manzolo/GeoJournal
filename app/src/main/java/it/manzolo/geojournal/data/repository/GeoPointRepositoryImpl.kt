@@ -120,6 +120,21 @@ class GeoPointRepositoryImpl @Inject constructor(
         }
     }
 
+    // ─── Task 10b: retry punti non sincronizzati ─────────────────────────────
+
+    override suspend fun syncUnsyncedPoints(): Int {
+        if (auth.currentUser == null) return 0
+        val unsynced = dao.getUnsyncedPoints()
+        var count = 0
+        unsynced.forEach { entity ->
+            val before = dao.getById(entity.id)?.syncedToFirestore ?: true
+            syncPointToFirestore(entity.toDomain())
+            val after = dao.getById(entity.id)?.syncedToFirestore ?: false
+            if (!before && after) count++
+        }
+        return count
+    }
+
     // ─── Task 9: migrazione punti guest → cloud ───────────────────────────────
 
     override suspend fun migrateGuestPointsToUser(userId: String): Int {

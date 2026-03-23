@@ -1,6 +1,7 @@
 package it.manzolo.geojournal.ui.map
 
 import io.mockk.coJustRun
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import it.manzolo.geojournal.data.backup.GeoPointExporter
@@ -12,6 +13,7 @@ import it.manzolo.geojournal.util.MainDispatcherRule
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -136,5 +138,57 @@ class MapViewModelTest {
         assertEquals(44.5, state.userLatitude, 0.001)
         assertEquals(11.3, state.userLongitude, 0.001)
         assertEquals(15.0, state.zoomLevel, 0.001)
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun `onMapMoved chiama setMapPosition dopo il debounce`() = runTest {
+        collectUiState()
+
+        viewModel.onMapMoved(44.5, 11.3, 15.0)
+        advanceTimeBy(1100)
+
+        coVerify(exactly = 1) { userPrefs.setMapPosition(44.5, 11.3, 15.0) }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun `onMapMoved multipli - setMapPosition chiamato solo una volta per debounce`() = runTest {
+        collectUiState()
+
+        viewModel.onMapMoved(44.0, 11.0, 13.0)
+        viewModel.onMapMoved(44.1, 11.1, 14.0)
+        viewModel.onMapMoved(44.5, 11.3, 15.0)
+        advanceTimeBy(1100)
+
+        coVerify(exactly = 1) { userPrefs.setMapPosition(44.5, 11.3, 15.0) }
+        coVerify(exactly = 0) { userPrefs.setMapPosition(44.0, 11.0, 13.0) }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun `restoreMapPosition - con coordinate salvate imposta stato e skippa fit automatico`() = runTest {
+        val prefsWithPosition = mockk<UserPreferencesRepository> {
+            every { preferences } returns flowOf(UserPreferences(mapLat = 41.9, mapLon = 12.5, mapZoom = 14.0))
+            coJustRun { setMapPosition(any(), any(), any()) }
+        }
+        val vmWithSavedPosition = MapViewModel(FakeGeoPointRepository(), exporter, prefsWithPosition)
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vmWithSavedPosition.uiState.collect {}
+        }
+
+        val state = vmWithSavedPosition.uiState.value
+        assertEquals(41.9, state.userLatitude, 0.001)
+        assertEquals(12.5, state.userLongitude, 0.001)
+        assertEquals(14.0, state.zoomLevel, 0.001)
+        assertTrue(state.hasAppliedInitialZoom)
+    }
+
+    @Test
+    fun `restoreMapPosition - senza coordinate salvate mantiene fit automatico attivo`() = runTest {
+        // userPrefs con lat/lon = 0.0 (default) → hasAppliedInitialZoom rimane false
+        val state = viewModel.uiState.value
+        assertFalse(state.hasAppliedInitialZoom)
     }
 }

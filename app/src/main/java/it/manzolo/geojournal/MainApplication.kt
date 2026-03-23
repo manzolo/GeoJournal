@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.HiltAndroidApp
@@ -14,6 +17,7 @@ import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.notification.ReminderBroadcastReceiver
 import it.manzolo.geojournal.data.worker.RescheduleWorker
+import it.manzolo.geojournal.data.worker.SyncUnsyncedPointsWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -37,6 +41,7 @@ class MainApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         ensureRemindersScheduled()
         ensureAutoBackupScheduled()
+        scheduleSyncUnsyncedPoints()
     }
 
     private fun createNotificationChannels() {
@@ -57,6 +62,18 @@ class MainApplication : Application(), Configuration.Provider {
     private fun ensureRemindersScheduled() {
         WorkManager.getInstance(this).enqueue(
             OneTimeWorkRequestBuilder<RescheduleWorker>().build()
+        )
+    }
+
+    /** Rilancia la sync dei punti non ancora sincronizzati su Firestore, quando c'è rete. */
+    private fun scheduleSyncUnsyncedPoints() {
+        val request = OneTimeWorkRequestBuilder<SyncUnsyncedPointsWorker>()
+            .setConstraints(Constraints(requiredNetworkType = NetworkType.CONNECTED))
+            .build()
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "sync_unsynced_points",
+            ExistingWorkPolicy.REPLACE,
+            request
         )
     }
 

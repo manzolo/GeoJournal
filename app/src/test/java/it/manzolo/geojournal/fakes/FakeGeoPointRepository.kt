@@ -59,6 +59,7 @@ class FakeGeoPointRepository : GeoPointRepository {
 
     override suspend fun migrateGuestPointsToUser(userId: String): Int = 0
     override suspend fun pullFromFirestore(): Int = 0
+    override suspend fun syncUnsyncedPoints(): Int = 0
     override suspend fun deleteAllLocalData() { _points.value = emptyList() }
     override suspend fun deleteAllFirestoreData(userId: String) {}
 }

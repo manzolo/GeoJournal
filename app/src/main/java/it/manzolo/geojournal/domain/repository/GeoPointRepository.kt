@@ -17,6 +17,7 @@ interface GeoPointRepository {
     suspend fun deleteById(id: String)
     suspend fun migrateGuestPointsToUser(userId: String): Int
     suspend fun pullFromFirestore(): Int
+    suspend fun syncUnsyncedPoints(): Int
     suspend fun deleteAllLocalData()
     suspend fun deleteAllFirestoreData(userId: String)
     suspend fun removeTagFromAllPoints(tag: String)
