@@ -266,14 +266,14 @@
 
     <!-- Onboarding (prima apertura) -->
     <string name="onboarding_title">I tuoi dati, le tue scelte</string>
-    <string name="onboarding_subtitle">GeoJournal funziona in due modalità. Scegli quella che fa per te.</string>
+    <string name="onboarding_subtitle">GeoJournal funziona in due modalità. Ti consiglio di leggere prima di scegliere.</string>
     <string name="onboarding_guest_title">Solo sul dispositivo</string>
-    <string name="onboarding_guest_body">Puoi usare GeoJournal completamente senza account. I tuoi luoghi, foto, audio, promemoria e visite restano solo su questo dispositivo. Nessun dato viene inviato al cloud.</string>
-    <string name="onboarding_guest_badge">Nessuna registrazione richiesta</string>
+    <string name="onboarding_guest_body">L\'opzione più privata. I tuoi luoghi, foto, promemoria e visite restano solo su questo telefono — nessun server, nessun cloud, nemmeno io sviluppatore posso vederli. Per non perdere i dati, esporta un backup periodico da Profilo → Esporta backup.</string>
+    <string name="onboarding_guest_badge">⭐ Consigliato per la privacy · Nessuna registrazione</string>
     <string name="onboarding_cloud_title">Sincronizzato sul cloud</string>
-    <string name="onboarding_cloud_body">Con un account Google i tuoi dati vengono cifrati e sincronizzati su Firebase, accessibili solo a te. Puoi recuperarli su altri dispositivi e cancellare tutto in qualsiasi momento.</string>
+    <string name="onboarding_cloud_body">Con un account Google i dati vengono sincronizzati su Firebase. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase: non consulto i tuoi dati e non ho alcun interesse a farlo, ma tecnicamente potrei. Se la massima privacy è importante per te, usa la modalità ospite.</string>
     <string name="onboarding_cloud_badge">Backup automatico · Multi-device</string>
-    <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite.</string>
+    <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite. Non contengono dati personali.</string>
     <string name="onboarding_cta">Ho capito</string>
     <string name="profile_data_info_button">Informazioni su come gestiamo i dati</string>
 </resources>

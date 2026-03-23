@@ -263,14 +263,14 @@
 
     <!-- Onboarding (first launch) -->
     <string name="onboarding_title">Your data, your choice</string>
-    <string name="onboarding_subtitle">GeoJournal works in two modes. Choose the one that suits you.</string>
+    <string name="onboarding_subtitle">GeoJournal works in two modes. I recommend reading before choosing.</string>
     <string name="onboarding_guest_title">On device only</string>
-    <string name="onboarding_guest_body">You can use GeoJournal completely without an account. Your places, photos, audio, reminders and visits stay only on this device. No data is ever sent to the cloud.</string>
-    <string name="onboarding_guest_badge">No registration required</string>
+    <string name="onboarding_guest_body">The most private option. Your places, photos, reminders and visits stay only on this device — no server, no cloud, not even I as the developer can see them. To avoid losing your data, export a periodic backup from Profile → Export backup.</string>
+    <string name="onboarding_guest_badge">⭐ Recommended for privacy · No registration</string>
     <string name="onboarding_cloud_title">Synced to the cloud</string>
-    <string name="onboarding_cloud_body">With a Google account your data is encrypted and synced to Firebase, accessible only by you. You can recover it on other devices and delete everything at any time.</string>
+    <string name="onboarding_cloud_body">With a Google account your data is synced to Firebase. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console: I do not view your data and have no interest in doing so, but technically I could. If maximum privacy matters to you, use guest mode.</string>
     <string name="onboarding_cloud_badge">Automatic backup · Multi-device</string>
-    <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode.</string>
+    <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
     <string name="onboarding_cta">Got it</string>
     <string name="profile_data_info_button">How we handle your data</string>
 </resources>
