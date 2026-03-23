@@ -74,8 +74,9 @@ class MainViewModel @Inject constructor(
             val prefs = userPrefs.preferences.first()
             _startDestination.value = when {
                 prefs.userId.isNotEmpty() -> Routes.Map.route
-                prefs.isGuest -> Routes.Map.route
-                else -> Routes.Login.route
+                prefs.isGuest            -> Routes.Map.route
+                !prefs.hasSeenDataOnboarding -> Routes.Onboarding.createRoute(fromProfile = false)
+                else                     -> Routes.Login.route
             }
         }
     }

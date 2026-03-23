@@ -3,6 +3,7 @@ package it.manzolo.geojournal.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 import it.manzolo.geojournal.data.local.db.GeoPointDao
 import it.manzolo.geojournal.data.local.db.GeoPointEntity
 import it.manzolo.geojournal.data.local.db.toEntity
@@ -12,6 +13,7 @@ import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +21,8 @@ import javax.inject.Singleton
 class GeoPointRepositoryImpl @Inject constructor(
     private val dao: GeoPointDao,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val storage: FirebaseStorage
 ) : GeoPointRepository {
 
     // Room è la source of truth — la UI osserva sempre il DB locale
@@ -64,11 +67,18 @@ class GeoPointRepositoryImpl @Inject constructor(
     }
 
     override suspend fun delete(point: GeoPoint) {
+        deleteStoragePhotos(point.photoUrls)
+        point.audioUrl?.let { deleteStorageFile(it) }
         dao.delete(point.toEntity())
         deletePointFromFirestore(point.id)
     }
 
     override suspend fun deleteById(id: String) {
+        val point = dao.getById(id)?.toDomain()
+        point?.let {
+            deleteStoragePhotos(it.photoUrls)
+            it.audioUrl?.let { url -> deleteStorageFile(url) }
+        }
         dao.deleteById(id)
         deletePointFromFirestore(id)
     }
@@ -117,9 +127,30 @@ class GeoPointRepositoryImpl @Inject constructor(
         if (guestPoints.isEmpty()) return 0
         dao.claimGuestPoints(userId)
         guestPoints.forEach { entity ->
-            syncPointToFirestore(entity.toDomain().copy(ownerId = userId))
+            val domain = entity.toDomain().copy(ownerId = userId)
+            // Carica le foto locali su Storage se l'utente è ora loggato
+            val resolvedPhotos = domain.photoUrls.map { url ->
+                if (url.startsWith("https://")) url
+                else uploadLocalPhotoToStorage(url, userId, domain.id) ?: url
+            }
+            val pointWithPhotos = domain.copy(photoUrls = resolvedPhotos)
+            if (resolvedPhotos != domain.photoUrls) {
+                dao.update(pointWithPhotos.toEntity().copy(ownerId = userId))
+            }
+            syncPointToFirestore(pointWithPhotos)
         }
         return guestPoints.size
+    }
+
+    private suspend fun uploadLocalPhotoToStorage(localPath: String, uid: String, pointId: String): String? {
+        return try {
+            val file = File(localPath)
+            if (!file.exists()) return null
+            val filename = file.name
+            val ref = storage.reference.child("users/$uid/photos/$pointId/$filename")
+            ref.putBytes(file.readBytes()).await()
+            ref.downloadUrl.await().toString()
+        } catch (_: Exception) { null }
     }
 
     // ─── Task 10a: pull da Firestore al login ────────────────────────────────
@@ -195,20 +226,65 @@ class GeoPointRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteAllFirestoreData(userId: String) {
+        // Cancella geo_points
         try {
             val snapshot = firestore
-                .collection("users")
-                .document(userId)
-                .collection("geo_points")
-                .get()
-                .await()
-            for (doc in snapshot.documents) {
-                doc.reference.delete().await()
-            }
+                .collection("users").document(userId)
+                .collection("geo_points").get().await()
+            for (doc in snapshot.documents) { doc.reference.delete().await() }
+        } catch (_: Exception) { }
+
+        // Cancella reminders
+        try {
+            val snapshot = firestore
+                .collection("users").document(userId)
+                .collection("reminders").get().await()
+            for (doc in snapshot.documents) { doc.reference.delete().await() }
+        } catch (_: Exception) { }
+
+        // Cancella visit_logs
+        try {
+            val snapshot = firestore
+                .collection("users").document(userId)
+                .collection("visit_logs").get().await()
+            for (doc in snapshot.documents) { doc.reference.delete().await() }
+        } catch (_: Exception) { }
+
+        // Cancella il documento utente radice
+        try {
             firestore.collection("users").document(userId).delete().await()
-        } catch (_: Exception) {
-            // Best-effort: l'account Firebase verrà eliminato comunque
-        }
+        } catch (_: Exception) { }
+
+        // Cancella foto e audio su Firebase Storage
+        try {
+            val photosRef = storage.reference.child("users/$userId/photos")
+            val photoItems = photosRef.listAll().await()
+            for (prefix in photoItems.prefixes) {
+                val items = prefix.listAll().await()
+                for (item in items.items) { item.delete().await() }
+            }
+        } catch (_: Exception) { }
+        try {
+            val audioRef = storage.reference.child("users/$userId/audio")
+            val audioItems = audioRef.listAll().await()
+            for (prefix in audioItems.prefixes) {
+                val items = prefix.listAll().await()
+                for (item in items.items) { item.delete().await() }
+            }
+        } catch (_: Exception) { }
+    }
+
+    // ─── Storage helpers (best-effort) ───────────────────────────────────────
+
+    private suspend fun deleteStoragePhotos(photoUrls: List<String>) {
+        photoUrls.filter { it.startsWith("https://firebasestorage") }
+            .forEach { deleteStorageFile(it) }
+    }
+
+    private suspend fun deleteStorageFile(url: String) {
+        try {
+            storage.getReferenceFromUrl(url).delete().await()
+        } catch (_: Exception) { }
     }
 
     override suspend fun removeTagFromAllPoints(tag: String) {

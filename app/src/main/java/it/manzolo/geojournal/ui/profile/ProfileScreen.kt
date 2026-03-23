@@ -664,6 +664,30 @@ fun ProfileScreen(
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                TextButton(
+                    onClick = {
+                        navController.navigate(Routes.Onboarding.createRoute(fromProfile = true))
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .padding(end = 0.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    androidx.compose.foundation.layout.Spacer(
+                        modifier = Modifier.size(6.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.profile_data_info_button),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 val privacyUrl = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.privacy_policy_url)
                 TextButton(
                     onClick = {

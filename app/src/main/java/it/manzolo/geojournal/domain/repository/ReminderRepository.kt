@@ -12,4 +12,5 @@ interface ReminderRepository {
     suspend fun save(reminder: Reminder)
     suspend fun delete(reminder: Reminder)
     suspend fun deleteByGeoPointId(geoPointId: String)
+    suspend fun pullFromFirestore(): Int
 }

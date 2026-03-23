@@ -165,7 +165,7 @@ private fun MonthHeader(
                 ) {
                     Text(
                         stringResource(R.string.calendar_today),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             }

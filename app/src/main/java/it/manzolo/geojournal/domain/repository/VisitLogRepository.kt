@@ -10,4 +10,5 @@ interface VisitLogRepository {
     suspend fun saveEntry(entry: VisitLogEntry)
     suspend fun logVisit(geoPointId: String, note: String = "")
     suspend fun delete(entry: VisitLogEntry)
+    suspend fun pullFromFirestore(): Int
 }

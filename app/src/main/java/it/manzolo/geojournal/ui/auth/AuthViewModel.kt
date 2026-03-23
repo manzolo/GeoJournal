@@ -7,6 +7,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.AuthRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
+import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +30,9 @@ data class AuthUiState(
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userPrefs: UserPreferencesRepository,
-    private val geoPointRepository: GeoPointRepository
+    private val geoPointRepository: GeoPointRepository,
+    private val reminderRepository: ReminderRepository,
+    private val visitLogRepository: VisitLogRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -57,6 +61,16 @@ class AuthViewModel @Inject constructor(
                         geoPointRepository.pullFromFirestore()
                     }
                     Log.d(TAG, "pullFromFirestore: completato (pulled=${pulled})")
+
+                    val pulledReminders = withTimeoutOrNull(FIRESTORE_TIMEOUT_MS) {
+                        reminderRepository.pullFromFirestore()
+                    }
+                    Log.d(TAG, "pullReminders: completato (pulled=${pulledReminders})")
+
+                    val pulledVisits = withTimeoutOrNull(FIRESTORE_TIMEOUT_MS) {
+                        visitLogRepository.pullFromFirestore()
+                    }
+                    Log.d(TAG, "pullVisitLogs: completato (pulled=${pulledVisits})")
 
                     _uiState.update { it.copy(isLoading = false, navigateToMain = true) }
                 }

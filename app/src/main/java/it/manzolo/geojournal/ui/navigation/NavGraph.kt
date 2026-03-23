@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import it.manzolo.geojournal.ui.addedit.AddEditScreen
 import it.manzolo.geojournal.ui.auth.AuthScreen
+import it.manzolo.geojournal.ui.onboarding.OnboardingScreen
 import it.manzolo.geojournal.ui.detail.PointDetailScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
 import it.manzolo.geojournal.ui.list.ListScreen
@@ -31,6 +32,25 @@ fun AppNavGraph(
                 onNavigateToMain = {
                     navController.navigate(Routes.Map.route) {
                         popUpTo(Routes.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(
+            route = Routes.Onboarding.route,
+            arguments = listOf(
+                navArgument("fromProfile") { type = NavType.BoolType; defaultValue = false }
+            )
+        ) { backStackEntry ->
+            val fromProfile = backStackEntry.arguments?.getBoolean("fromProfile") ?: false
+            OnboardingScreen(
+                onClose = {
+                    if (fromProfile) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(Routes.Login.route) {
+                            popUpTo(Routes.Onboarding.route) { inclusive = true }
+                        }
                     }
                 }
             )

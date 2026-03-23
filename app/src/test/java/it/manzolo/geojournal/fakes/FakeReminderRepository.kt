@@ -40,4 +40,6 @@ class FakeReminderRepository : ReminderRepository {
     override suspend fun deleteByGeoPointId(geoPointId: String) {
         _reminders.value = _reminders.value.filter { it.geoPointId != geoPointId }
     }
+
+    override suspend fun pullFromFirestore(): Int = 0
 }

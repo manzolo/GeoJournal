@@ -6,6 +6,9 @@ sealed class Routes(val route: String) {
     data object Calendar : Routes("calendar")
     data object Profile : Routes("profile")
     data object Login : Routes("login")
+    data object Onboarding : Routes("onboarding?fromProfile={fromProfile}") {
+        fun createRoute(fromProfile: Boolean = false) = "onboarding?fromProfile=$fromProfile"
+    }
 
     data object AddEditPoint : Routes("add_edit_point/{pointId}?title={title}&lat={lat}&lon={lon}") {
         fun createRoute(pointId: String? = null) = "add_edit_point/${pointId ?: "new"}"
