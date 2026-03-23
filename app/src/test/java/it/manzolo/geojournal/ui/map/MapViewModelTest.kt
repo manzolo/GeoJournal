@@ -1,10 +1,15 @@
 package it.manzolo.geojournal.ui.map
 
+import io.mockk.coJustRun
+import io.mockk.every
 import io.mockk.mockk
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.local.datastore.UserPreferences
+import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.fakes.FakeGeoPointRepository
 import it.manzolo.geojournal.util.MainDispatcherRule
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -26,11 +31,15 @@ class MapViewModelTest {
     private lateinit var viewModel: MapViewModel
 
     private val exporter: GeoPointExporter = mockk(relaxed = true)
+    private val userPrefs: UserPreferencesRepository = mockk {
+        every { preferences } returns flowOf(UserPreferences())
+        coJustRun { setMapPosition(any(), any(), any()) }
+    }
 
     @Before
     fun setup() {
         fakeRepo = FakeGeoPointRepository()
-        viewModel = MapViewModel(fakeRepo, exporter)
+        viewModel = MapViewModel(fakeRepo, exporter, userPrefs)
     }
 
     private fun makePoint(

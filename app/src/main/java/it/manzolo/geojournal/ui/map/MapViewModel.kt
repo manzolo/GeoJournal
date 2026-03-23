@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -49,7 +53,8 @@ data class MapUiState(
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val repository: GeoPointRepository,
-    private val exporter: GeoPointExporter
+    private val exporter: GeoPointExporter,
+    private val userPrefs: UserPreferencesRepository
 ) : ViewModel() {
 
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
@@ -65,10 +70,29 @@ class MapViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(MapUiState())
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
+    private var savePositionJob: Job? = null
+
     init {
+        restoreMapPosition()
         observePoints()
         seedSampleDataIfEmpty()
         observeFocusRequests()
+    }
+
+    private fun restoreMapPosition() {
+        viewModelScope.launch {
+            val prefs = userPrefs.preferences.first()
+            if (prefs.mapLat != 0.0 || prefs.mapLon != 0.0) {
+                _uiState.update {
+                    it.copy(
+                        userLatitude = prefs.mapLat,
+                        userLongitude = prefs.mapLon,
+                        zoomLevel = prefs.mapZoom,
+                        hasAppliedInitialZoom = true  // salta il fit automatico sui punti
+                    )
+                }
+            }
+        }
     }
 
     // ID del punto da selezionare (bottom sheet) quando arriva da notifica o da lista,
@@ -143,6 +167,11 @@ class MapViewModel @Inject constructor(
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Double) {
         _uiState.update { it.copy(userLatitude = lat, userLongitude = lon, zoomLevel = zoom) }
+        savePositionJob?.cancel()
+        savePositionJob = viewModelScope.launch {
+            delay(1000)
+            userPrefs.setMapPosition(lat, lon, zoom)
+        }
     }
 
     fun clearFocusTarget() = _uiState.update { it.copy(focusTarget = null) }

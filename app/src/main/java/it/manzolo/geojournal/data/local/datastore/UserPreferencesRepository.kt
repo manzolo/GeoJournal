@@ -3,6 +3,7 @@ package it.manzolo.geojournal.data.local.datastore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -22,7 +23,10 @@ data class UserPreferences(
     val autoBackupEnabled: Boolean = false,
     val driveBackupUri: String = "",   // URI SAF persistito per il backup su Drive/cloud
     val lastLocalBackupTimestamp: Long = 0L,
-    val hasSeenDataOnboarding: Boolean = false
+    val hasSeenDataOnboarding: Boolean = false,
+    val mapLat: Double = 0.0,
+    val mapLon: Double = 0.0,
+    val mapZoom: Double = 0.0
 )
 
 @Singleton
@@ -38,6 +42,9 @@ class UserPreferencesRepository @Inject constructor(
         val DRIVE_BACKUP_URI = stringPreferencesKey("drive_backup_uri")
         val LAST_LOCAL_BACKUP = longPreferencesKey("last_local_backup_timestamp")
         val HAS_SEEN_DATA_ONBOARDING = booleanPreferencesKey("has_seen_data_onboarding")
+        val MAP_LAT = doublePreferencesKey("map_lat")
+        val MAP_LON = doublePreferencesKey("map_lon")
+        val MAP_ZOOM = doublePreferencesKey("map_zoom")
     }
 
     val preferences: Flow<UserPreferences> = dataStore.data
@@ -54,7 +61,10 @@ class UserPreferencesRepository @Inject constructor(
                 autoBackupEnabled = prefs[Keys.AUTO_BACKUP_ENABLED] ?: false,
                 driveBackupUri = prefs[Keys.DRIVE_BACKUP_URI] ?: "",
                 lastLocalBackupTimestamp = prefs[Keys.LAST_LOCAL_BACKUP] ?: 0L,
-                hasSeenDataOnboarding = prefs[Keys.HAS_SEEN_DATA_ONBOARDING] ?: false
+                hasSeenDataOnboarding = prefs[Keys.HAS_SEEN_DATA_ONBOARDING] ?: false,
+                mapLat = prefs[Keys.MAP_LAT] ?: 0.0,
+                mapLon = prefs[Keys.MAP_LON] ?: 0.0,
+                mapZoom = prefs[Keys.MAP_ZOOM] ?: 0.0
             )
         }
 
@@ -88,5 +98,13 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setHasSeenDataOnboarding(seen: Boolean) {
         dataStore.edit { it[Keys.HAS_SEEN_DATA_ONBOARDING] = seen }
+    }
+
+    suspend fun setMapPosition(lat: Double, lon: Double, zoom: Double) {
+        dataStore.edit {
+            it[Keys.MAP_LAT] = lat
+            it[Keys.MAP_LON] = lon
+            it[Keys.MAP_ZOOM] = zoom
+        }
     }
 }
