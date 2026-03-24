@@ -15,8 +15,8 @@ android {
         applicationId = "it.manzolo.geojournal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 80
-        versionName = "0.4.52"
+        versionCode = 81
+        versionName = "0.4.53"
         
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -119,7 +119,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.crashlytics.ktx)
 
     // OSMDroid
