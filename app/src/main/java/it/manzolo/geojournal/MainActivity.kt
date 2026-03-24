@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -196,25 +195,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleGeojUri(uri: Uri, intent: Intent) {
-        val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
-        Log.d(TAG, "handleGeojUri: resolvedMime=$resolvedMime intentType=${intent.type}")
-
-        // Per ACTION_SEND ci fidiamo del manifest (già filtra i MIME giusti).
-        // L'URI WhatsApp è content://com.whatsapp.provider.media/file/123 — nessun
-        // nome file visibile nell'URI, quindi isGeojUri() fallirebbe sempre.
-        val isGeoj = intent.action == Intent.ACTION_SEND ||
-            intent.type == "application/x-geojournal-point" ||
-            resolvedMime == "application/x-geojournal-point" ||
-            (uri.scheme == "file" && uri.path?.endsWith(".geoj", ignoreCase = true) == true) ||
-            (uri.scheme == "content" && isGeojUri(uri))
-
-        if (!isGeoj) {
-            Log.d(TAG, "handleGeojUri: not a .geoj file, ignoring")
-            return
-        }
-
-        // Copia subito il contenuto in un file locale per evitare problemi di
-        // permessi URI scaduti (content:// da WhatsApp, file manager, ecc.)
+        // Il manifest già filtra quali intent riceviamo (MIME specifici).
+        // Non serve un secondo check sull'URI: lo tentiamo sempre e mostriamo
+        // errore se il file non è un .geoj valido.
+        Log.d(TAG, "handleGeojUri: uri=$uri mime=${intent.type}")
         val localUri = try {
             copyToLocalTemp(uri)
         } catch (e: Exception) {
@@ -226,9 +210,8 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Copia il contenuto di un content:// URI in un file temporaneo nella cache interna.
-     * Questa operazione è sincrona e deve essere chiamata subito, finché il permesso
-     * URI è ancora valido (nel contesto dell'intent che l'ha concesso).
+     * Copia il contenuto dell'URI in un file temporaneo nella cache interna.
+     * Eseguita subito nel contesto dell'intent, mentre il permesso URI è ancora valido.
      */
     private fun copyToLocalTemp(uri: Uri): Uri {
         val tempFile = java.io.File(cacheDir, "geoj_import_${System.currentTimeMillis()}.geoj")
@@ -238,24 +221,6 @@ class MainActivity : ComponentActivity() {
             }
         } ?: throw IllegalStateException("Cannot open input stream for $uri")
         return Uri.fromFile(tempFile)
-    }
-
-    private fun isGeojUri(uri: Uri): Boolean {
-        try {
-            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                ?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val name = cursor.getString(0)
-                        Log.d(TAG, "isGeojUri: displayName=$name")
-                        if (!name.isNullOrBlank()) return name.endsWith(".geoj", ignoreCase = true)
-                    }
-                }
-        } catch (e: Exception) {
-            Log.w(TAG, "isGeojUri: query failed", e)
-        }
-        val fallback = uri.toString().contains(".geoj", ignoreCase = true)
-        Log.d(TAG, "isGeojUri: fallback=$fallback uri=$uri")
-        return fallback
     }
 
     companion object {
