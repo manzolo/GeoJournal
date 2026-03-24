@@ -35,8 +35,13 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.font.FontStyle
 import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -93,6 +98,7 @@ import java.util.Locale
 fun ListScreen(navController: NavController) {
     val viewModel: ListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pendingSharePoint by viewModel.pendingSharePoint.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val shareChooserLabel = stringResource(R.string.point_share)
     var showSortMenu by remember { mutableStateOf(false) }
@@ -115,6 +121,35 @@ fun ListScreen(navController: NavController) {
             }
             context.startActivity(Intent.createChooser(intent, shareChooserLabel))
         }
+    }
+
+    // Dialog messaggio prima di condividere
+    pendingSharePoint?.let {
+        var shareMessage by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { viewModel.onShareDismissed() },
+            title = { Text(stringResource(R.string.share_message_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = shareMessage,
+                    onValueChange = { if (it.length <= 200) shareMessage = it },
+                    placeholder = { Text(stringResource(R.string.share_message_hint)) },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.onShareConfirmed(shareMessage.ifBlank { null }) }) {
+                    Text(stringResource(R.string.point_share))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onShareConfirmed(null) }) {
+                    Text(stringResource(R.string.share_message_skip))
+                }
+            }
+        )
     }
 
     // Menu contestuale (tap lungo)
@@ -154,7 +189,7 @@ fun ListScreen(navController: NavController) {
                         leadingIcon = { Icon(Icons.Filled.Share, null) },
                         onClick = {
                             contextMenuPoint = null
-                            viewModel.prepareShare(point)
+                            viewModel.onShareRequested(point)
                         }
                     )
                     if (state.showArchived) {

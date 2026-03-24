@@ -10,18 +10,26 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
@@ -59,6 +67,7 @@ class MainActivity : ComponentActivity() {
             GeoJournalTheme(darkTheme = isDarkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
                 val pendingGeojUri by mainViewModel.pendingGeojUri.collectAsState()
+                val pendingGeojSenderMessage by mainViewModel.pendingGeojSenderMessage.collectAsState()
                 val context = LocalContext.current
 
                 // Toast dal risultato import .geoj
@@ -103,7 +112,36 @@ class MainActivity : ComponentActivity() {
                         AlertDialog(
                             onDismissRequest = { mainViewModel.clearPendingGeojUri() },
                             title = { Text(stringResource(R.string.maps_import_geoj_title)) },
-                            text = { Text(stringResource(R.string.maps_import_geoj_text)) },
+                            text = {
+                                Column {
+                                    if (!pendingGeojSenderMessage.isNullOrBlank()) {
+                                        ElevatedCard(
+                                            colors = CardDefaults.elevatedCardColors(
+                                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                            ),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(modifier = Modifier.padding(12.dp)) {
+                                                Text(
+                                                    stringResource(R.string.import_sender_message_label),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    pendingGeojSenderMessage!!,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontStyle = FontStyle.Italic,
+                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                    }
+                                    Text(stringResource(R.string.maps_import_geoj_text))
+                                }
+                            },
                             confirmButton = {
                                 Button(onClick = {
                                     mainViewModel.importGeojPoint(uri)

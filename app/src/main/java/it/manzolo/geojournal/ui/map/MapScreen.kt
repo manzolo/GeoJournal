@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +41,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -170,6 +172,35 @@ fun MapScreen(
             }
             context.startActivity(Intent.createChooser(intent, "Condividi punto"))
         }
+    }
+
+    // Dialog messaggio prima di condividere
+    uiState.pendingSharePoint?.let {
+        var shareMessage by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { viewModel.onShareDismissed() },
+            title = { Text(stringResource(R.string.share_message_dialog_title)) },
+            text = {
+                OutlinedTextField(
+                    value = shareMessage,
+                    onValueChange = { if (it.length <= 200) shareMessage = it },
+                    placeholder = { Text(stringResource(R.string.share_message_hint)) },
+                    minLines = 3,
+                    maxLines = 5,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.onShareConfirmed(shareMessage.ifBlank { null }) }) {
+                    Text(stringResource(R.string.point_share))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onShareConfirmed(null) }) {
+                    Text(stringResource(R.string.share_message_skip))
+                }
+            }
+        )
     }
 
     // Ref aggiornabile per avere sempre i punti correnti nel listener di zoom
@@ -323,25 +354,30 @@ fun MapScreen(
                     Icon(Icons.Filled.FitScreen, contentDescription = "Inquadra tutti i punti")
                 }
             }
-            SmallFloatingActionButton(
-                onClick = {
-                    currentLayer = when (currentLayer) {
-                        MapLayer.ROAD -> MapLayer.TOPO
-                        MapLayer.TOPO -> MapLayer.SATELLITE
-                        MapLayer.SATELLITE -> MapLayer.ROAD
-                    }
-                },
-                containerColor = when (currentLayer) {
-                    MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
-                    MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
-                    MapLayer.SATELLITE -> MaterialTheme.colorScheme.primaryContainer
+        }
+
+        // Pulsante Layer (sopra il parcheggio)
+        SmallFloatingActionButton(
+            onClick = {
+                currentLayer = when (currentLayer) {
+                    MapLayer.ROAD -> MapLayer.TOPO
+                    MapLayer.TOPO -> MapLayer.SATELLITE
+                    MapLayer.SATELLITE -> MapLayer.ROAD
                 }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Layers,
-                    contentDescription = stringResource(R.string.map_layer_button)
-                )
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 184.dp),
+            containerColor = when (currentLayer) {
+                MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
+                MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
+                MapLayer.SATELLITE -> MaterialTheme.colorScheme.primaryContainer
             }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Layers,
+                contentDescription = stringResource(R.string.map_layer_button)
+            )
         }
 
         // FAB posizione utente (lato destro)
@@ -433,7 +469,7 @@ fun MapScreen(
                 },
                 onShareClick = { point ->
                     viewModel.onBottomSheetDismiss()
-                    viewModel.prepareShare(point)
+                    viewModel.onShareRequested(point)
                 },
                 onOpenGoogleMaps = { point ->
                     viewModel.onBottomSheetDismiss()
@@ -630,8 +666,8 @@ private fun updateClusteredMarkers(
                 icon = createCloudBubbleDrawable(context, point.emoji, point.title)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 setOnMarkerClickListener { _, mv ->
-                    mv.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude))
-                    if (mv.zoomLevelDouble < 17.0) mv.controller.setZoom(17.0)
+                    val targetZoom = if (mv.zoomLevelDouble < 17.0) 17.0 else mv.zoomLevelDouble
+                    mv.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), targetZoom, 800L)
                     onMarkerClick(point)
                     true
                 }

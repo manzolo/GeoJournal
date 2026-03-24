@@ -261,6 +261,12 @@
     <string name="maps_import_confirm">Import</string>
     <string name="maps_import_geoj_title">Import point</string>
     <string name="maps_import_geoj_text">Do you want to import this GeoJournal point into your diary?</string>
+    <string name="import_sender_message_label">Message from sender:</string>
+
+    <!-- Share: optional message dialog -->
+    <string name="share_message_dialog_title">Add a message</string>
+    <string name="share_message_hint">Write something for the recipient… (optional)</string>
+    <string name="share_message_skip">Skip</string>
 
     <!-- Firebase placeholder notice -->
     <string name="firebase_not_configured">Firebase not configured. Add google-services.json to enable sync.</string>

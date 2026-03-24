@@ -109,9 +109,9 @@ class BackupViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = State.Working
             _state.value = runCatching {
-                val point = geojExporter.importFromUri(uri)
-                geoPointRepository.save(point)
-                State.ImportPointOk(point.title)
+                val result = geojExporter.importFromUri(uri)
+                geoPointRepository.save(result.point)
+                State.ImportPointOk(result.point.title)
             }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione del punto") }
         }
     }

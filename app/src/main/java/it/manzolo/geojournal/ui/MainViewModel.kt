@@ -33,19 +33,30 @@ class MainViewModel @Inject constructor(
     private val _pendingGeojUri = MutableStateFlow<Uri?>(null)
     val pendingGeojUri: StateFlow<Uri?> = _pendingGeojUri.asStateFlow()
 
+    private val _pendingGeojSenderMessage = MutableStateFlow<String?>(null)
+    val pendingGeojSenderMessage: StateFlow<String?> = _pendingGeojSenderMessage.asStateFlow()
 
     private val _geojImportMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val geojImportMessage: SharedFlow<String> = _geojImportMessage.asSharedFlow()
 
-    fun setPendingGeojUri(uri: Uri) { _pendingGeojUri.value = uri }
-    fun clearPendingGeojUri() { _pendingGeojUri.value = null }
+    fun setPendingGeojUri(uri: Uri) {
+        _pendingGeojUri.value = uri
+        viewModelScope.launch {
+            _pendingGeojSenderMessage.value = geojExporter.peekSenderMessage(uri)
+        }
+    }
+
+    fun clearPendingGeojUri() {
+        _pendingGeojUri.value = null
+        _pendingGeojSenderMessage.value = null
+    }
 
     fun importGeojPoint(uri: Uri) {
         viewModelScope.launch {
             runCatching {
-                val point = geojExporter.importFromUri(uri)
-                geoPointRepository.save(point)
-                "✓ Punto \"${point.title}\" importato"
+                val result = geojExporter.importFromUri(uri)
+                geoPointRepository.save(result.point)
+                "✓ Punto \"${result.point.title}\" importato"
             }.onSuccess { _geojImportMessage.emit(it) }
              .onFailure { _geojImportMessage.emit("Errore importazione: ${it.message}") }
         }

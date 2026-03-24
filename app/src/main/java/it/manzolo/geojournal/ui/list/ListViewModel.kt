@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -50,11 +51,24 @@ class ListViewModel @Inject constructor(
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
     val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
 
-    fun prepareShare(point: GeoPoint) {
+    private val _pendingSharePoint = MutableStateFlow<GeoPoint?>(null)
+    val pendingSharePoint: StateFlow<GeoPoint?> = _pendingSharePoint.asStateFlow()
+
+    fun onShareRequested(point: GeoPoint) {
+        _pendingSharePoint.value = point
+    }
+
+    fun onShareConfirmed(message: String?) {
+        val point = _pendingSharePoint.value ?: return
+        _pendingSharePoint.value = null
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { exporter.exportPointToCache(point) }
+            runCatching { exporter.exportPointToCache(point, message) }
                 .onSuccess { _shareFileEvent.emit(it) }
         }
+    }
+
+    fun onShareDismissed() {
+        _pendingSharePoint.value = null
     }
 
     private val _query = MutableStateFlow("")

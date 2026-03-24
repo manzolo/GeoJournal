@@ -18,25 +18,27 @@ import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class GeojImportResult(val point: GeoPoint, val senderMessage: String?)
+
 @Singleton
 class GeoPointExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val SCHEMA_VERSION = 1
+        private const val SCHEMA_VERSION = 2
         private const val BACKUP_PHOTO_PREFIX = "geoj://photos/"
     }
 
     // ─── Export singolo punto → file .geoj in cacheDir ───────────────────────
 
-    fun exportPointToCache(point: GeoPoint): File {
+    fun exportPointToCache(point: GeoPoint, senderMessage: String? = null): File {
         val dir = File(context.cacheDir, "geoj").also { it.mkdirs() }
         val safeName = point.title.replace(Regex("[^a-zA-Z0-9_\\-]"), "_").take(40)
         val file = File(dir, "geojournal_$safeName.geoj")
 
         ZipOutputStream(BufferedOutputStream(FileOutputStream(file))).use { zip ->
-            // point.json
-            val json = buildPointJson(point)
+            // point.json (reminder e visite non inclusi: sono dati personali dell'utente)
+            val json = buildPointJson(point, senderMessage)
             zip.putNextEntry(ZipEntry("point.json"))
             zip.write(json.toByteArray(Charsets.UTF_8))
             zip.closeEntry()
@@ -56,11 +58,12 @@ class GeoPointExporter @Inject constructor(
         return file
     }
 
-    private fun buildPointJson(point: GeoPoint): String =
+    private fun buildPointJson(point: GeoPoint, senderMessage: String? = null): String =
         JSONObject().apply {
             put("schemaVersion", SCHEMA_VERSION)
             put("exportedAt", System.currentTimeMillis())
             put("appVersion", BuildConfig.VERSION_NAME)
+            if (!senderMessage.isNullOrBlank()) put("senderMessage", senderMessage)
             put("id", point.id)
             put("title", point.title)
             put("description", point.description)
@@ -80,9 +83,30 @@ class GeoPointExporter @Inject constructor(
             point.audioUrl?.let { put("audioUrl", it) }
         }.toString(2)
 
+    // ─── Peek del messaggio mittente senza import completo ───────────────────
+
+    suspend fun peekSenderMessage(uri: Uri): String? {
+        return try {
+            context.contentResolver.openInputStream(uri)?.use { ins ->
+                ZipInputStream(ins).use { zip ->
+                    var entry = zip.nextEntry
+                    while (entry != null) {
+                        if (entry.name == "point.json") {
+                            val json = JSONObject(zip.readBytes().toString(Charsets.UTF_8))
+                            return@use json.optString("senderMessage").takeIf { it.isNotBlank() }
+                        }
+                        zip.closeEntry()
+                        entry = zip.nextEntry
+                    }
+                    null
+                }
+            }
+        } catch (_: Exception) { null }
+    }
+
     // ─── Import singolo punto da URI .geoj ───────────────────────────────────
 
-    suspend fun importFromUri(uri: Uri): GeoPoint {
+    suspend fun importFromUri(uri: Uri): GeojImportResult {
         val photoEntries = mutableMapOf<String, ByteArray>()
         var jsonContent: String? = null
 
@@ -121,7 +145,7 @@ class GeoPointExporter @Inject constructor(
             photoPathMap[url] ?: url
         }
 
-        return GeoPoint(
+        val point = GeoPoint(
             id          = newPointId, // nuovo ID per evitare conflitti
             title       = json.getString("title"),
             description = json.optString("description", ""),
@@ -139,5 +163,7 @@ class GeoPointExporter @Inject constructor(
             createdAt   = Date(json.getLong("createdAt")),
             updatedAt   = Date()
         )
+        val senderMessage = json.optString("senderMessage").takeIf { it.isNotBlank() }
+        return GeojImportResult(point, senderMessage)
     }
 }

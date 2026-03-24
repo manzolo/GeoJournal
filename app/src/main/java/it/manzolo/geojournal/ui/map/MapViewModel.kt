@@ -41,6 +41,8 @@ data class MapUiState(
     val focusTarget: FocusTarget? = null,
     /** True dopo il primo fit automatico su tutti i punti */
     val hasAppliedInitialZoom: Boolean = false,
+    /** Punto in attesa di condivisione: non-null = mostra dialog messaggio */
+    val pendingSharePoint: GeoPoint? = null,
     /** Messaggio snackbar per conferma parcheggio (@StringRes, risolto nella UI) */
     @StringRes val parkingSnackbarRes: Int? = null,
     /** Mostra dialog quando esiste già un parcheggio salvato */
@@ -60,11 +62,21 @@ class MapViewModel @Inject constructor(
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
     val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
 
-    fun prepareShare(point: GeoPoint) {
+    fun onShareRequested(point: GeoPoint) {
+        _uiState.update { it.copy(pendingSharePoint = point) }
+    }
+
+    fun onShareConfirmed(message: String?) {
+        val point = _uiState.value.pendingSharePoint ?: return
+        _uiState.update { it.copy(pendingSharePoint = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { exporter.exportPointToCache(point) }
+            runCatching { exporter.exportPointToCache(point, message) }
                 .onSuccess { _shareFileEvent.emit(it) }
         }
+    }
+
+    fun onShareDismissed() {
+        _uiState.update { it.copy(pendingSharePoint = null) }
     }
 
     private val _uiState = MutableStateFlow(MapUiState())

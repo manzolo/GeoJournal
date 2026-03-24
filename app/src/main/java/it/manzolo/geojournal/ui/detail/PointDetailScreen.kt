@@ -11,6 +11,12 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -656,17 +662,34 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                     offset = Offset.Zero
                 }
 
-                val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-                    scale = (scale * zoomChange).coerceIn(1f, 5f)
-                    offset = if (scale > 1f) offset + panChange else Offset.Zero
-                }
-
                 AsyncImage(
                     model = if (url.startsWith("/")) File(url) else url,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
-                        .transformable(transformState)
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                awaitFirstDown()
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val zoom = event.calculateZoom()
+                                    val pan = event.calculatePan()
+                                    
+                                    scale = (scale * zoom).coerceIn(1f, 5f)
+                                    if (scale > 1f) {
+                                        offset += pan
+                                        event.changes.forEach { 
+                                            if (it.positionChanged()) it.consume() 
+                                        }
+                                    }
+                                } while (event.changes.any { it.pressed })
+                                
+                                if (scale <= 1.05f) {
+                                    scale = 1f
+                                    offset = Offset.Zero
+                                }
+                            }
+                        }
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
