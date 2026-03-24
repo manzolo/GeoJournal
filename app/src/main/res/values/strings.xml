@@ -19,6 +19,10 @@
     <string name="map_parking_dialog_text">Hai già un parcheggio salvato. Vuoi aggiornare la posizione con quella attuale o tornare al parcheggio salvato?</string>
     <string name="map_parking_update_action">Aggiorna posizione</string>
     <string name="map_parking_navigate">Portami lì</string>
+    <string name="map_layer_button">Cambia layer mappa</string>
+    <string name="map_layer_road">Stradale</string>
+    <string name="map_layer_topo">Topografica</string>
+    <string name="map_layer_satellite">Satellite</string>
 
     <!-- Point Details -->
     <string name="point_edit">Modifica</string>

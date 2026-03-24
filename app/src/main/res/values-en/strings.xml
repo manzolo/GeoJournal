@@ -19,6 +19,10 @@
     <string name="map_parking_dialog_text">You already have a saved parking spot. Do you want to update the location with the current one, or go back to the saved spot?</string>
     <string name="map_parking_update_action">Update location</string>
     <string name="map_parking_navigate">Take me there</string>
+    <string name="map_layer_button">Change map layer</string>
+    <string name="map_layer_road">Road</string>
+    <string name="map_layer_topo">Topographic</string>
+    <string name="map_layer_satellite">Satellite</string>
 
     <!-- Point Details -->
     <string name="point_edit">Edit</string>

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -51,6 +52,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,11 +85,40 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
+import org.osmdroid.util.MapTileIndex
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+
+// ESRI usa Z/Y/X anziché Z/X/Y — necessita tile source custom
+private object EsriSatelliteTileSource : OnlineTileSourceBase(
+    "ESRI_Satellite", 0, 19, 256, "",
+    arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
+) {
+    override fun getTileURLString(pMapTileIndex: Long): String {
+        val z = MapTileIndex.getZoom(pMapTileIndex)
+        val x = MapTileIndex.getX(pMapTileIndex)
+        val y = MapTileIndex.getY(pMapTileIndex)
+        return "${baseUrl}$z/$y/$x"
+    }
+}
+
+private enum class MapLayer { ROAD, TOPO, SATELLITE }
+
+private val mapLayerSources = mapOf(
+    MapLayer.ROAD to { TileSourceFactory.MAPNIK },
+    MapLayer.TOPO to {
+        XYTileSource(
+            "OpenTopoMap", 0, 17, 256, ".png",
+            arrayOf("https://tile.opentopomap.org/")
+        )
+    },
+    MapLayer.SATELLITE to { EsriSatelliteTileSource }
+)
 
 private data class MapCluster(
     val centerLat: Double,
@@ -165,6 +196,26 @@ fun MapScreen(
             controller.setZoom(initialZoom)
             controller.setCenter(initialCenter)
         }
+    }
+
+    var currentLayer by remember { mutableStateOf(MapLayer.ROAD) }
+    val layerRoadLabel = stringResource(R.string.map_layer_road)
+    val layerTopoLabel = stringResource(R.string.map_layer_topo)
+    val layerSatLabel = stringResource(R.string.map_layer_satellite)
+    val isFirstLayerRender = remember { mutableStateOf(true) }
+    LaunchedEffect(currentLayer) {
+        if (isFirstLayerRender.value) {
+            isFirstLayerRender.value = false
+            return@LaunchedEffect
+        }
+        mapView.setTileSource(mapLayerSources[currentLayer]!!.invoke())
+        mapView.invalidate()
+        val label = when (currentLayer) {
+            MapLayer.ROAD -> layerRoadLabel
+            MapLayer.TOPO -> layerTopoLabel
+            MapLayer.SATELLITE -> layerSatLabel
+        }
+        snackbarHostState.showSnackbar(label)
     }
 
     // Listener di zoom e scroll: ri-clustera al cambio zoom, salva camera (throttled 100ms)
@@ -271,6 +322,25 @@ fun MapScreen(
                 ) {
                     Icon(Icons.Filled.FitScreen, contentDescription = "Inquadra tutti i punti")
                 }
+            }
+            SmallFloatingActionButton(
+                onClick = {
+                    currentLayer = when (currentLayer) {
+                        MapLayer.ROAD -> MapLayer.TOPO
+                        MapLayer.TOPO -> MapLayer.SATELLITE
+                        MapLayer.SATELLITE -> MapLayer.ROAD
+                    }
+                },
+                containerColor = when (currentLayer) {
+                    MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
+                    MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
+                    MapLayer.SATELLITE -> MaterialTheme.colorScheme.primaryContainer
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Layers,
+                    contentDescription = stringResource(R.string.map_layer_button)
+                )
             }
         }
 
