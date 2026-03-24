@@ -196,15 +196,42 @@ class MainActivity : ComponentActivity() {
     private fun handleGeojUri(uri: Uri, intent: Intent) {
         val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
         Log.d(TAG, "handleGeojUri: resolvedMime=$resolvedMime intentType=${intent.type}")
-        if (intent.type == "application/x-geojournal-point" ||
-            resolvedMime == "application/x-geojournal-point"
-        ) { mainViewModel.setPendingGeojUri(uri); return }
-        if (uri.scheme == "file") {
-            if (uri.path?.endsWith(".geoj", ignoreCase = true) == true)
-                mainViewModel.setPendingGeojUri(uri)
+
+        val isGeoj = intent.type == "application/x-geojournal-point" ||
+            resolvedMime == "application/x-geojournal-point" ||
+            (uri.scheme == "file" && uri.path?.endsWith(".geoj", ignoreCase = true) == true) ||
+            (uri.scheme == "content" && isGeojUri(uri))
+
+        if (!isGeoj) {
+            Log.d(TAG, "handleGeojUri: not a .geoj file, ignoring")
             return
         }
-        if (isGeojUri(uri)) mainViewModel.setPendingGeojUri(uri)
+
+        // Copia subito il contenuto in un file locale per evitare problemi di
+        // permessi URI scaduti (content:// da WhatsApp, file manager, ecc.)
+        val localUri = try {
+            copyToLocalTemp(uri)
+        } catch (e: Exception) {
+            Log.e(TAG, "handleGeojUri: failed to copy URI to local", e)
+            return
+        }
+        Log.d(TAG, "handleGeojUri: copied to local $localUri")
+        mainViewModel.setPendingGeojUri(localUri)
+    }
+
+    /**
+     * Copia il contenuto di un content:// URI in un file temporaneo nella cache interna.
+     * Questa operazione è sincrona e deve essere chiamata subito, finché il permesso
+     * URI è ancora valido (nel contesto dell'intent che l'ha concesso).
+     */
+    private fun copyToLocalTemp(uri: Uri): Uri {
+        val tempFile = java.io.File(cacheDir, "geoj_import_${System.currentTimeMillis()}.geoj")
+        contentResolver.openInputStream(uri)?.use { input ->
+            tempFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        } ?: throw IllegalStateException("Cannot open input stream for $uri")
+        return Uri.fromFile(tempFile)
     }
 
     private fun isGeojUri(uri: Uri): Boolean {
