@@ -271,8 +271,8 @@
     <string name="onboarding_guest_body">L\'opzione più privata. I tuoi luoghi, foto, promemoria e visite restano solo su questo telefono — nessun server, nessun cloud, nemmeno io sviluppatore posso vederli. Per non perdere i dati, esporta un backup periodico da Profilo → Esporta backup.</string>
     <string name="onboarding_guest_badge">⭐ Consigliato per la privacy · Nessuna registrazione</string>
     <string name="onboarding_cloud_title">Sincronizzato sul cloud</string>
-    <string name="onboarding_cloud_body">Con un account Google puoi sincronizzare i tuoi dati su Firebase — ma nulla viene inviato automaticamente. Sei tu a decidere cosa condividere: punti, foto, audio, promemoria e visite possono essere attivati o disattivati singolarmente da Profilo → Sincronizzazione &amp; Privacy. Tutto è OFF per default. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase. Se la massima privacy è importante, usa la modalità ospite.</string>
-    <string name="onboarding_cloud_badge">Backup opt-in · Controllo granulare</string>
+    <string name="onboarding_cloud_body">Con un account Google puoi sincronizzare i tuoi dati su Firebase — ma nulla viene inviato automaticamente. Sei tu a decidere cosa condividere: punti, promemoria e visite possono essere attivati o disattivati da Profilo → Sincronizzazione &amp; Privacy. Tutto è OFF per default. Foto e audio rimangono sempre solo sul dispositivo — non vengono mai caricati su alcun server. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase. Se la massima privacy è importante, usa la modalità ospite.</string>
+    <string name="onboarding_cloud_badge">Backup opt-in · Foto sempre locali</string>
     <string name="onboarding_open_source_note">🔓 GeoJournal è open source (AGPL-3.0): il codice è pubblico su GitHub e chiunque può verificare cosa fa con i tuoi dati. Non devi fidarti solo della mia parola.</string>
     <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite. Non contengono dati personali.</string>
     <string name="onboarding_cta">Ho capito</string>
@@ -280,7 +280,7 @@
 
     <!-- Sincronizzazione & Privacy -->
     <string name="profile_section_sync_privacy">Sincronizzazione &amp; Privacy</string>
-    <string name="profile_sync_local_default_note">Di default i tuoi dati rimangono solo su questo dispositivo. Attiva solo quello che vuoi condividere con Firebase. Le modifiche hanno effetto al prossimo salvataggio.</string>
+    <string name="profile_sync_local_default_note">Di default i tuoi dati rimangono solo su questo dispositivo. Attiva solo quello che vuoi condividere con Firebase. Foto e audio rimangono sempre locali. Le modifiche hanno effetto al prossimo salvataggio.</string>
     <string name="profile_sync_geo_points_title">Dati geografici</string>
     <string name="profile_sync_geo_points_desc">Titolo, coordinate, tag e note → Firestore</string>
     <string name="profile_sync_photos_title">Foto</string>

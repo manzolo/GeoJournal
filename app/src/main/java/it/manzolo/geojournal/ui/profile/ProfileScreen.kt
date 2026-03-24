@@ -669,40 +669,7 @@ fun ProfileScreen(
                         title = stringResource(R.string.profile_sync_geo_points_title),
                         desc = stringResource(R.string.profile_sync_geo_points_desc),
                         checked = uiState.syncGeoPointsEnabled,
-                        onCheckedChange = {
-                            viewModel.setSyncGeoPointsEnabled(it)
-                            // Se disattiviamo i punti, disattiviamo anche foto e audio
-                            if (!it) {
-                                viewModel.setSyncPhotosEnabled(false)
-                                viewModel.setSyncAudioEnabled(false)
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Toggle: Foto (rientrato, dipende da geo_points)
-                    SyncToggleRow(
-                        title = "  └  " + stringResource(R.string.profile_sync_photos_title),
-                        desc = stringResource(
-                            if (uiState.syncGeoPointsEnabled) R.string.profile_sync_photos_desc
-                            else R.string.profile_sync_requires_geo_points
-                        ),
-                        checked = uiState.syncPhotosEnabled,
-                        onCheckedChange = { viewModel.setSyncPhotosEnabled(it) },
-                        enabled = uiState.syncGeoPointsEnabled
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Toggle: Audio (rientrato, dipende da geo_points)
-                    SyncToggleRow(
-                        title = "  └  " + stringResource(R.string.profile_sync_audio_title),
-                        desc = stringResource(
-                            if (uiState.syncGeoPointsEnabled) R.string.profile_sync_audio_desc
-                            else R.string.profile_sync_requires_geo_points
-                        ),
-                        checked = uiState.syncAudioEnabled,
-                        onCheckedChange = { viewModel.setSyncAudioEnabled(it) },
-                        enabled = uiState.syncGeoPointsEnabled
+                        onCheckedChange = { viewModel.setSyncGeoPointsEnabled(it) }
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     HorizontalDivider()
