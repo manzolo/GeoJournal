@@ -68,7 +68,8 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
             GeoJournalTheme(darkTheme = isDarkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
-                val pendingGeojImport by mainViewModel.pendingGeojImport.collectAsState()
+                val pendingGeojUri by mainViewModel.pendingGeojUri.collectAsState()
+                val pendingGeojSenderMessage by mainViewModel.pendingGeojSenderMessage.collectAsState()
                 val context = LocalContext.current
 
                 // Toast dal risultato import .geoj
@@ -108,49 +109,50 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Dialog conferma import .geoj
-                    pendingGeojImport?.let { importResult ->
+                    // Dialog conferma import .geoj (semplice — il messaggio appare dopo)
+                    pendingGeojUri?.let { uri ->
                         AlertDialog(
-                            onDismissRequest = { mainViewModel.clearPendingGeojImport() },
+                            onDismissRequest = { mainViewModel.clearPendingGeojUri() },
                             title = { Text(stringResource(R.string.maps_import_geoj_title)) },
+                            text = { Text(stringResource(R.string.maps_import_geoj_text)) },
+                            confirmButton = {
+                                Button(onClick = {
+                                    mainViewModel.importGeojPoint(uri)
+                                    mainViewModel.clearPendingGeojUri()
+                                }) { Text(stringResource(R.string.maps_import_confirm)) }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { mainViewModel.clearPendingGeojUri() }) {
+                                    Text(stringResource(R.string.action_cancel))
+                                }
+                            }
+                        )
+                    }
+
+                    // Dialog messaggio mittente — mostrato dopo l'import
+                    pendingGeojSenderMessage?.let { msg ->
+                        AlertDialog(
+                            onDismissRequest = { mainViewModel.clearPendingGeojSenderMessage() },
+                            title = { Text(stringResource(R.string.import_sender_message_label)) },
                             text = {
-                                Column {
-                                    if (!importResult.senderMessage.isNullOrBlank()) {
-                                        ElevatedCard(
-                                            colors = CardDefaults.elevatedCardColors(
-                                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                            ),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Column(modifier = Modifier.padding(12.dp)) {
-                                                Text(
-                                                    stringResource(R.string.import_sender_message_label),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    importResult.senderMessage,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontStyle = FontStyle.Italic,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                    }
-                                    Text(stringResource(R.string.maps_import_geoj_text))
+                                ElevatedCard(
+                                    colors = CardDefaults.elevatedCardColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        msg,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontStyle = FontStyle.Italic,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
                                 }
                             },
                             confirmButton = {
-                                Button(onClick = { mainViewModel.confirmGeojImport() }) {
-                                    Text(stringResource(R.string.maps_import_confirm))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { mainViewModel.clearPendingGeojImport() }) {
-                                    Text(stringResource(R.string.action_cancel))
+                                Button(onClick = { mainViewModel.clearPendingGeojSenderMessage() }) {
+                                    Text(stringResource(R.string.action_close))
                                 }
                             }
                         )
@@ -197,7 +199,11 @@ class MainActivity : ComponentActivity() {
         val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
         Log.d(TAG, "handleGeojUri: resolvedMime=$resolvedMime intentType=${intent.type}")
 
-        val isGeoj = intent.type == "application/x-geojournal-point" ||
+        // Per ACTION_SEND ci fidiamo del manifest (già filtra i MIME giusti).
+        // L'URI WhatsApp è content://com.whatsapp.provider.media/file/123 — nessun
+        // nome file visibile nell'URI, quindi isGeojUri() fallirebbe sempre.
+        val isGeoj = intent.action == Intent.ACTION_SEND ||
+            intent.type == "application/x-geojournal-point" ||
             resolvedMime == "application/x-geojournal-point" ||
             (uri.scheme == "file" && uri.path?.endsWith(".geoj", ignoreCase = true) == true) ||
             (uri.scheme == "content" && isGeojUri(uri))

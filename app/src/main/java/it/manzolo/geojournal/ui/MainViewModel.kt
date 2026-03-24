@@ -5,7 +5,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import it.manzolo.geojournal.data.backup.GeojImportResult
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
@@ -32,42 +31,48 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     // ─── Import .geoj da intent esterno ──────────────────────────────────────
-    // Il file viene parsato una sola volta al momento dell'arrivo dell'URI.
-    // Il punto viene salvato in Room solo se l'utente conferma nel dialog.
-    private val _pendingGeojImport = MutableStateFlow<GeojImportResult?>(null)
-    val pendingGeojImport: StateFlow<GeojImportResult?> = _pendingGeojImport.asStateFlow()
+    private val _pendingGeojUri = MutableStateFlow<Uri?>(null)
+    val pendingGeojUri: StateFlow<Uri?> = _pendingGeojUri.asStateFlow()
+
+    // Mostrato DOPO l'import se il file contiene un messaggio del mittente
+    private val _pendingGeojSenderMessage = MutableStateFlow<String?>(null)
+    val pendingGeojSenderMessage: StateFlow<String?> = _pendingGeojSenderMessage.asStateFlow()
 
     private val _geojImportMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val geojImportMessage: SharedFlow<String> = _geojImportMessage.asSharedFlow()
 
     fun setPendingGeojUri(uri: Uri) {
+        Log.d(TAG, "setPendingGeojUri: uri=$uri")
+        _pendingGeojUri.value = uri
+    }
+
+    fun clearPendingGeojUri() {
+        _pendingGeojUri.value = null
+    }
+
+    fun clearPendingGeojSenderMessage() {
+        _pendingGeojSenderMessage.value = null
+    }
+
+    fun importGeojPoint(uri: Uri) {
         viewModelScope.launch {
-            Log.d(TAG, "setPendingGeojUri: parsing uri=$uri")
+            Log.d(TAG, "importGeojPoint: parsing uri=$uri")
             runCatching { geojExporter.importFromUri(uri) }
-                .onSuccess {
-                    Log.d(TAG, "setPendingGeojUri: parsed OK title=${it.point.title}")
-                    _pendingGeojImport.value = it
+                .onSuccess { result ->
+                    Log.d(TAG, "importGeojPoint: parsed OK title=${result.point.title}")
+                    runCatching { geoPointRepository.save(result.point) }
+                        .onSuccess {
+                            _geojImportMessage.emit("✓ Punto \"${result.point.title}\" importato")
+                            if (!result.senderMessage.isNullOrBlank()) {
+                                _pendingGeojSenderMessage.value = result.senderMessage
+                            }
+                        }
+                        .onFailure { _geojImportMessage.emit("Errore salvataggio: ${it.message}") }
                 }
                 .onFailure {
-                    Log.e(TAG, "setPendingGeojUri: FAILED", it)
-                    _geojImportMessage.emit("Errore apertura file: ${it.message}")
+                    Log.e(TAG, "importGeojPoint: FAILED", it)
+                    _geojImportMessage.emit("Errore importazione: ${it.message}")
                 }
-        }
-    }
-
-    fun clearPendingGeojImport() {
-        _pendingGeojImport.value = null
-    }
-
-    fun confirmGeojImport() {
-        val result = _pendingGeojImport.value ?: return
-        _pendingGeojImport.value = null
-        viewModelScope.launch {
-            runCatching {
-                geoPointRepository.save(result.point)
-                "✓ Punto \"${result.point.title}\" importato"
-            }.onSuccess { _geojImportMessage.emit(it) }
-             .onFailure { _geojImportMessage.emit("Errore importazione: ${it.message}") }
         }
     }
 
