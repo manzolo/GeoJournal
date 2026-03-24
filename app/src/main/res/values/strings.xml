@@ -78,7 +78,7 @@
     <string name="profile_dark_theme">Tema scuro</string>
     <string name="profile_dark_theme_on">Attivo</string>
     <string name="profile_dark_theme_off">Disattivo</string>
-    <string name="profile_backup_desc">Esporta tutti i tuoi punti, foto, promemoria e visite in un file ZIP. Puoi importarlo su un altro dispositivo o per ripristinare i dati.</string>
+    <string name="profile_backup_desc">Esporta tutti i tuoi punti, foto, promemoria e visite in un file ZIP. Le foto sono salvate solo localmente — il backup è l\'unico modo per non perderle. Puoi importarlo su un altro dispositivo o per ripristinare i dati.</string>
     <string name="profile_auto_backup">Backup automatico</string>
     <string name="profile_auto_backup_desc">Salva automaticamente ogni giorno</string>
     <string name="profile_drive_backup">Backup su cloud (Drive)</string>
@@ -271,7 +271,7 @@
     <string name="onboarding_guest_body">L\'opzione più privata. I tuoi luoghi, foto, promemoria e visite restano solo su questo telefono — nessun server, nessun cloud, nemmeno io sviluppatore posso vederli. Per non perdere i dati, esporta un backup periodico da Profilo → Esporta backup.</string>
     <string name="onboarding_guest_badge">⭐ Consigliato per la privacy · Nessuna registrazione</string>
     <string name="onboarding_cloud_title">Sincronizzato sul cloud</string>
-    <string name="onboarding_cloud_body">Con un account Google i dati vengono sincronizzati su Firebase. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase: non consulto i tuoi dati e non ho alcun interesse a farlo, ma tecnicamente potrei. Se la massima privacy è importante per te, usa la modalità ospite.</string>
+    <string name="onboarding_cloud_body">Con un account Google i tuoi punti, promemoria e visite vengono sincronizzati su Firebase. Le foto restano solo sul dispositivo — non vengono mai caricate su alcun server. Gli altri utenti non possono mai accedere ai tuoi dati. Tuttavia, in quanto sviluppatore ho accesso tecnico alla console Firebase: non consulto i tuoi dati e non ho alcun interesse a farlo, ma tecnicamente potrei. Se la massima privacy è importante per te, usa la modalità ospite.</string>
     <string name="onboarding_cloud_badge">Backup automatico · Multi-device</string>
     <string name="onboarding_open_source_note">🔓 GeoJournal è open source (AGPL-3.0): il codice è pubblico su GitHub e chiunque può verificare cosa fa con i tuoi dati. Non devi fidarti solo della mia parola.</string>
     <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite. Non contengono dati personali.</string>

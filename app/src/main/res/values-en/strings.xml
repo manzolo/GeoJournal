@@ -78,7 +78,7 @@
     <string name="profile_dark_theme">Dark theme</string>
     <string name="profile_dark_theme_on">Active</string>
     <string name="profile_dark_theme_off">Inactive</string>
-    <string name="profile_backup_desc">Export all your points, photos, reminders and visits into a ZIP file. You can import it on another device or to restore your data.</string>
+    <string name="profile_backup_desc">Export all your points, photos, reminders and visits into a ZIP file. Photos are stored locally only — backup is the only way to keep them safe. You can import it on another device or to restore your data.</string>
     <string name="profile_auto_backup">Automatic backup</string>
     <string name="profile_auto_backup_desc">Saves automatically every day</string>
     <string name="profile_drive_backup">Cloud backup (Drive)</string>
@@ -268,7 +268,7 @@
     <string name="onboarding_guest_body">The most private option. Your places, photos, reminders and visits stay only on this device — no server, no cloud, not even I as the developer can see them. To avoid losing your data, export a periodic backup from Profile → Export backup.</string>
     <string name="onboarding_guest_badge">⭐ Recommended for privacy · No registration</string>
     <string name="onboarding_cloud_title">Synced to the cloud</string>
-    <string name="onboarding_cloud_body">With a Google account your data is synced to Firebase. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console: I do not view your data and have no interest in doing so, but technically I could. If maximum privacy matters to you, use guest mode.</string>
+    <string name="onboarding_cloud_body">With a Google account your points, reminders and visits are synced to Firebase. Photos stay on your device only — they are never uploaded to any server. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console: I do not view your data and have no interest in doing so, but technically I could. If maximum privacy matters to you, use guest mode.</string>
     <string name="onboarding_cloud_badge">Automatic backup · Multi-device</string>
     <string name="onboarding_open_source_note">🔓 GeoJournal is open source (AGPL-3.0): the code is public on GitHub and anyone can verify what it does with your data. You don\'t have to take my word for it.</string>
     <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
