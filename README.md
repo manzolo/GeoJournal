@@ -9,7 +9,7 @@ Salva i posti che ami, arricchiscili con foto, note vocali e tag, ritrovali sull
 &nbsp;
 [<img src="https://img.shields.io/github/v/tag/manzolo/GeoJournal?label=versione&style=flat-square" alt="Versione">](https://github.com/manzolo/GeoJournal/releases)
 
-> Versione stabile: **v0.4.63** · Open source AGPL-3.0
+> Open source AGPL-3.0
 
 ---
 

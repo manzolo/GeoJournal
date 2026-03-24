@@ -9,7 +9,7 @@ Save the spots you love, enrich them with photos, voice notes and tags, and find
 &nbsp;
 [<img src="https://img.shields.io/github/v/tag/manzolo/GeoJournal?label=version&style=flat-square" alt="Version">](https://github.com/manzolo/GeoJournal/releases)
 
-> Stable release: **v0.4.63** · Open source AGPL-3.0
+> Open source AGPL-3.0
 
 ---
 
