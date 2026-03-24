@@ -66,8 +66,7 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
             GeoJournalTheme(darkTheme = isDarkTheme) {
                 val startDestination by mainViewModel.startDestination.collectAsState()
-                val pendingGeojUri by mainViewModel.pendingGeojUri.collectAsState()
-                val pendingGeojSenderMessage by mainViewModel.pendingGeojSenderMessage.collectAsState()
+                val pendingGeojImport by mainViewModel.pendingGeojImport.collectAsState()
                 val context = LocalContext.current
 
                 // Toast dal risultato import .geoj
@@ -108,13 +107,13 @@ class MainActivity : ComponentActivity() {
                     }
 
                     // Dialog conferma import .geoj
-                    pendingGeojUri?.let { uri ->
+                    pendingGeojImport?.let { importResult ->
                         AlertDialog(
-                            onDismissRequest = { mainViewModel.clearPendingGeojUri() },
+                            onDismissRequest = { mainViewModel.clearPendingGeojImport() },
                             title = { Text(stringResource(R.string.maps_import_geoj_title)) },
                             text = {
                                 Column {
-                                    if (!pendingGeojSenderMessage.isNullOrBlank()) {
+                                    if (!importResult.senderMessage.isNullOrBlank()) {
                                         ElevatedCard(
                                             colors = CardDefaults.elevatedCardColors(
                                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -130,7 +129,7 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
-                                                    pendingGeojSenderMessage!!,
+                                                    importResult.senderMessage,
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     fontStyle = FontStyle.Italic,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -143,13 +142,12 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             confirmButton = {
-                                Button(onClick = {
-                                    mainViewModel.importGeojPoint(uri)
-                                    mainViewModel.clearPendingGeojUri()
-                                }) { Text(stringResource(R.string.maps_import_confirm)) }
+                                Button(onClick = { mainViewModel.confirmGeojImport() }) {
+                                    Text(stringResource(R.string.maps_import_confirm))
+                                }
                             },
                             dismissButton = {
-                                TextButton(onClick = { mainViewModel.clearPendingGeojUri() }) {
+                                TextButton(onClick = { mainViewModel.clearPendingGeojImport() }) {
                                     Text(stringResource(R.string.action_cancel))
                                 }
                             }

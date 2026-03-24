@@ -83,27 +83,6 @@ class GeoPointExporter @Inject constructor(
             point.audioUrl?.let { put("audioUrl", it) }
         }.toString(2)
 
-    // ─── Peek del messaggio mittente senza import completo ───────────────────
-
-    suspend fun peekSenderMessage(uri: Uri): String? {
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { ins ->
-                ZipInputStream(ins).use { zip ->
-                    var entry = zip.nextEntry
-                    while (entry != null) {
-                        if (entry.name == "point.json") {
-                            val json = JSONObject(zip.readBytes().toString(Charsets.UTF_8))
-                            return@use json.optString("senderMessage").takeIf { it.isNotBlank() }
-                        }
-                        zip.closeEntry()
-                        entry = zip.nextEntry
-                    }
-                    null
-                }
-            }
-        } catch (_: Exception) { null }
-    }
-
     // ─── Import singolo punto da URI .geoj ───────────────────────────────────
 
     suspend fun importFromUri(uri: Uri): GeojImportResult {
