@@ -629,7 +629,9 @@ private fun updateClusteredMarkers(
                 val point = cluster.points[0]
                 icon = createCloudBubbleDrawable(context, point.emoji, point.title)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                setOnMarkerClickListener { _, _ ->
+                setOnMarkerClickListener { _, mv ->
+                    mv.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude))
+                    if (mv.zoomLevelDouble < 17.0) mv.controller.setZoom(17.0)
                     onMarkerClick(point)
                     true
                 }

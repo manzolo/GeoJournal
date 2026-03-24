@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -232,10 +234,14 @@ private fun PointDetailContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedPhoto by remember { mutableStateOf<String?>(null) }
+    var selectedPhotoIndex by remember { mutableStateOf<Int?>(null) }
 
-    selectedPhoto?.let { url ->
-        PhotoViewerDialog(url = url, onDismiss = { selectedPhoto = null })
+    selectedPhotoIndex?.let { index ->
+        PhotoViewerDialog(
+            urls = point.photoUrls,
+            initialIndex = index,
+            onDismiss = { selectedPhotoIndex = null }
+        )
     }
 
     var showDates by remember { mutableStateOf(false) }
@@ -326,6 +332,33 @@ private fun PointDetailContent(
             }
         }
 
+        // ── Foto ──────────────────────────────────────────────────────────────
+        if (point.photoUrls.isNotEmpty()) {
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.Filled.PhotoLibrary,
+                        title = stringResource(R.string.detail_section_photos, point.photoUrls.size))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        maxItemsInEachRow = 3
+                    ) {
+                        point.photoUrls.forEachIndexed { index, url ->
+                            AsyncImage(
+                                model = if (url.startsWith("/")) File(url) else url,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { selectedPhotoIndex = index },
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // ── Posizione: coordinate e date tutte dietro (i) ────────────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -353,33 +386,6 @@ private fun PointDetailContent(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                         InfoRow(Icons.Filled.Edit, stringResource(R.string.detail_updated),
                             dateFormat.format(point.updatedAt))
-                    }
-                }
-            }
-        }
-
-        // ── Foto ──────────────────────────────────────────────────────────────
-        if (point.photoUrls.isNotEmpty()) {
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionHeader(icon = Icons.Filled.PhotoLibrary,
-                        title = stringResource(R.string.detail_section_photos, point.photoUrls.size))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        maxItemsInEachRow = 3
-                    ) {
-                        point.photoUrls.forEach { url ->
-                            AsyncImage(
-                                model = if (url.startsWith("/")) File(url) else url,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable { selectedPhoto = url },
-                                contentScale = ContentScale.Crop
-                            )
-                        }
                     }
                 }
             }
@@ -618,16 +624,10 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
+private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-    val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 5f)
-        offset = if (scale > 1f) offset + panChange else Offset.Zero
-    }
+    val pagerState = rememberPagerState(initialPage = initialIndex) { urls.size }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -643,21 +643,41 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            AsyncImage(
-                model = if (url.startsWith("/")) File(url) else url,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .transformable(transformState)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = offset.x
-                        translationY = offset.y
-                    },
-                contentScale = ContentScale.Fit
-            )
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val url = urls[page]
+                var scale by remember { mutableFloatStateOf(1f) }
+                var offset by remember { mutableStateOf(Offset.Zero) }
 
+                LaunchedEffect(pagerState.currentPage) {
+                    scale = 1f
+                    offset = Offset.Zero
+                }
+
+                val transformState = rememberTransformableState { zoomChange, panChange, _ ->
+                    scale = (scale * zoomChange).coerceIn(1f, 5f)
+                    offset = if (scale > 1f) offset + panChange else Offset.Zero
+                }
+
+                AsyncImage(
+                    model = if (url.startsWith("/")) File(url) else url,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .transformable(transformState)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = offset.x
+                            translationY = offset.y
+                        },
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            val currentUrl = urls[pagerState.currentPage]
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -669,12 +689,19 @@ private fun PhotoViewerDialog(url: String, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row {
-                    IconButton(onClick = { scope.launch { sharePhoto(context, url) } }) {
+                    IconButton(onClick = { scope.launch { sharePhoto(context, currentUrl) } }) {
                         Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.point_share), tint = Color.White)
                     }
-                    IconButton(onClick = { scope.launch { saveToGallery(context, url) } }) {
+                    IconButton(onClick = { scope.launch { saveToGallery(context, currentUrl) } }) {
                         Icon(Icons.Filled.FileDownload, contentDescription = stringResource(R.string.detail_save_to_gallery), tint = Color.White)
                     }
+                }
+                if (urls.size > 1) {
+                    Text(
+                        text = "${pagerState.currentPage + 1} / ${urls.size}",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge
+                    )
                 }
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = Color.White)
