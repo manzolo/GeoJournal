@@ -72,6 +72,24 @@
                 <data android:scheme="file" android:pathPattern=".*\\.geoj" />
                 <data android:scheme="file" android:pathPattern=".*\\.GEOJ" />
             </intent-filter>
+            <!-- Ricevi .geoj condiviso: MIME nativo (da altra GeoJournal) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-geojournal-point" />
+            </intent-filter>
+            <!-- Ricevi .geoj condiviso: MIME generico (da app che non conoscono l'estensione) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <!-- Ricevi .geoj condiviso: ZIP -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+            </intent-filter>
         </activity>
 
         <!-- FileProvider per condivisione foto con la camera -->

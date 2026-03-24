@@ -2,8 +2,10 @@ package it.manzolo.geojournal
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -171,13 +173,29 @@ class MainActivity : ComponentActivity() {
             }
             return
         }
-        if (intent?.action != Intent.ACTION_VIEW) return
-        val uri = intent.data ?: return
-        handleGeojUri(uri, intent)
+
+        when (intent?.action) {
+            Intent.ACTION_VIEW -> {
+                val uri = intent.data ?: return
+                Log.d(TAG, "ACTION_VIEW uri=$uri mime=${intent.type}")
+                handleGeojUri(uri, intent)
+            }
+            Intent.ACTION_SEND -> {
+                @Suppress("DEPRECATION")
+                val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                } ?: return
+                Log.d(TAG, "ACTION_SEND uri=$uri mime=${intent.type}")
+                handleGeojUri(uri, intent)
+            }
+        }
     }
 
     private fun handleGeojUri(uri: Uri, intent: Intent) {
         val resolvedMime = try { contentResolver.getType(uri) } catch (_: Exception) { null }
+        Log.d(TAG, "handleGeojUri: resolvedMime=$resolvedMime intentType=${intent.type}")
         if (intent.type == "application/x-geojournal-point" ||
             resolvedMime == "application/x-geojournal-point"
         ) { mainViewModel.setPendingGeojUri(uri); return }
@@ -195,11 +213,20 @@ class MainActivity : ComponentActivity() {
                 ?.use { cursor ->
                     if (cursor.moveToFirst()) {
                         val name = cursor.getString(0)
+                        Log.d(TAG, "isGeojUri: displayName=$name")
                         if (!name.isNullOrBlank()) return name.endsWith(".geoj", ignoreCase = true)
                     }
                 }
-        } catch (_: Exception) { }
-        return uri.toString().contains(".geoj", ignoreCase = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "isGeojUri: query failed", e)
+        }
+        val fallback = uri.toString().contains(".geoj", ignoreCase = true)
+        Log.d(TAG, "isGeojUri: fallback=$fallback uri=$uri")
+        return fallback
+    }
+
+    companion object {
+        private const val TAG = "GeoJournal"
     }
 }
 

@@ -1,6 +1,7 @@
 package it.manzolo.geojournal.ui
 
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,9 +42,16 @@ class MainViewModel @Inject constructor(
 
     fun setPendingGeojUri(uri: Uri) {
         viewModelScope.launch {
+            Log.d(TAG, "setPendingGeojUri: parsing uri=$uri")
             runCatching { geojExporter.importFromUri(uri) }
-                .onSuccess { _pendingGeojImport.value = it }
-                .onFailure { _geojImportMessage.emit("Errore apertura file: ${it.message}") }
+                .onSuccess {
+                    Log.d(TAG, "setPendingGeojUri: parsed OK title=${it.point.title}")
+                    _pendingGeojImport.value = it
+                }
+                .onFailure {
+                    Log.e(TAG, "setPendingGeojUri: FAILED", it)
+                    _geojImportMessage.emit("Errore apertura file: ${it.message}")
+                }
         }
     }
 
@@ -91,5 +99,9 @@ class MainViewModel @Inject constructor(
                 else                     -> Routes.Login.route
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "GeoJournal"
     }
 }
