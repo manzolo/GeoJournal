@@ -1,0 +1,12 @@
+services:
+  viewer:
+    build: .
+    image: manzolo/geojournal-viewer:latest
+    container_name: geojournal-viewer
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backup.zip:/data/backup.zip:ro
+    environment:
+      - BACKUP_PATH=/data/backup.zip
+    restart: unless-stopped

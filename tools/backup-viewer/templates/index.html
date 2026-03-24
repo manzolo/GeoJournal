@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoJournal Viewer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='%236c8cff'/><circle cx='12' cy='9' r='2.5' fill='white'/></svg>"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #22263a;
+      --accent:   #6c8cff;
+      --text:     #e2e8f0;
+      --muted:    #94a3b8;
+      --border:   #2d3148;
+      --archived: #4b5563;
+      --radius:   10px;
+    }
+
+    html, body { height: 100%; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Shell ────────────────────────────────────────────────────────────── */
+    .layout { display: flex; flex-direction: column; height: 100vh; }
+
+    header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 18px; flex-shrink: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header h1 span { color: var(--accent); }
+    .meta { margin-left: auto; display: flex; gap: 14px; font-size: 0.75rem; color: var(--muted); flex-wrap: wrap; align-items: center; }
+    .meta strong { color: var(--text); }
+    .sep { color: var(--border); }
+
+    .body { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 340px; flex-shrink: 0;
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      position: relative; overflow: hidden; /* needed for slide */
+    }
+
+    /* slide panels */
+    .panel {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      transition: transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    #listPanel   { transform: translateX(0); }
+    #detailPanel { transform: translateX(100%); }
+    .sidebar.show-detail #listPanel   { transform: translateX(-100%); }
+    .sidebar.show-detail #detailPanel { transform: translateX(0); }
+
+    /* ── List panel ───────────────────────────────────────────────────────── */
+    .sidebar-head {
+      padding: 10px 12px; border-bottom: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
+    }
+    .search-box {
+      width: 100%; padding: 7px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text); font-size: 0.85rem; outline: none;
+    }
+    .search-box:focus { border-color: var(--accent); }
+
+    .filter-bar { display: flex; gap: 6px; }
+    .filter-btn {
+      flex: 1; padding: 5px 4px; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      cursor: pointer; transition: all .15s; text-align: center;
+    }
+    .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+    .sidebar-list { flex: 1; overflow-y: auto; }
+
+    .point-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .15s;
+    }
+    .point-card:hover  { background: var(--surface2); }
+    .point-card.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 11px; }
+    .point-card.archived-card { opacity: 0.6; }
+
+    .thumb-wrap { position: relative; flex-shrink: 0; }
+    .card-thumb {
+      width: 50px; height: 50px; border-radius: 6px;
+      background: var(--surface2); display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; overflow: hidden;
+    }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .arch-dot {
+      position: absolute; bottom: -4px; right: -4px;
+      font-size: 0.72rem; line-height: 1;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-body { flex: 1; min-width: 0; }
+    .card-title { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-date  { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+    .card-tags  { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .tag { font-size: 0.67rem; padding: 1px 6px; border-radius: 10px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .tag.internal { opacity: 0.5; font-style: italic; }
+    .stars { font-size: 0.7rem; color: #f59e0b; margin-top: 2px; }
+
+    /* ── Detail panel ─────────────────────────────────────────────────────── */
+    .detail-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      background: var(--surface);
+    }
+    .back-btn {
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer;
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .back-btn:hover { border-color: var(--accent); color: var(--text); }
+    .detail-point-name { font-weight: 600; font-size: 0.9rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .detail-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
+
+    /* View mode toggle */
+    .view-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+    .vt { background: none; border: none; color: var(--muted); padding: 5px 9px; cursor: pointer; font-size: 0.9rem; line-height: 1; transition: all .15s; }
+    .vt.active { background: var(--accent); color: white; }
+    .vt:hover:not(.active) { color: var(--text); }
+
+    /* Cornicetta foto */
+    .photo-frame {
+      outline: 2px solid rgba(255,255,255,.18);
+      outline-offset: -2px;
+      box-shadow: 0 3px 14px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.2);
+    }
+
+    /* Journal view */
+    .journal-hero { flex-shrink: 0; background: #000; }
+    .journal-hero img { width: 100%; max-height: 320px; object-fit: cover; display: block; cursor: zoom-in; }
+    .journal-photos { display: flex; flex-direction: column; gap: 3px; background: #000; padding-top: 3px; }
+    .journal-photos img { width: 100%; height: auto; display: block; cursor: zoom-in; }
+
+    /* Visite e Reminder */
+    .detail-section { padding: 14px 14px 14px; border-top: 1px solid var(--border); margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+    .detail-section-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
+    }
+    .visit-row, .reminder-row {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 7px 10px;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .visit-date, .rem-title { font-size: 0.8rem; font-weight: 600; }
+    .visit-note { font-size: 0.76rem; color: var(--muted); line-height: 1.4; }
+    .rem-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+    .rem-date { font-size: 0.73rem; color: var(--muted); }
+    .rem-badge {
+      font-size: 0.62rem; padding: 1px 7px; border-radius: 10px; font-weight: 600;
+    }
+    .rem-badge.active   { background: #16a34a22; color: #4ade80; border: 1px solid #16a34a44; }
+    .rem-badge.inactive { background: #6b728022; color: var(--muted); border: 1px solid var(--border); }
+    .rem-badge.type     { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+
+    /* Carousel inside sidebar */
+    .carousel { position: relative; background: #000; flex-shrink: 0; }
+    .carousel-img {
+      width: 100%; height: 220px; object-fit: cover; display: block;
+      cursor: zoom-in; user-select: none; -webkit-user-drag: none;
+    }
+    .car-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,.5); border: none; color: white;
+      font-size: 1.5rem; width: 34px; height: 48px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; z-index: 2;
+    }
+    .car-arrow:hover { background: rgba(0,0,0,.8); }
+    .car-arrow.prev { left: 0; border-radius: 0 6px 6px 0; }
+    .car-arrow.next { right: 0; border-radius: 6px 0 0 6px; }
+    .car-counter {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(0,0,0,.6); color: white; font-size: 0.7rem;
+      padding: 2px 8px; border-radius: 10px; z-index: 2;
+    }
+    .car-dots {
+      position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 5px; z-index: 2;
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); cursor: pointer; }
+    .dot.active { background: white; }
+
+    /* Detail info section */
+    .detail-info { padding: 14px 14px 0; display: flex; flex-direction: column; gap: 10px; }
+    .detail-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .detail-emoji { font-size: 1.5rem; }
+    .detail-title { font-size: 1rem; font-weight: 700; flex: 1; }
+    .badge-archived-big {
+      font-size: 0.68rem; padding: 2px 8px; border-radius: 6px;
+      background: var(--archived); color: #d1d5db;
+    }
+    .detail-stars { font-size: 0.82rem; color: #f59e0b; }
+    .detail-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip { font-size: 0.73rem; padding: 3px 9px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
+    .chip.coord { font-family: monospace; font-size: 0.7rem; cursor: pointer; }
+    .chip.coord:hover { border-color: var(--accent); color: var(--text); }
+    .detail-desc { padding: 0 14px 14px; font-size: 0.86rem; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
+
+    /* ── Map ──────────────────────────────────────────────────────────────── */
+    #map { flex: 1; }
+
+    /* Bubble marker */
+    /* Wrapper Leaflet — deve permettere overflow */
+    .bubble-wrapper { overflow: visible !important; }
+
+    .bubble-marker {
+      position: absolute;
+      transform: translate(-50%, calc(-100% - 8px));
+      background: white; border-radius: 10px;
+      padding: 5px 9px 5px 7px;
+      display: flex; align-items: center; gap: 5px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.45);
+      white-space: nowrap; cursor: pointer;
+      transition: background .15s, box-shadow .15s;
+    }
+    .bubble-emoji { font-size: 16px; line-height: 1; flex-shrink: 0; }
+    .bubble-label { font-size: 11px; font-weight: 600; color: #1e2235; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+    .bubble-marker::after {
+      content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      border: 8px solid transparent; border-top-color: white; border-bottom: 0;
+    }
+    .bubble-marker.selected {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,140,255,.35), 0 4px 16px rgba(0,0,0,.55);
+    }
+    .bubble-marker.selected .bubble-label { color: white; }
+    .bubble-marker.selected::after { border-top-color: var(--accent); }
+    .bubble-marker.archived { background: #6b7280; opacity: 0.65; }
+    .bubble-marker.archived .bubble-label { color: #e5e7eb; }
+    .bubble-marker.archived::after { border-top-color: #6b7280; }
+    .bubble-marker.archived.selected { background: var(--accent); opacity: 1; }
+    .bubble-marker.archived.selected .bubble-label { color: white; }
+    .bubble-marker.archived.selected::after { border-top-color: var(--accent); }
+
+    /* Layer switcher custom */
+    .layer-ctrl { display: flex; flex-direction: column; gap: 5px; }
+    .layer-btn {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 1.15rem; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 5px rgba(0,0,0,.4); transition: background .15s;
+    }
+    .layer-btn:hover { background: var(--surface2); }
+    .layer-btn.active { background: var(--accent); border-color: var(--accent); }
+
+    /* Leaflet dark overrides */
+    .leaflet-bar a { background-color: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+    .leaflet-bar a:hover { background-color: var(--surface2) !important; }
+    .leaflet-control-layers { background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; color: var(--text) !important; }
+    .leaflet-control-layers-list { color: var(--text); }
+    .leaflet-control-layers label { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.82rem; }
+    .leaflet-control-attribution { background: rgba(15,17,23,.75) !important; color: var(--muted) !important; font-size: 0.63rem !important; }
+    .leaflet-control-attribution a { color: var(--accent) !important; }
+
+    /* ── Lightbox ────────────────────────────────────────────────────────── */
+    .lightbox {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.92); z-index: 10000;
+      align-items: center; justify-content: center;
+    }
+    .lightbox.open { display: flex; }
+    #lbImg { max-width: 95vw; max-height: 92vh; object-fit: contain; border-radius: 6px; -webkit-user-drag: none; }
+    .lb-close {
+      position: absolute; top: 14px; right: 16px;
+      background: rgba(255,255,255,.12); border: none; color: white;
+      font-size: 1.6rem; width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .lb-close:hover { background: rgba(255,255,255,.25); }
+    .lb-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,.5); border: none; color: white;
+      font-size: 2rem; width: 50px; height: 70px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lb-arrow:hover { background: rgba(255,255,255,.15); }
+    .lb-arrow.prev { left: 0; border-radius: 0 8px 8px 0; }
+    .lb-arrow.next { right: 0; border-radius: 8px 0 0 8px; }
+    .lb-counter { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.65); font-size: 0.8rem; }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Header -->
+  <header>
+    <span style="font-size:1.4rem">🗺️</span>
+    <h1>Geo<span>Journal</span> Viewer</h1>
+    <div class="meta">
+      <div id="metaCount"></div>
+      <span class="sep">·</span>
+      <div>Backup: <strong>{{ meta.exported_at }}</strong></div>
+      <span class="sep">·</span>
+      <div>v<strong>{{ meta.app_version }}</strong></div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" id="sidebar">
+
+      <!-- LIST PANEL -->
+      <div class="panel" id="listPanel">
+        <div class="sidebar-head">
+          <input class="search-box" type="search" id="searchInput" data-i18n-placeholder="search_ph" placeholder="" />
+          <div class="filter-bar">
+            <button class="filter-btn"        data-filter="all"      onclick="setFilter('all')"      data-i18n="all">Tutti</button>
+            <button class="filter-btn active" data-filter="active"   onclick="setFilter('active')"   data-i18n="active_f">Attivi</button>
+            <button class="filter-btn"        data-filter="archived" onclick="setFilter('archived')" data-i18n="archived_f">Archiviati</button>
+          </div>
+        </div>
+        <div class="sidebar-list" id="pointList">
+          {% for p in points %}
+          <div class="point-card {% if p.isArchived %}archived-card{% endif %}"
+               data-id="{{ p.id }}"
+               data-archived="{{ 'true' if p.isArchived else 'false' }}"
+               onclick="selectPoint('{{ p.id }}')">
+            <div class="thumb-wrap">
+              <div class="card-thumb">
+                {% if p.webPhotos %}
+                <img src="{{ p.webPhotos[0] }}" loading="lazy" alt=""
+                     onerror="this.parentNode.textContent='{{ p.emoji or '📍' }}'"/>
+                {% else %}{{ p.emoji or '📍' }}{% endif %}
+              </div>
+              {% if p.isArchived %}<span class="arch-dot" data-i18n-title="archived_dot">🗄️</span>{% endif %}
+            </div>
+            <div class="card-body">
+              <div class="card-title">{{ p.emoji or '📍' }} {{ p.title }}</div>
+              <div class="card-date">{{ p.createdAt_fmt }}</div>
+              {% if p.rating > 0 %}
+              <div class="stars">{% for i in range(p.rating) %}★{% endfor %}{% for i in range(5 - p.rating) %}☆{% endfor %}</div>
+              {% endif %}
+              <div class="card-tags">
+                {% for t in p.tagList[:4] %}
+                <span class="tag {% if t.startswith('_') %}internal{% endif %}">{{ t }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- DETAIL PANEL -->
+      <div class="panel" id="detailPanel">
+        <div class="detail-header">
+          <button class="back-btn" onclick="showList()" data-i18n="back">← Lista</button>
+          <span class="detail-point-name" id="detailHeaderName"></span>
+          <div class="view-toggle">
+            <button class="vt" data-mode="carousel" onclick="setViewMode('carousel')" data-i18n-title="view_carousel">⊟</button>
+            <button class="vt" data-mode="journal"  onclick="setViewMode('journal')"  data-i18n-title="view_journal">≡</button>
+          </div>
+        </div>
+        <div class="detail-body" id="detailBody">
+          <!-- filled dynamically -->
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Map -->
+    <div id="map"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="onLbClick(event)">
+  <button class="lb-close" onclick="closeLb()">×</button>
+  <button class="lb-arrow prev" id="lbPrev" onclick="lbStep(-1)">&#8249;</button>
+  <img id="lbImg" src="" alt="" />
+  <button class="lb-arrow next" id="lbNext" onclick="lbStep(1)">&#8250;</button>
+  <div class="lb-counter" id="lbCounter"></div>
+</div>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────────────
+const LANG = navigator.language.toLowerCase().startsWith('it') ? 'it' : 'en';
+const T = {
+  it: {
+    all:          'Tutti',       active_f:     'Attivi',      archived_f:   'Archiviati',
+    search_ph:    'Cerca titolo, tag, descrizione…',
+    back:         '← Lista',
+    view_carousel:'Carosello',   view_journal: 'Vista completa',
+    archived_dot: 'Archiviato',
+    meta_active:  'attivi',      meta_archived:'archiviati',
+    copy_coord:   'Copia coordinate',
+    visits:       'Visite',      reminders:    'Reminder',
+    single:       'Singolo',     recurring:    'Ricorrente',
+    active:       'Attivo',      expired:      'Scaduto',
+    archived_lbl: 'archiviato',
+    layer_map:    'Mappa standard', layer_dark: 'Dark', layer_sat: 'Satellite',
+  },
+  en: {
+    all:          'All',         active_f:     'Active',      archived_f:   'Archived',
+    search_ph:    'Search title, tag, description…',
+    back:         '← List',
+    view_carousel:'Carousel',    view_journal: 'Full view',
+    archived_dot: 'Archived',
+    meta_active:  'active',      meta_archived:'archived',
+    copy_coord:   'Copy coordinates',
+    visits:       'Visits',      reminders:    'Reminders',
+    single:       'Single',      recurring:    'Recurring',
+    active:       'Active',      expired:      'Expired',
+    archived_lbl: 'archived',
+    layer_map:    'Standard map', layer_dark: 'Dark', layer_sat: 'Satellite',
+  },
+};
+const t = k => (T[LANG] || T.en)[k] ?? k;
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+}
+
+const POINTS = {{ points | tojson }};
+
+// ── Meta ─────────────────────────────────────────────────────────────────────
+const nActive   = POINTS.filter(p => !p.isArchived).length;
+const nArchived = POINTS.filter(p =>  p.isArchived).length;
+document.getElementById('metaCount').innerHTML =
+  `<strong>${nActive}</strong> ${t('meta_active')}` +
+  (nArchived ? ` · <strong>${nArchived}</strong> ${t('meta_archived')}` : '');
+
+// ── Map ───────────────────────────────────────────────────────────────────────
+const map = L.map('map', { zoomControl: false });
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+const baseLayers = {
+  '🗺️ Mappa':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                   { attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>', maxZoom: 19 }),
+  '🌑 Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                   { attribution: '© <a href="https://carto.com">CARTO</a>', maxZoom: 20 }),
+  '🛰️ Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                   { attribution: '© <a href="https://esri.com">Esri</a>', maxZoom: 19 }),
+};
+baseLayers['🗺️ Mappa'].addTo(map);
+
+// Controllo layer custom con emoji
+const LayerCtrl = L.Control.extend({
+  onAdd(map) {
+    const wrap = L.DomUtil.create('div', 'layer-ctrl');
+    [
+      { key: '🗺️ Mappa',    icon: '🗺️', label: t('layer_map') },
+      { key: '🌑 Dark',      icon: '🌑', label: t('layer_dark') },
+      { key: '🛰️ Satellite', icon: '🛰️', label: t('layer_sat') },
+    ].forEach(l => {
+      const btn = L.DomUtil.create('button', 'layer-btn', wrap);
+      btn.innerHTML = l.icon;
+      btn.title = l.label;
+      if (l.key === '🗺️ Mappa') btn.classList.add('active');
+      btn.onclick = () => {
+        Object.values(baseLayers).forEach(ly => map.removeLayer(ly));
+        baseLayers[l.key].addTo(map);
+        wrap.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      };
+    });
+    L.DomEvent.disableClickPropagation(wrap);
+    return wrap;
+  }
+});
+new LayerCtrl({ position: 'topright' }).addTo(map);
+
+// ── Bubble icons ──────────────────────────────────────────────────────────────
+function makeIcon(p, selected) {
+  let cls = 'bubble-marker';
+  if (p.isArchived) cls += ' archived';
+  if (selected)     cls += ' selected';
+  const label = p.title.length > 24 ? p.title.slice(0, 22) + '…' : p.title;
+  return L.divIcon({
+    html: `<div class="${cls}">
+      <span class="bubble-emoji">${p.emoji || '📍'}</span>
+      <span class="bubble-label">${label}</span>
+    </div>`,
+    className:  'bubble-wrapper',
+    iconSize:   [0, 0],
+    iconAnchor: [0, 0],
+  });
+}
+
+const markersById = {};
+const bounds = [];
+let selectedId = null;
+
+POINTS.forEach(p => {
+  if (!p.latitude || !p.longitude) return;
+  const m = L.marker([p.latitude, p.longitude], {
+    icon: makeIcon(p, false),
+    opacity: p.isArchived ? 0.6 : 1,
+    zIndexOffset: 0,
+  }).addTo(map);
+  m.on('click', () => selectPoint(p.id));
+  markersById[p.id] = m;
+  bounds.push([p.latitude, p.longitude]);
+});
+
+if (bounds.length) map.fitBounds(bounds, { padding: [50, 50] });
+
+// ── Select point (from list OR map) ──────────────────────────────────────────
+function selectPoint(id) {
+  const p = POINTS.find(x => x.id === id);
+  if (!p) return;
+
+  // Update markers
+  if (selectedId && markersById[selectedId]) {
+    const prev = POINTS.find(x => x.id === selectedId);
+    markersById[selectedId].setIcon(makeIcon(prev, false));
+    markersById[selectedId].setOpacity(prev.isArchived ? 0.6 : 1);
+    markersById[selectedId].setZIndexOffset(0);
+  }
+  selectedId = id;
+  markersById[id].setIcon(makeIcon(p, true));
+  markersById[id].setOpacity(1);
+  markersById[id].setZIndexOffset(1000);
+
+  // Highlight list card
+  document.querySelectorAll('.point-card').forEach(el => el.classList.remove('active'));
+  const card = document.querySelector(`.point-card[data-id="${id}"]`);
+  if (card) card.classList.add('active');
+
+  // Fly map
+  map.flyTo([p.latitude, p.longitude], Math.max(map.getZoom(), 15), { duration: 0.9 });
+
+  // Open detail panel
+  buildDetail(p);
+  document.getElementById('sidebar').classList.add('show-detail');
+}
+
+function showList() {
+  document.getElementById('sidebar').classList.remove('show-detail');
+  // deselect marker
+  if (selectedId && markersById[selectedId]) {
+    const prev = POINTS.find(x => x.id === selectedId);
+    markersById[selectedId].setIcon(makeIcon(prev, false));
+    markersById[selectedId].setOpacity(prev.isArchived ? 0.6 : 1);
+    markersById[selectedId].setZIndexOffset(0);
+  }
+  selectedId = null;
+  document.querySelectorAll('.point-card').forEach(el => el.classList.remove('active'));
+}
+
+// ── Detail build ──────────────────────────────────────────────────────────────
+let _photos = [];
+let _cidx   = 0;
+let _touchX = null;
+let viewMode = localStorage.getItem('gjViewMode') || 'carousel';
+
+function setViewMode(m) {
+  viewMode = m;
+  localStorage.setItem('gjViewMode', m);
+  document.querySelectorAll('.vt').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  // Rebuild se il pannello dettaglio è aperto
+  if (selectedId && document.getElementById('sidebar').classList.contains('show-detail')) {
+    const p = POINTS.find(x => x.id === selectedId);
+    if (p) { _cidx = 0; _renderDetailBody(p); }
+  }
+}
+
+function _infoHtml(p) {
+  const stars    = p.rating > 0 ? '★'.repeat(p.rating) + '☆'.repeat(5 - p.rating) : '';
+  const coordStr = `${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}`;
+  let h = `<div class="detail-info">`;
+  h += `<div class="detail-title-row">
+    <span class="detail-emoji">${p.emoji || '📍'}</span>
+    <span class="detail-title">${p.title}</span>
+    ${p.isArchived ? `<span class="badge-archived-big">🗄️ ${t('archived_lbl')}</span>` : ''}
+  </div>`;
+  if (stars) h += `<div class="detail-stars">${stars}</div>`;
+  h += `<div class="detail-chips">
+    <span class="chip">📅 ${p.createdAt_fmt}</span>
+    <span class="chip coord" onclick="copyCoord('${coordStr}')" title="${t('copy_coord')}">📍 ${coordStr}</span>
+  </div>`;
+  if ((p.tagList || []).length)
+    h += `<div class="detail-chips">` +
+      p.tagList.map(t => `<span class="chip tag ${t.startsWith('_') ? 'internal' : ''}">${t}</span>`).join('') +
+      `</div>`;
+  h += `</div>`;
+  if (p.description) h += `<div class="detail-desc">${escHtml(p.description)}</div>`;
+  return h;
+}
+
+function _extraHtml(p) {
+  let h = '';
+
+  // ── Visite
+  const visits = p.visits || [];
+  if (visits.length) {
+    h += `<div class="detail-section">
+      <div class="detail-section-title">🚶 ${t('visits')} (${visits.length})</div>`;
+    visits.forEach(v => {
+      h += `<div class="visit-row">
+        <span class="visit-date">📅 ${v.visitedAt}</span>
+        ${v.note ? `<span class="visit-note">${escHtml(v.note)}</span>` : ''}
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  // ── Reminder
+  const reminders = p.reminders || [];
+  if (reminders.length) {
+    h += `<div class="detail-section">
+      <div class="detail-section-title">🔔 ${t('reminders')} (${reminders.length})</div>`;
+    reminders.forEach(r => {
+      const typeLbl = r.type === 'SINGLE' ? t('single') : t('recurring');
+      const dateRange = r.endDate ? `${r.startDate} → ${r.endDate}` : r.startDate;
+      h += `<div class="reminder-row">
+        <span class="rem-title">📌 ${escHtml(r.title)}</span>
+        <div class="rem-meta">
+          <span class="rem-date">${dateRange}</span>
+          <span class="rem-badge type">${typeLbl}</span>
+          <span class="rem-badge ${r.isActive ? 'active' : 'inactive'}">${r.isActive ? t('active') : t('expired')}</span>
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  return h;
+}
+
+function _renderDetailBody(p) {
+  let html = '';
+
+  if (viewMode === 'journal') {
+    // ── Vista journal: foto principale → info → foto in cascata
+    if (_photos.length) {
+      html += `<div class="journal-hero">
+        <img class="photo-frame" src="${_photos[0]}" alt="" onclick="openLb(0)" loading="lazy" />
+      </div>`;
+    }
+    html += _infoHtml(p);
+    if (_photos.length > 1) {
+      html += `<div class="journal-photos">` +
+        _photos.slice(1).map((url, i) =>
+          `<img class="photo-frame" src="${url}" alt="" onclick="openLb(${i + 1})" loading="lazy" />`
+        ).join('') +
+        `</div>`;
+    }
+    html += _extraHtml(p);
+  } else {
+    // ── Vista carosello (default)
+    if (_photos.length) {
+      html += `<div class="carousel" id="carousel">
+        <img class="carousel-img photo-frame" id="carImg" src="${_photos[0]}" alt="" onclick="openLb(0)" />
+        <button class="car-arrow prev" id="carPrev" onclick="cStep(-1)">&#8249;</button>
+        <button class="car-arrow next" id="carNext" onclick="cStep(1)">&#8250;</button>
+        <div class="car-counter" id="carCnt"></div>
+        <div class="car-dots" id="carDots"></div>
+      </div>`;
+    }
+    html += _infoHtml(p);
+    html += _extraHtml(p);
+  }
+
+  document.getElementById('detailBody').innerHTML = html;
+
+  if (viewMode === 'carousel' && _photos.length) {
+    renderCarousel();
+    const img = document.getElementById('carImg');
+    img.addEventListener('touchstart', e => { _touchX = e.touches[0].clientX; }, { passive: true });
+    img.addEventListener('touchend',   e => {
+      if (_touchX === null) return;
+      const dx = e.changedTouches[0].clientX - _touchX;
+      if (Math.abs(dx) > 40) dx < 0 ? cStep(1) : cStep(-1);
+      _touchX = null;
+    });
+  }
+}
+
+function buildDetail(p) {
+  document.getElementById('detailHeaderName').textContent = (p.emoji || '📍') + ' ' + p.title;
+  _photos = p.webPhotos || [];
+  _cidx   = 0;
+  // Sincronizza stato toggle
+  document.querySelectorAll('.vt').forEach(b => b.classList.toggle('active', b.dataset.mode === viewMode));
+  _renderDetailBody(p);
+}
+
+function renderCarousel() {
+  const multi = _photos.length > 1;
+  const img   = document.getElementById('carImg');
+  const cnt   = document.getElementById('carCnt');
+  const dots  = document.getElementById('carDots');
+  const prev  = document.getElementById('carPrev');
+  const next  = document.getElementById('carNext');
+
+  img.src = _photos[_cidx];
+  img.onclick = () => openLb(_cidx);
+
+  prev.style.visibility = multi ? '' : 'hidden';
+  next.style.visibility = multi ? '' : 'hidden';
+  cnt.style.display     = multi ? '' : 'none';
+  dots.style.display    = multi ? '' : 'none';
+
+  if (multi) {
+    cnt.textContent = `${_cidx + 1} / ${_photos.length}`;
+    dots.innerHTML  = _photos.map((_, i) =>
+      `<span class="dot ${i === _cidx ? 'active' : ''}"
+             onclick="event.stopPropagation();goC(${i})"></span>`
+    ).join('');
+  }
+}
+
+function cStep(d)  { goC(_cidx + d); }
+function goC(i)    { _cidx = (i + _photos.length) % _photos.length; renderCarousel(); }
+
+// ── Filter + Search ───────────────────────────────────────────────────────────
+let currentFilter = 'active';
+let currentSearch = '';
+
+// Applica traduzioni e filtro iniziale
+applyI18n();
+applyFilters();
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  applyFilters();
+}
+
+document.getElementById('searchInput').addEventListener('input', function () {
+  currentSearch = this.value.toLowerCase().trim();
+  applyFilters();
+});
+
+function applyFilters() {
+  document.querySelectorAll('.point-card').forEach(card => {
+    const id  = card.dataset.id;
+    const arc = card.dataset.archived === 'true';
+    const p   = POINTS.find(x => x.id === id);
+
+    const passSearch = !currentSearch ||
+      p.title.toLowerCase().includes(currentSearch) ||
+      (p.description || '').toLowerCase().includes(currentSearch) ||
+      (p.tagList || []).some(t => t.toLowerCase().includes(currentSearch));
+
+    // Se c'è una ricerca attiva, cerca su tutti i punti ignorando il filtro
+    const passFilter = currentSearch
+      ? true
+      : (currentFilter === 'all' ||
+         (currentFilter === 'active'   && !arc) ||
+         (currentFilter === 'archived' &&  arc));
+
+    const show = passFilter && passSearch;
+    card.style.display = show ? '' : 'none';
+    if (markersById[id]) markersById[id].setOpacity(show ? (arc ? 0.6 : 1) : 0.08);
+  });
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+let _lbIdx = 0;
+
+function openLb(idx) {
+  _lbIdx = idx;
+  renderLb();
+  document.getElementById('lightbox').classList.add('open');
+}
+function renderLb() {
+  document.getElementById('lbImg').src = _photos[_lbIdx];
+  const multi = _photos.length > 1;
+  document.getElementById('lbPrev').style.display    = multi ? '' : 'none';
+  document.getElementById('lbNext').style.display    = multi ? '' : 'none';
+  document.getElementById('lbCounter').style.display = multi ? '' : 'none';
+  if (multi) document.getElementById('lbCounter').textContent = `${_lbIdx + 1} / ${_photos.length}`;
+}
+function lbStep(d)      { _lbIdx = (_lbIdx + d + _photos.length) % _photos.length; renderLb(); }
+function closeLb()      { document.getElementById('lightbox').classList.remove('open'); }
+function onLbClick(e)   { if (e.target === document.getElementById('lightbox')) closeLb(); }
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyCoord(s) { navigator.clipboard?.writeText(s); }
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const lbOpen = document.getElementById('lightbox').classList.contains('open');
+  if (e.key === 'Escape') {
+    if (lbOpen) { closeLb(); return; }
+    showList();
+  }
+  if (lbOpen && e.key === 'ArrowLeft')  lbStep(-1);
+  if (lbOpen && e.key === 'ArrowRight') lbStep(1);
+  if (!lbOpen && e.key === 'ArrowLeft')  cStep(-1);
+  if (!lbOpen && e.key === 'ArrowRight') cStep(1);
+});
+</script>
+</body>
+</html>
