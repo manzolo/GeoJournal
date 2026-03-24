@@ -26,7 +26,13 @@ data class UserPreferences(
     val hasSeenDataOnboarding: Boolean = false,
     val mapLat: Double = 0.0,
     val mapLon: Double = 0.0,
-    val mapZoom: Double = 0.0
+    val mapZoom: Double = 0.0,
+    // Privacy sync: tutti OFF per default — l'utente sceglie cosa mandare su Firebase
+    val syncGeoPointsEnabled: Boolean = false,
+    val syncPhotosEnabled: Boolean = false,
+    val syncAudioEnabled: Boolean = false,
+    val syncRemindersEnabled: Boolean = false,
+    val syncVisitLogsEnabled: Boolean = false
 )
 
 @Singleton
@@ -45,6 +51,12 @@ class UserPreferencesRepository @Inject constructor(
         val MAP_LAT = doublePreferencesKey("map_lat")
         val MAP_LON = doublePreferencesKey("map_lon")
         val MAP_ZOOM = doublePreferencesKey("map_zoom")
+        // Privacy sync flags
+        val SYNC_GEO_POINTS = booleanPreferencesKey("sync_geo_points_enabled")
+        val SYNC_PHOTOS = booleanPreferencesKey("sync_photos_enabled")
+        val SYNC_AUDIO = booleanPreferencesKey("sync_audio_enabled")
+        val SYNC_REMINDERS = booleanPreferencesKey("sync_reminders_enabled")
+        val SYNC_VISIT_LOGS = booleanPreferencesKey("sync_visit_logs_enabled")
     }
 
     val preferences: Flow<UserPreferences> = dataStore.data
@@ -64,7 +76,12 @@ class UserPreferencesRepository @Inject constructor(
                 hasSeenDataOnboarding = prefs[Keys.HAS_SEEN_DATA_ONBOARDING] ?: false,
                 mapLat = prefs[Keys.MAP_LAT] ?: 0.0,
                 mapLon = prefs[Keys.MAP_LON] ?: 0.0,
-                mapZoom = prefs[Keys.MAP_ZOOM] ?: 0.0
+                mapZoom = prefs[Keys.MAP_ZOOM] ?: 0.0,
+                syncGeoPointsEnabled = prefs[Keys.SYNC_GEO_POINTS] ?: false,
+                syncPhotosEnabled = prefs[Keys.SYNC_PHOTOS] ?: false,
+                syncAudioEnabled = prefs[Keys.SYNC_AUDIO] ?: false,
+                syncRemindersEnabled = prefs[Keys.SYNC_REMINDERS] ?: false,
+                syncVisitLogsEnabled = prefs[Keys.SYNC_VISIT_LOGS] ?: false
             )
         }
 
@@ -106,5 +123,25 @@ class UserPreferencesRepository @Inject constructor(
             it[Keys.MAP_LON] = lon
             it[Keys.MAP_ZOOM] = zoom
         }
+    }
+
+    suspend fun setSyncGeoPointsEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.SYNC_GEO_POINTS] = enabled }
+    }
+
+    suspend fun setSyncPhotosEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.SYNC_PHOTOS] = enabled }
+    }
+
+    suspend fun setSyncAudioEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.SYNC_AUDIO] = enabled }
+    }
+
+    suspend fun setSyncRemindersEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.SYNC_REMINDERS] = enabled }
+    }
+
+    suspend fun setSyncVisitLogsEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.SYNC_VISIT_LOGS] = enabled }
     }
 }

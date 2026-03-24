@@ -2,12 +2,14 @@ package it.manzolo.geojournal.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.local.db.VisitLogDao
 import it.manzolo.geojournal.data.local.db.toDomain
 import it.manzolo.geojournal.data.local.db.toEntity
 import it.manzolo.geojournal.domain.model.VisitLogEntry
 import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
@@ -18,7 +20,8 @@ import javax.inject.Singleton
 class VisitLogRepositoryImpl @Inject constructor(
     private val dao: VisitLogDao,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val userPrefs: UserPreferencesRepository
 ) : VisitLogRepository {
 
     override fun observeByGeoPointId(geoPointId: String): Flow<List<VisitLogEntry>> =
@@ -54,6 +57,7 @@ class VisitLogRepositoryImpl @Inject constructor(
     // ─── Firestore sync (best-effort, non-fatal) ────────────────────────────
 
     private suspend fun syncToFirestore(entry: VisitLogEntry) {
+        if (!userPrefs.preferences.first().syncVisitLogsEnabled) return
         val uid = auth.currentUser?.uid ?: return
         try {
             val data = mapOf(

@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.storage.FirebaseStorage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.util.Date
 import java.util.UUID
@@ -55,6 +57,7 @@ class AddEditViewModel @Inject constructor(
     private val repository: GeoPointRepository,
     private val userPrefs: UserPreferencesRepository,
     private val auth: FirebaseAuth,
+    private val storage: FirebaseStorage,
     private val reminderRepository: ReminderRepository,
     private val scheduler: ReminderScheduler,
     savedStateHandle: SavedStateHandle
@@ -322,13 +325,33 @@ class AddEditViewModel @Inject constructor(
 
     // ─── Photo resolution ────────────────────────────────────────────────────
 
-    private suspend fun resolvePhotos(uris: List<String>, pointId: String): List<String> =
-        uris.mapNotNull { uri ->
+    private suspend fun resolvePhotos(uris: List<String>, pointId: String): List<String> {
+        val prefs = userPrefs.preferences.first()
+        return uris.mapNotNull { uri ->
             when {
-                uri.startsWith("content://") -> copyToInternalStorage(uri, pointId)
+                uri.startsWith("https://") -> uri  // già su Firebase Storage
+                uri.startsWith("content://") -> {   // nuovo dal picker/camera
+                    if (prefs.syncPhotosEnabled && auth.currentUser != null)
+                        uploadToFirebase(uri, pointId) ?: copyToInternalStorage(uri, pointId)
+                    else copyToInternalStorage(uri, pointId)
+                }
                 else -> uri  // path locale già salvato
             }
         }
+    }
+
+    private suspend fun uploadToFirebase(uriStr: String, pointId: String): String? {
+        return try {
+            val uid = auth.currentUser!!.uid
+            val filename = "${UUID.randomUUID()}.jpg"
+            val ref = storage.reference.child("users/$uid/photos/$pointId/$filename")
+            val bytes = context.contentResolver
+                .openInputStream(Uri.parse(uriStr))
+                ?.use { it.readBytes() } ?: return null
+            ref.putBytes(bytes).await()
+            ref.downloadUrl.await().toString()
+        } catch (_: Exception) { null }
+    }
 
     private fun copyToInternalStorage(uriStr: String, pointId: String): String? {
         return try {

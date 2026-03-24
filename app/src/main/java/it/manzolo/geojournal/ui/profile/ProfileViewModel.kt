@@ -24,7 +24,12 @@ data class ProfileUiState(
     val isDarkTheme: Boolean = false,
     val navigateToLogin: Boolean = false,
     val isDeletingAccount: Boolean = false,
-    val deleteAccountError: String? = null
+    val deleteAccountError: String? = null,
+    val syncGeoPointsEnabled: Boolean = false,
+    val syncPhotosEnabled: Boolean = false,
+    val syncAudioEnabled: Boolean = false,
+    val syncRemindersEnabled: Boolean = false,
+    val syncVisitLogsEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -49,7 +54,12 @@ class ProfileViewModel @Inject constructor(
                     photoUrl = user?.photoUrl?.toString(),
                     isGuest = user == null && prefs.isGuest,
                     isLoggedIn = user != null,
-                    isDarkTheme = prefs.isDarkTheme
+                    isDarkTheme = prefs.isDarkTheme,
+                    syncGeoPointsEnabled = prefs.syncGeoPointsEnabled,
+                    syncPhotosEnabled = prefs.syncPhotosEnabled,
+                    syncAudioEnabled = prefs.syncAudioEnabled,
+                    syncRemindersEnabled = prefs.syncRemindersEnabled,
+                    syncVisitLogsEnabled = prefs.syncVisitLogsEnabled
                 )
             }.collect { state ->
                 _uiState.update { state }
@@ -97,5 +107,25 @@ class ProfileViewModel @Inject constructor(
 
     fun clearDeleteAccountError() {
         _uiState.update { it.copy(deleteAccountError = null) }
+    }
+
+    fun setSyncGeoPointsEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefs.setSyncGeoPointsEnabled(enabled) }
+    }
+
+    fun setSyncPhotosEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefs.setSyncPhotosEnabled(enabled) }
+    }
+
+    fun setSyncAudioEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefs.setSyncAudioEnabled(enabled) }
+    }
+
+    fun setSyncRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefs.setSyncRemindersEnabled(enabled) }
+    }
+
+    fun setSyncVisitLogsEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPrefs.setSyncVisitLogsEnabled(enabled) }
     }
 }

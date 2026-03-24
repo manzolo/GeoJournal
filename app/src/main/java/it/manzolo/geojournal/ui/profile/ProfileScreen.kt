@@ -635,6 +635,108 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Sezione Sincronizzazione & Privacy (solo per utenti loggati)
+        if (uiState.isLoggedIn) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = stringResource(R.string.profile_section_sync_privacy),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.profile_sync_local_default_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Toggle: Dati geografici
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_geo_points_title),
+                        desc = stringResource(R.string.profile_sync_geo_points_desc),
+                        checked = uiState.syncGeoPointsEnabled,
+                        onCheckedChange = {
+                            viewModel.setSyncGeoPointsEnabled(it)
+                            // Se disattiviamo i punti, disattiviamo anche foto e audio
+                            if (!it) {
+                                viewModel.setSyncPhotosEnabled(false)
+                                viewModel.setSyncAudioEnabled(false)
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Toggle: Foto (rientrato, dipende da geo_points)
+                    SyncToggleRow(
+                        title = "  └  " + stringResource(R.string.profile_sync_photos_title),
+                        desc = stringResource(
+                            if (uiState.syncGeoPointsEnabled) R.string.profile_sync_photos_desc
+                            else R.string.profile_sync_requires_geo_points
+                        ),
+                        checked = uiState.syncPhotosEnabled,
+                        onCheckedChange = { viewModel.setSyncPhotosEnabled(it) },
+                        enabled = uiState.syncGeoPointsEnabled
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Toggle: Audio (rientrato, dipende da geo_points)
+                    SyncToggleRow(
+                        title = "  └  " + stringResource(R.string.profile_sync_audio_title),
+                        desc = stringResource(
+                            if (uiState.syncGeoPointsEnabled) R.string.profile_sync_audio_desc
+                            else R.string.profile_sync_requires_geo_points
+                        ),
+                        checked = uiState.syncAudioEnabled,
+                        onCheckedChange = { viewModel.setSyncAudioEnabled(it) },
+                        enabled = uiState.syncGeoPointsEnabled
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Toggle: Promemoria
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_reminders_title),
+                        desc = stringResource(R.string.profile_sync_reminders_desc),
+                        checked = uiState.syncRemindersEnabled,
+                        onCheckedChange = { viewModel.setSyncRemindersEnabled(it) }
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Toggle: Visite
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_visit_logs_title),
+                        desc = stringResource(R.string.profile_sync_visit_logs_desc),
+                        checked = uiState.syncVisitLogsEnabled,
+                        onCheckedChange = { viewModel.setSyncVisitLogsEnabled(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.profile_sync_existing_data_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Sezione Info app
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
@@ -763,6 +865,41 @@ fun ProfileScreen(
             kotlinx.coroutines.delay(5_000)
             backupViewModel.resetState()
         }
+    }
+}
+
+@Composable
+private fun SyncToggleRow(
+    title: String,
+    desc: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            )
+            Text(
+                text = desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
+        )
     }
 }
 

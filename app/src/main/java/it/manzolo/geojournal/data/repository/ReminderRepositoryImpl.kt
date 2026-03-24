@@ -2,6 +2,7 @@ package it.manzolo.geojournal.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.local.db.ReminderDao
 import it.manzolo.geojournal.data.local.db.toDomain
 import it.manzolo.geojournal.data.local.db.toEntity
@@ -9,6 +10,7 @@ import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -18,7 +20,8 @@ import javax.inject.Singleton
 class ReminderRepositoryImpl @Inject constructor(
     private val dao: ReminderDao,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val userPrefs: UserPreferencesRepository
 ) : ReminderRepository {
 
     override fun observeByGeoPointId(geoPointId: String): Flow<List<Reminder>> =
@@ -54,6 +57,7 @@ class ReminderRepositoryImpl @Inject constructor(
     // ─── Firestore sync (best-effort, non-fatal) ────────────────────────────
 
     private suspend fun syncToFirestore(reminder: Reminder) {
+        if (!userPrefs.preferences.first().syncRemindersEnabled) return
         val uid = auth.currentUser?.uid ?: return
         try {
             val data = mapOf(
