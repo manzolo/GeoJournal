@@ -11,7 +11,6 @@ data class GeoPoint(
     val longitude: Double,
     val tags: List<String> = emptyList(),
     val photoUrls: List<String> = emptyList(),
-    val audioUrl: String? = null,
     val emoji: String = "📍",
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),

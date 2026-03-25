@@ -19,7 +19,6 @@ data class GeoPointEntity(
     // Liste serializzate con separatore "|"
     @ColumnInfo(name = "tags") val tags: String = "",
     @ColumnInfo(name = "photo_urls") val photoUrls: String = "",
-    @ColumnInfo(name = "audio_url") val audioUrl: String? = null,
 
     @ColumnInfo(name = "emoji") val emoji: String = "📍",
 
@@ -47,7 +46,6 @@ fun GeoPointEntity.toDomain(): GeoPoint = GeoPoint(
     longitude = longitude,
     tags = if (tags.isEmpty()) emptyList() else tags.split("|").filter { it.isNotEmpty() },
     photoUrls = if (photoUrls.isEmpty()) emptyList() else photoUrls.split("|").filter { it.isNotEmpty() },
-    audioUrl = audioUrl,
     emoji = emoji,
     createdAt = Date(createdAt),
     updatedAt = Date(updatedAt),
@@ -65,7 +63,6 @@ fun GeoPoint.toEntity(syncedToFirestore: Boolean = false): GeoPointEntity = GeoP
     longitude = longitude,
     tags = tags.joinToString("|"),
     photoUrls = photoUrls.joinToString("|"),
-    audioUrl = audioUrl,
     emoji = emoji,
     createdAt = createdAt.time,
     updatedAt = updatedAt.time,

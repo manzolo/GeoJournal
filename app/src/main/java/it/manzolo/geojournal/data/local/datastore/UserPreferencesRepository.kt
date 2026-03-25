@@ -32,7 +32,6 @@ data class UserPreferences(
     // Privacy sync: tutti OFF per default — l'utente sceglie cosa mandare su Firebase
     val syncGeoPointsEnabled: Boolean = false,
     val syncPhotosEnabled: Boolean = false,
-    val syncAudioEnabled: Boolean = false,
     val syncRemindersEnabled: Boolean = false,
     val syncVisitLogsEnabled: Boolean = false
 )
@@ -58,7 +57,6 @@ class UserPreferencesRepository @Inject constructor(
         // Privacy sync flags
         val SYNC_GEO_POINTS = booleanPreferencesKey("sync_geo_points_enabled")
         val SYNC_PHOTOS = booleanPreferencesKey("sync_photos_enabled")
-        val SYNC_AUDIO = booleanPreferencesKey("sync_audio_enabled")
         val SYNC_REMINDERS = booleanPreferencesKey("sync_reminders_enabled")
         val SYNC_VISIT_LOGS = booleanPreferencesKey("sync_visit_logs_enabled")
     }
@@ -85,7 +83,6 @@ class UserPreferencesRepository @Inject constructor(
                 mapZoom = prefs[Keys.MAP_ZOOM] ?: 0.0,
                 syncGeoPointsEnabled = prefs[Keys.SYNC_GEO_POINTS] ?: false,
                 syncPhotosEnabled = prefs[Keys.SYNC_PHOTOS] ?: false,
-                syncAudioEnabled = prefs[Keys.SYNC_AUDIO] ?: false,
                 syncRemindersEnabled = prefs[Keys.SYNC_REMINDERS] ?: false,
                 syncVisitLogsEnabled = prefs[Keys.SYNC_VISIT_LOGS] ?: false
             )
@@ -144,10 +141,6 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setSyncPhotosEnabled(enabled: Boolean) {
         dataStore.edit { it[Keys.SYNC_PHOTOS] = enabled }
-    }
-
-    suspend fun setSyncAudioEnabled(enabled: Boolean) {
-        dataStore.edit { it[Keys.SYNC_AUDIO] = enabled }
     }
 
     suspend fun setSyncRemindersEnabled(enabled: Boolean) {

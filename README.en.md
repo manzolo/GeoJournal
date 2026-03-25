@@ -1,7 +1,7 @@
 # GeoJournal
 
 **Your personal journal of places.**
-Save the spots you love, enrich them with photos, voice notes and tags, and find them again on the map — even without an internet connection.
+Save the spots you love, enrich them with photos and tags, and find them again on the map — even without an internet connection.
 
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" height="60" alt="Get it on Google Play">](https://play.google.com/store/apps/details?id=com.manzolo.geojournal)
 &nbsp;
@@ -20,7 +20,6 @@ Save the spots you love, enrich them with photos, voice notes and tags, and find
 | 📍 **Interactive map** | OpenStreetMap — no API key, no subscription |
 | 📝 **Custom points** | Title, description, emoji, tags, 1–5 star rating |
 | 📷 **Photos** | From camera or gallery |
-| 🎙️ **Voice notes** | Record and replay directly from the point |
 | 🔔 **Reminders** | One-time date, yearly anniversary, or custom recurrence |
 | 📅 **Calendar** | Monthly view with reminders and visit logs |
 | 💾 **Backup** | Manual ZIP export/import + automatic backup (also to Google Drive) |

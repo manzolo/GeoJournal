@@ -72,7 +72,6 @@ class GeoPointRepositoryImpl @Inject constructor(
     override suspend fun delete(point: GeoPoint) {
         // Cleanup Storage best-effort (no-op se le foto non erano mai state caricate)
         deleteStoragePhotos(point.photoUrls)
-        point.audioUrl?.let { deleteStorageFile(it) }
         dao.delete(point.toEntity())
         deletePointFromFirestore(point.id)
     }
@@ -81,7 +80,6 @@ class GeoPointRepositoryImpl @Inject constructor(
         val point = dao.getById(id)?.toDomain()
         point?.let {
             deleteStoragePhotos(it.photoUrls)
-            it.audioUrl?.let { url -> deleteStorageFile(url) }
         }
         dao.deleteById(id)
         deletePointFromFirestore(id)
@@ -103,7 +101,6 @@ class GeoPointRepositoryImpl @Inject constructor(
                 "longitude" to point.longitude,
                 "tags" to point.tags,
                 "photoUrls" to point.photoUrls,
-                "audioUrl" to point.audioUrl,
                 "emoji" to point.emoji,
                 "createdAt" to point.createdAt.time,
                 "updatedAt" to point.updatedAt.time,
@@ -157,14 +154,8 @@ class GeoPointRepositoryImpl @Inject constructor(
                     if (url.startsWith("https://")) url
                     else uploadLocalPhotoToStorage(url, userId, domain.id) ?: url
                 }
-                val resolvedAudio = if (prefs.syncAudioEnabled) {
-                    domain.audioUrl?.let { url ->
-                        if (url.startsWith("https://")) url
-                        else uploadLocalFileToStorage(url, "audio", userId, domain.id) ?: url
-                    }
-                } else domain.audioUrl
-                val updated = domain.copy(photoUrls = resolvedPhotos, audioUrl = resolvedAudio)
-                if (resolvedPhotos != domain.photoUrls || resolvedAudio != domain.audioUrl) {
+                val updated = domain.copy(photoUrls = resolvedPhotos)
+                if (resolvedPhotos != domain.photoUrls) {
                     dao.update(updated.toEntity().copy(ownerId = userId))
                 }
                 syncPointToFirestore(updated)
@@ -213,7 +204,6 @@ class GeoPointRepositoryImpl @Inject constructor(
                 longitude = longitude,
                 tags = (get("tags") as? List<*>)?.joinToString("|") ?: "",
                 photoUrls = (get("photoUrls") as? List<*>)?.joinToString("|") ?: "",
-                audioUrl = getString("audioUrl"),
                 emoji = getString("emoji") ?: "📍",
                 createdAt = getLong("createdAt") ?: System.currentTimeMillis(),
                 updatedAt = getLong("updatedAt") ?: System.currentTimeMillis(),
@@ -277,19 +267,11 @@ class GeoPointRepositoryImpl @Inject constructor(
             firestore.collection("users").document(userId).delete().await()
         } catch (_: Exception) { }
 
-        // Cancella foto e audio su Firebase Storage (best-effort)
+        // Cancella foto su Firebase Storage (best-effort)
         try {
             val photosRef = storage.reference.child("users/$userId/photos")
             val photoItems = photosRef.listAll().await()
             for (prefix in photoItems.prefixes) {
-                val items = prefix.listAll().await()
-                for (item in items.items) { item.delete().await() }
-            }
-        } catch (_: Exception) { }
-        try {
-            val audioRef = storage.reference.child("users/$userId/audio")
-            val audioItems = audioRef.listAll().await()
-            for (prefix in audioItems.prefixes) {
                 val items = prefix.listAll().await()
                 for (item in items.items) { item.delete().await() }
             }
@@ -304,17 +286,6 @@ class GeoPointRepositoryImpl @Inject constructor(
             if (!file.exists()) return null
             val filename = file.name
             val ref = storage.reference.child("users/$uid/photos/$pointId/$filename")
-            ref.putBytes(file.readBytes()).await()
-            ref.downloadUrl.await().toString()
-        } catch (_: Exception) { null }
-    }
-
-    private suspend fun uploadLocalFileToStorage(localPath: String, folder: String, uid: String, pointId: String): String? {
-        return try {
-            val file = File(localPath)
-            if (!file.exists()) return null
-            val filename = file.name
-            val ref = storage.reference.child("users/$uid/$folder/$pointId/$filename")
             ref.putBytes(file.readBytes()).await()
             ref.downloadUrl.await().toString()
         } catch (_: Exception) { null }

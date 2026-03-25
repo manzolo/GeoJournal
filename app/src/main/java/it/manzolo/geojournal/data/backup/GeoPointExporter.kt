@@ -80,7 +80,6 @@ class GeoPointExporter @Inject constructor(
                 if (url.startsWith("https://") || url.startsWith("content://")) url
                 else "$BACKUP_PHOTO_PREFIX${File(url).name}"
             }))
-            point.audioUrl?.let { put("audioUrl", it) }
         }.toString(2)
 
     // ─── Import singolo punto da URI .geoj ───────────────────────────────────
@@ -135,7 +134,6 @@ class GeoPointExporter @Inject constructor(
                 (0 until a.length()).map { a.getString(it) }
             },
             photoUrls   = resolvedPhotos,
-            audioUrl    = if (json.has("audioUrl")) json.getString("audioUrl") else null,
             ownerId     = "",
             isShared    = false,
             rating      = json.optInt("rating", 0),

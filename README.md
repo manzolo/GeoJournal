@@ -1,7 +1,7 @@
 # GeoJournal
 
 **Il tuo diario personale dei luoghi.**
-Salva i posti che ami, arricchiscili con foto, note vocali e tag, ritrovali sulla mappa — anche senza connessione.
+Salva i posti che ami, arricchiscili con foto e tag, ritrovali sulla mappa — anche senza connessione.
 
 [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/it_badge_web_generic.png" height="60" alt="Disponibile su Google Play">](https://play.google.com/store/apps/details?id=com.manzolo.geojournal)
 &nbsp;
@@ -20,7 +20,6 @@ Salva i posti che ami, arricchiscili con foto, note vocali e tag, ritrovali sull
 | 📍 **Mappa interattiva** | OpenStreetMap — nessuna API key, nessun abbonamento |
 | 📝 **Punti personalizzati** | Titolo, descrizione, emoji, tag, rating 1–5 stelle |
 | 📷 **Foto** | Dalla fotocamera o dalla galleria |
-| 🎙️ **Note vocali** | Registra e riascolta direttamente dal punto |
 | 🔔 **Promemoria** | Data singola, anniversario annuale o ricorrenza personalizzata |
 | 📅 **Calendario** | Vista mensile con promemoria e log visite |
 | 💾 **Backup** | Export/import ZIP manuale + backup automatico (anche su Google Drive) |

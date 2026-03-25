@@ -9,4 +9,5 @@ services:
       - ./backup.zip:/data/backup.zip:ro
     environment:
       - BACKUP_PATH=/data/backup.zip
+      - TZ=Europe/Rome
     restart: unless-stopped

@@ -11,9 +11,6 @@
     <!-- Fotocamera e media -->
     <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Audio (note vocali) -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-
     <!-- Notifiche e allarmi -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

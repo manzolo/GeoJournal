@@ -27,7 +27,6 @@ data class ProfileUiState(
     val deleteAccountError: String? = null,
     val syncGeoPointsEnabled: Boolean = false,
     val syncPhotosEnabled: Boolean = false,
-    val syncAudioEnabled: Boolean = false,
     val syncRemindersEnabled: Boolean = false,
     val syncVisitLogsEnabled: Boolean = false
 )
@@ -57,7 +56,6 @@ class ProfileViewModel @Inject constructor(
                     isDarkTheme = prefs.isDarkTheme,
                     syncGeoPointsEnabled = prefs.syncGeoPointsEnabled,
                     syncPhotosEnabled = prefs.syncPhotosEnabled,
-                    syncAudioEnabled = prefs.syncAudioEnabled,
                     syncRemindersEnabled = prefs.syncRemindersEnabled,
                     syncVisitLogsEnabled = prefs.syncVisitLogsEnabled
                 )
@@ -115,10 +113,6 @@ class ProfileViewModel @Inject constructor(
 
     fun setSyncPhotosEnabled(enabled: Boolean) {
         viewModelScope.launch { userPrefs.setSyncPhotosEnabled(enabled) }
-    }
-
-    fun setSyncAudioEnabled(enabled: Boolean) {
-        viewModelScope.launch { userPrefs.setSyncAudioEnabled(enabled) }
     }
 
     fun setSyncRemindersEnabled(enabled: Boolean) {

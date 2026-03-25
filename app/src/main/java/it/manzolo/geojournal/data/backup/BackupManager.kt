@@ -153,7 +153,6 @@ class BackupManager @Inject constructor(
                             if (url.startsWith("https://") || url.startsWith("content://")) url
                             else "$BACKUP_PHOTO_PREFIX${p.id}/${File(url).name}"
                         }))
-                        p.audioUrl?.let { put("audioUrl", it) }
                         put("rating", p.rating)
                         put("isArchived", p.isArchived)
                     })
@@ -250,7 +249,6 @@ class BackupManager @Inject constructor(
                     (0 until a.length()).map { a.getString(it) }
                 },
                 photoUrls   = resolvedPhotos,
-                audioUrl    = if (obj.has("audioUrl")) obj.getString("audioUrl") else null,
                 ownerId     = obj.optString("ownerId", ""),
                 isShared    = obj.optBoolean("isShared", false),
                 createdAt   = Date(obj.getLong("createdAt")),

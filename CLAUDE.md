@@ -1,6 +1,6 @@
 # GeoJournal — CLAUDE.md
 
-App Android per diario geo-personale con GPS, foto, note vocali, reminders e backup.
+App Android per diario geo-personale con GPS, foto, reminders e backup.
 
 ---
 
@@ -61,7 +61,7 @@ app/
 ```
 
 **Entità principale — GeoPoint:**
-`id, title, description, lat, lon, emoji, tags, photoUrls, audioUrl, ownerId, isShared, rating (0=nessun rating), createdAt, updatedAt`
+`id, title, description, lat, lon, emoji, tags, photoUrls, ownerId, isShared, rating (0=nessun rating), createdAt, updatedAt`
 
 **UserPreferences (DataStore):**
 `isDarkTheme, isPro, userId, isGuest, lastSyncTimestamp, autoBackupEnabled, driveBackupUri`
