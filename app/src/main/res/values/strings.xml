@@ -92,7 +92,9 @@
     <string name="profile_drive_configure">Configura</string>
     <string name="profile_export">Esporta</string>
     <string name="profile_import">Importa</string>
-    <string name="profile_import_geoj">Importa punto .geoj</string>
+    <string name="profile_import_geoj">Apri punto condiviso</string>
+    <string name="profile_advanced_section">Strumenti</string>
+    <string name="detail_share_geoj">Condividi punto</string>
     <string name="profile_version">Versione</string>
     <string name="profile_delete_account_title">Elimina account</string>
     <string name="profile_delete_account_confirm">Questa operazione eliminerà in modo permanente il tuo account e tutti i tuoi dati (punti, foto, backup cloud). L\'operazione non è reversibile.\n\nSei sicuro di voler procedere?</string>

@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
+import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.VisitLogEntry
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 data class PointDetailUiState(
@@ -39,6 +41,7 @@ class PointDetailViewModel @Inject constructor(
     private val visitLogRepository: VisitLogRepository,
     private val reminderRepository: ReminderRepository,
     private val reminderScheduler: ReminderScheduler,
+    private val exporter: GeoPointExporter,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
@@ -93,6 +96,8 @@ class PointDetailViewModel @Inject constructor(
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch { reminderRepository.delete(reminder) }
     }
+
+    fun exportGeojToCache(): File? = _uiState.value.point?.let { exporter.exportPointToCache(it) }
 
     fun toggleDeleteConfirm() = _uiState.update { it.copy(showDeleteConfirm = !it.showDeleteConfirm) }
 

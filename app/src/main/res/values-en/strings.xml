@@ -92,7 +92,9 @@
     <string name="profile_drive_configure">Configure</string>
     <string name="profile_export">Export</string>
     <string name="profile_import">Import</string>
-    <string name="profile_import_geoj">Import .geoj point</string>
+    <string name="profile_import_geoj">Open shared point</string>
+    <string name="profile_advanced_section">Tools</string>
+    <string name="detail_share_geoj">Share point</string>
     <string name="profile_version">Version</string>
     <string name="profile_delete_account_title">Delete account</string>
     <string name="profile_delete_account_confirm">This will permanently delete your account and all your data (points, photos, cloud backup). This action cannot be undone.\n\nAre you sure you want to proceed?</string>

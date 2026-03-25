@@ -2,6 +2,7 @@ package it.manzolo.geojournal.ui.profile
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +19,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -614,16 +617,37 @@ private fun BackupCard(
                     Text(stringResource(R.string.profile_import))
                 }
             }
+            // ── Strumenti ────────────────────────────────────────────────
             Spacer(Modifier.height(4.dp))
-            OutlinedButton(
-                onClick = onImportGeoj,
-                enabled = !isWorking,
+            var showAdvanced by remember { mutableStateOf(false) }
+            TextButton(
+                onClick = { showAdvanced = !showAdvanced },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.size(6.dp))
-                Text(stringResource(R.string.profile_import_geoj))
+                Text(
+                    stringResource(R.string.profile_advanced_section),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (showAdvanced) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(visible = showAdvanced) {
+                OutlinedButton(
+                    onClick = onImportGeoj,
+                    enabled = !isWorking,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(R.string.profile_import_geoj))
+                }
             }
 
             // Feedback operazione

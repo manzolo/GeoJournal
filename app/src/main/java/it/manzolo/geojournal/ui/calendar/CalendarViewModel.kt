@@ -44,7 +44,7 @@ class CalendarViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _currentMonth = MutableStateFlow(YearMonth.now())
-    private val _selectedDay = MutableStateFlow<LocalDate?>(LocalDate.now())
+    private val _selectedDay = MutableStateFlow<LocalDate?>(null)
 
     // Tutti i reminder attivi — il filtering per mese avviene nel combine
     private val remindersFlow = reminderRepository.observeAllActive()
@@ -137,7 +137,7 @@ class CalendarViewModel @Inject constructor(
     fun selectDay(day: LocalDate?) = _selectedDay.update { day }
     fun nextMonth() { _currentMonth.update { it.plusMonths(1) }; _selectedDay.update { null } }
     fun previousMonth() { _currentMonth.update { it.minusMonths(1) }; _selectedDay.update { null } }
-    fun goToToday() { _currentMonth.update { YearMonth.now() }; _selectedDay.update { LocalDate.now() } }
+    fun goToToday() { _currentMonth.update { YearMonth.now() }; _selectedDay.update { null } }
 
     private fun YearMonth.startEpoch(): Long =
         atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()

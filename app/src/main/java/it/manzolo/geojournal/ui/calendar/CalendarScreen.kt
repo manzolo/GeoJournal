@@ -22,7 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -158,15 +160,15 @@ private fun MonthHeader(
                 fontWeight = FontWeight.Bold
             )
             if (!isCurrentMonth) {
-                TextButton(
+                FilledTonalButton(
                     onClick = onToday,
-                    modifier = Modifier.height(24.dp),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    modifier = Modifier.height(32.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
-                    Text(
-                        stringResource(R.string.calendar_today),
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    Icon(Icons.Filled.CalendarToday, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.calendar_today), style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
