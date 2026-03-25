@@ -52,6 +52,14 @@ class BackupViewModel @Inject constructor(
         .map { it.lastLocalBackupTimestamp }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
 
+    val lastDriveBackupTimestamp: StateFlow<Long> = userPrefsRepository.preferences
+        .map { it.lastDriveBackupTimestamp }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+
+    val lastDriveBackupSuccess: StateFlow<Boolean> = userPrefsRepository.preferences
+        .map { it.lastDriveBackupSuccess }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     init {
         viewModelScope.launch {
             if (userPrefsRepository.preferences.first().autoBackupEnabled) {

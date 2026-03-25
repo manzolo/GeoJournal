@@ -28,13 +28,16 @@ class AutoBackupWorker @AssistedInject constructor(
             // 2. Backup su Drive (SAF) se l'URI è impostato e valido
             val prefs = userPrefsRepository.preferences.first()
             if (prefs.driveBackupUri.isNotEmpty()) {
-                runCatching {
+                val driveResult = runCatching {
                     val uri = Uri.parse(prefs.driveBackupUri)
                     applicationContext.contentResolver.openOutputStream(uri, "wt")?.use { out ->
                         localFile.inputStream().use { it.copyTo(out) }
                     }
                 }
-                // Se il Drive write fallisce, non consideriamo il job fallito
+                userPrefsRepository.setLastDriveBackup(
+                    timestamp = System.currentTimeMillis(),
+                    success = driveResult.isSuccess
+                )
             }
 
             // 3. Salva timestamp ultimo backup

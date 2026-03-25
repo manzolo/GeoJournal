@@ -231,6 +231,9 @@
 
     <!-- Profile -->
     <string name="profile_last_backup">Ultimo backup locale: %s</string>
+    <string name="profile_last_drive_backup_ok">Drive: sincronizzato il %s</string>
+    <string name="profile_last_drive_backup_error">Drive: ultimo invio fallito (%s)</string>
+    <string name="profile_drive_never_synced">Drive: mai sincronizzato dall\'auto-backup</string>
     <string name="profile_backup_info_title">Come funziona il backup</string>
     <string name="profile_backup_info_body">Il timestamp indica quando GeoJournal ha scritto il file nel buffer di Google Drive.\n\nLa sincronizzazione con i server Google avviene in modo autonomo e può richiedere qualche minuto, solitamente quando il dispositivo è connesso al Wi-Fi.\n\nSe il file non appare subito su Drive, aprendo l\'app Drive la sincronizzazione viene avviata.</string>
     <string name="point_info_created">Creato: %s</string>
