@@ -772,6 +772,11 @@ private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
+            Text(
+                stringResource(R.string.profile_sync_privacy_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(Modifier.height(8.dp))
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Text(

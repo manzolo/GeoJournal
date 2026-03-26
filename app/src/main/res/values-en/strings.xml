@@ -292,16 +292,17 @@
 
     <!-- Sync & Privacy -->
     <string name="profile_section_sync_privacy">Sync &amp; Privacy</string>
-    <string name="profile_sync_local_default_note">By default your data stays only on this device. Enable only what you want to share with Firebase. Photos always stay local. Changes take effect on the next save.</string>
+    <string name="profile_sync_privacy_subtitle">Choose what to save online</string>
+    <string name="profile_sync_local_default_note">By default your data stays only on this device. Enable only what you want to save online. Photos always stay local. Changes take effect on the next save.</string>
     <string name="profile_sync_geo_points_title">Geographic data</string>
-    <string name="profile_sync_geo_points_desc">Title, coordinates, tags and notes → Firestore</string>
+    <string name="profile_sync_geo_points_desc">Title, coordinates, tags and notes saved to the cloud</string>
     <string name="profile_sync_photos_title">Photos</string>
-    <string name="profile_sync_photos_desc">Photos are uploaded to Firebase Storage</string>
+    <string name="profile_sync_photos_desc">Photos are uploaded online as a backup</string>
     <string name="profile_sync_reminders_title">Reminders</string>
-    <string name="profile_sync_reminders_desc">Reminders are synced to Firestore</string>
+    <string name="profile_sync_reminders_desc">Reminders are saved online</string>
     <string name="profile_sync_visit_logs_title">Visit log</string>
-    <string name="profile_sync_visit_logs_desc">Recorded visits are synced to Firestore</string>
-    <string name="profile_sync_existing_data_note">ℹ Data already sent to Firebase is not automatically deleted when you turn off a toggle.</string>
+    <string name="profile_sync_visit_logs_desc">Recorded visits are saved online</string>
+    <string name="profile_sync_existing_data_note">ℹ Data already sent to the cloud is not automatically deleted when you turn off a toggle.</string>
     <string name="profile_sync_requires_geo_points">Requires geographic data to be enabled</string>
     <!-- Updated onboarding -->
     <string name="onboarding_cloud_privacy_note">You choose what to sync: enable or disable each data type (points, photos, reminders, visits) individually from Profile → Sync &amp; Privacy. Everything is OFF by default.</string>

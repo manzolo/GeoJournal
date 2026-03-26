@@ -295,16 +295,17 @@
 
     <!-- Sincronizzazione & Privacy -->
     <string name="profile_section_sync_privacy">Sincronizzazione &amp; Privacy</string>
-    <string name="profile_sync_local_default_note">Di default i tuoi dati rimangono solo su questo dispositivo. Attiva solo quello che vuoi condividere con Firebase. Le foto rimangono sempre locali. Le modifiche hanno effetto al prossimo salvataggio.</string>
+    <string name="profile_sync_privacy_subtitle">Scegli cosa salvare online</string>
+    <string name="profile_sync_local_default_note">Di default i tuoi dati rimangono solo su questo dispositivo. Attiva solo quello che vuoi salvare online. Le foto rimangono sempre locali. Le modifiche hanno effetto al prossimo salvataggio.</string>
     <string name="profile_sync_geo_points_title">Dati geografici</string>
-    <string name="profile_sync_geo_points_desc">Titolo, coordinate, tag e note → Firestore</string>
+    <string name="profile_sync_geo_points_desc">Titolo, coordinate, tag e note salvati nel cloud</string>
     <string name="profile_sync_photos_title">Foto</string>
-    <string name="profile_sync_photos_desc">Le foto vengono caricate su Firebase Storage</string>
+    <string name="profile_sync_photos_desc">Le foto vengono caricate online come backup</string>
     <string name="profile_sync_reminders_title">Promemoria</string>
-    <string name="profile_sync_reminders_desc">I promemoria vengono sincronizzati su Firestore</string>
+    <string name="profile_sync_reminders_desc">I promemoria vengono salvati online</string>
     <string name="profile_sync_visit_logs_title">Registro visite</string>
-    <string name="profile_sync_visit_logs_desc">Le visite registrate vengono sincronizzate su Firestore</string>
-    <string name="profile_sync_existing_data_note">ℹ I dati già inviati a Firebase non vengono eliminati automaticamente disattivando un toggle.</string>
+    <string name="profile_sync_visit_logs_desc">Le visite registrate vengono salvate online</string>
+    <string name="profile_sync_existing_data_note">ℹ I dati già inviati al cloud non vengono eliminati automaticamente disattivando un toggle.</string>
     <string name="profile_sync_requires_geo_points">Richiede che i dati geografici siano attivi</string>
     <!-- Onboarding aggiornato -->
     <string name="onboarding_cloud_privacy_note">Scegli tu cosa sincronizzare: puoi attivare o disattivare ogni tipo di dato (punti, foto, promemoria, visite) singolarmente dalle impostazioni Profilo → Sincronizzazione &amp; Privacy. Tutto è OFF per default.</string>

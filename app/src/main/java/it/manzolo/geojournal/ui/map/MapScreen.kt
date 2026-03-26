@@ -32,6 +32,12 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.foundation.layout.Row
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.content.Intent
@@ -234,6 +241,8 @@ fun MapScreen(
     val layerTopoLabel = stringResource(R.string.map_layer_topo)
     val layerSatLabel = stringResource(R.string.map_layer_satellite)
     val isFirstLayerRender = remember { mutableStateOf(true) }
+    var showLayerLabel by remember { mutableStateOf(false) }
+    var layerLabelText by remember { mutableStateOf("") }
     LaunchedEffect(currentLayer) {
         if (isFirstLayerRender.value) {
             isFirstLayerRender.value = false
@@ -246,7 +255,10 @@ fun MapScreen(
             MapLayer.TOPO -> layerTopoLabel
             MapLayer.SATELLITE -> layerSatLabel
         }
-        snackbarHostState.showSnackbar(label)
+        layerLabelText = label
+        showLayerLabel = true
+        delay(1500L)
+        showLayerLabel = false
     }
 
     // Listener di zoom e scroll: ri-clustera al cambio zoom, salva camera (throttled 100ms)
@@ -378,6 +390,29 @@ fun MapScreen(
                 imageVector = Icons.Filled.Layers,
                 contentDescription = stringResource(R.string.map_layer_button)
             )
+        }
+
+        // Chip nome layer — compare vicino al pulsante, scompare dopo 1.5s
+        AnimatedVisibility(
+            visible = showLayerLabel,
+            enter = fadeIn() + scaleIn(initialScale = 0.85f),
+            exit = fadeOut() + scaleOut(targetScale = 0.85f),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 64.dp, bottom = 194.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    text = layerLabelText,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
         }
 
         // FAB posizione utente (lato destro)
