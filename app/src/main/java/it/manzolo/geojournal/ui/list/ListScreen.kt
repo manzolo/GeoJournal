@@ -1,6 +1,5 @@
 package it.manzolo.geojournal.ui.list
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -76,6 +75,7 @@ import it.manzolo.geojournal.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
@@ -448,48 +448,54 @@ fun ListScreen(navController: NavController) {
                         }
                         items(state.points, key = { it.id }) { point ->
                             val swipeState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    when (value) {
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            if (state.showArchived) viewModel.unarchivePoint(point)
-                                            else viewModel.archivePoint(point)
-                                            false
-                                        }
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            deleteConfirmPoint = point
-                                            false
-                                        }
-                                        else -> false
-                                    }
-                                },
                                 positionalThreshold = { it * 0.35f }
                             )
+                            // pattern non-deprecated: osserva currentValue e snapBack dopo l'azione
+                            LaunchedEffect(swipeState.currentValue) {
+                                when (swipeState.currentValue) {
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        if (state.showArchived) viewModel.unarchivePoint(point)
+                                        else viewModel.archivePoint(point)
+                                        swipeState.snapTo(SwipeToDismissBoxValue.Settled)
+                                    }
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        deleteConfirmPoint = point
+                                        swipeState.snapTo(SwipeToDismissBoxValue.Settled)
+                                    }
+                                    SwipeToDismissBoxValue.Settled -> {}
+                                }
+                            }
                             SwipeToDismissBox(
                                 state = swipeState,
                                 enableDismissFromStartToEnd = true,
                                 enableDismissFromEndToStart = true,
                                 backgroundContent = {
-                                    val bgColor by animateColorAsState(
-                                        targetValue = when (swipeState.targetValue) {
-                                            SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFFF9C4)
-                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                            else -> Color.Transparent
-                                        },
-                                        label = "swipe_bg"
-                                    )
-                                    val (icon, iconTint, align) = when (swipeState.targetValue) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Triple(
-                                            if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                                            Color(0xFF5D4037),
-                                            Alignment.CenterStart
-                                        )
-                                        SwipeToDismissBoxValue.EndToStart -> Triple(
-                                            Icons.Filled.Delete,
-                                            MaterialTheme.colorScheme.onErrorContainer,
-                                            Alignment.CenterEnd
-                                        )
-                                        else -> Triple(null, Color.Transparent, Alignment.Center)
+                                    // requireOffset() legge il pixel offset live → icona visibile da subito
+                                    val offset = runCatching { swipeState.requireOffset() }.getOrDefault(0f)
+                                    val isRight = offset > 2f
+                                    val isLeft  = offset < -2f
+                                    // targetValue indica se si è superata la soglia (past-threshold = azione confermata)
+                                    val confirmed = swipeState.targetValue != SwipeToDismissBoxValue.Settled
+                                    val bgColor = when {
+                                        isRight -> Color(0xFFFFF9C4)
+                                        isLeft  -> MaterialTheme.colorScheme.errorContainer
+                                        else    -> Color.Transparent
                                     }
+                                    val icon = when {
+                                        isRight -> if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                                        isLeft  -> Icons.Filled.Delete
+                                        else    -> null
+                                    }
+                                    val iconTint = if (isLeft) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF5D4037)
+                                    val label = when {
+                                        isRight -> stringResource(if (state.showArchived) R.string.point_unarchive else R.string.point_archive)
+                                        isLeft  -> stringResource(R.string.point_delete_confirm_button)
+                                        else    -> null
+                                    }
+                                    val align = if (isRight) Alignment.CenterStart else Alignment.CenterEnd
+                                    // icona più grande e piena quando la soglia è superata (feedback "si attiva")
+                                    val iconSize = if (confirmed) 32.dp else 24.dp
+                                    val contentAlpha = if (confirmed) 1f else 0.65f
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -498,8 +504,15 @@ fun ListScreen(navController: NavController) {
                                             .padding(horizontal = 20.dp),
                                         contentAlignment = align
                                     ) {
-                                        if (icon != null) {
-                                            Icon(icon, contentDescription = null, tint = iconTint)
+                                        if (icon != null && label != null) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                                modifier = Modifier.graphicsLayer { alpha = contentAlpha }
+                                            ) {
+                                                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(iconSize))
+                                                Text(label, style = MaterialTheme.typography.labelSmall, color = iconTint, fontWeight = FontWeight.SemiBold)
+                                            }
                                         }
                                     }
                                 }
