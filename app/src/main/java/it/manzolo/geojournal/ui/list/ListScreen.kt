@@ -1,5 +1,6 @@
 package it.manzolo.geojournal.ui.list
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -38,6 +39,9 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -443,11 +447,69 @@ fun ListScreen(navController: NavController) {
                             BuyMeCoffeeBanner(context = context)
                         }
                         items(state.points, key = { it.id }) { point ->
-                            GeoPointCard(
-                                point = point,
-                                onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
-                                onLongClick = { contextMenuPoint = point }
+                            val swipeState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    when (value) {
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            if (state.showArchived) viewModel.unarchivePoint(point)
+                                            else viewModel.archivePoint(point)
+                                            false
+                                        }
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            deleteConfirmPoint = point
+                                            false
+                                        }
+                                        else -> false
+                                    }
+                                },
+                                positionalThreshold = { it * 0.35f }
                             )
+                            SwipeToDismissBox(
+                                state = swipeState,
+                                enableDismissFromStartToEnd = true,
+                                enableDismissFromEndToStart = true,
+                                backgroundContent = {
+                                    val bgColor by animateColorAsState(
+                                        targetValue = when (swipeState.targetValue) {
+                                            SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFFF9C4)
+                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                            else -> Color.Transparent
+                                        },
+                                        label = "swipe_bg"
+                                    )
+                                    val (icon, iconTint, align) = when (swipeState.targetValue) {
+                                        SwipeToDismissBoxValue.StartToEnd -> Triple(
+                                            if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                                            Color(0xFF5D4037),
+                                            Alignment.CenterStart
+                                        )
+                                        SwipeToDismissBoxValue.EndToStart -> Triple(
+                                            Icons.Filled.Delete,
+                                            MaterialTheme.colorScheme.onErrorContainer,
+                                            Alignment.CenterEnd
+                                        )
+                                        else -> Triple(null, Color.Transparent, Alignment.Center)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(bgColor)
+                                            .padding(horizontal = 20.dp),
+                                        contentAlignment = align
+                                    ) {
+                                        if (icon != null) {
+                                            Icon(icon, contentDescription = null, tint = iconTint)
+                                        }
+                                    }
+                                }
+                            ) {
+                                GeoPointCard(
+                                    point = point,
+                                    onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
+                                    onLongClick = { contextMenuPoint = point }
+                                )
+                            }
                         }
                     }
                 }

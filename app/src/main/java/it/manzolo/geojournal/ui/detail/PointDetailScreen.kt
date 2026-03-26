@@ -372,23 +372,6 @@ private fun PointDetailContent(
             }
         }
 
-        // ── Tag ───────────────────────────────────────────────────────────────
-        if (point.tags.isNotEmpty()) {
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionHeader(icon = Icons.AutoMirrored.Filled.Label, title = stringResource(R.string.detail_section_tags))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        point.tags.forEach { tag ->
-                            AssistChip(onClick = {}, label = { Text(tag) })
-                        }
-                    }
-                }
-            }
-        }
-
         // ── Valutazione ───────────────────────────────────────────────────────
         if (point.rating > 0) {
             ElevatedCard(
@@ -508,7 +491,9 @@ private fun PointDetailContent(
                             MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
                             navController.popBackStack(Routes.Map.route, inclusive = false)
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     ActionGridButton(
                         icon = Icons.Filled.Map,
@@ -517,7 +502,9 @@ private fun PointDetailContent(
                             val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
                             context.startActivity(Intent(Intent.ACTION_VIEW, uri))
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -534,18 +521,20 @@ private fun PointDetailContent(
                         modifier = Modifier.weight(1f)
                     )
                     ActionGridButton(
-                        icon = if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                        label = stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive),
-                        onClick = onArchiveToggle,
+                        icon = Icons.AutoMirrored.Filled.Send,
+                        label = stringResource(R.string.detail_share_geoj),
+                        onClick = onShareGeoj,
                         modifier = Modifier.weight(1f)
                     )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionGridButton(
-                        icon = Icons.AutoMirrored.Filled.Send,
-                        label = stringResource(R.string.detail_share_geoj),
-                        onClick = onShareGeoj,
-                        modifier = Modifier.weight(1f)
+                        icon = if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                        label = stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive),
+                        onClick = onArchiveToggle,
+                        modifier = Modifier.weight(1f),
+                        containerColor = Color(0xFFFFF9C4),
+                        contentColor = Color(0xFF5D4037)
                     )
                     ActionGridButton(
                         icon = Icons.Filled.Delete,
@@ -559,19 +548,39 @@ private fun PointDetailContent(
             }
         }
 
+        // ── Tag ───────────────────────────────────────────────────────────────
+        if (point.tags.isNotEmpty()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.AutoMirrored.Filled.Label, title = stringResource(R.string.detail_section_tags))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        point.tags.forEach { tag ->
+                            AssistChip(onClick = {}, label = { Text(tag) })
+                        }
+                    }
+                }
+            }
+        }
+
         // ── Posizione: coordinate e date (in fondo) ───────────────────────────
-        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth().clickable { showDates = !showDates }
+        ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionHeader(icon = Icons.Filled.LocationOn,
                         title = stringResource(R.string.detail_section_info),
                         modifier = Modifier.weight(1f))
-                    IconButton(onClick = { showDates = !showDates }, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Filled.Info, contentDescription = stringResource(R.string.detail_created),
-                            modifier = Modifier.size(18.dp),
-                            tint = if (showDates) MaterialTheme.colorScheme.primary
-                                   else MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (showDates) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 AnimatedVisibility(visible = showDates) {
                     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
