@@ -65,6 +65,15 @@
       padding: 10px 12px; border-bottom: 1px solid var(--border);
       display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;
     }
+    .sidebar-close-btn {
+      display: none; align-self: flex-end;
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      border-radius: 6px; padding: 3px 10px; font-size: 0.8rem; cursor: pointer;
+    }
+    .sidebar-close-btn:hover { border-color: var(--accent); color: var(--text); }
+    @media (max-width: 767px) {
+      .sidebar-close-btn { display: block; }
+    }
     .search-box {
       width: 100%; padding: 7px 10px; border-radius: 6px;
       border: 1px solid var(--border); background: var(--surface2);
@@ -300,6 +309,56 @@
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Mobile FAB toggle ───────────────────────────────────────────────── */
+    .fab-toggle {
+      display: none;
+      position: fixed; bottom: 100px; right: 14px; z-index: 1100;
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--accent); border: 2px solid rgba(255,255,255,.25); color: white;
+      font-size: 1.5rem; cursor: pointer; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,.65);
+    }
+
+    /* ── Overlay backdrop (mobile) ───────────────────────────────────────── */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,.45);
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    /* ── Responsive breakpoint ───────────────────────────────────────────── */
+    @media (max-width: 767px) {
+      /* Sidebar diventa un drawer fixed sopra tutto — position:fixed evita
+         il clipping di overflow:hidden sul parent .body.
+         z-index > 900 (overlay) > #map (z-index:1) */
+      #map { position: relative; z-index: 1; }
+
+      .sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: min(340px, 92vw);
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform .3s ease;
+        box-shadow: 4px 0 24px rgba(0,0,0,.65);
+      }
+      .sidebar.mobile-open { transform: translateX(0); }
+
+      .fab-toggle { display: flex; }
+
+      header .meta { display: none; }
+
+      .meta-mobile {
+        display: flex; gap: 8px; font-size: 0.72rem;
+        color: var(--muted); padding: 6px 14px 0;
+        flex-wrap: wrap;
+      }
+      .meta-mobile strong { color: var(--text); }
+    }
+
+    @media (min-width: 768px) {
+      .meta-mobile { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -318,7 +377,13 @@
     </div>
   </header>
 
+  <!-- Meta info mobile (sotto header) -->
+  <div class="meta-mobile" id="metaMobile"></div>
+
   <div class="body">
+
+    <!-- Sidebar overlay backdrop (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
 
     <!-- ── Sidebar ── -->
     <aside class="sidebar" id="sidebar">
@@ -326,6 +391,7 @@
       <!-- LIST PANEL -->
       <div class="panel" id="listPanel">
         <div class="sidebar-head">
+          <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
           <input class="search-box" type="search" id="searchInput" data-i18n-placeholder="search_ph" placeholder="" />
           <div class="filter-bar">
             <button class="filter-btn"        data-filter="all"      onclick="setFilter('all')"      data-i18n="all">Tutti</button>
@@ -387,6 +453,9 @@
   </div>
 </div>
 
+<!-- Mobile FAB toggle -->
+<button class="fab-toggle" id="fabToggle" onclick="toggleMobileSidebar()" aria-label="Toggle lista">☰</button>
+
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox" onclick="onLbClick(event)">
   <button class="lb-close" onclick="closeLb()">×</button>
@@ -397,6 +466,27 @@
 </div>
 
 <script>
+// ── Mobile sidebar ────────────────────────────────────────────────────────────
+const isMobile = () => window.innerWidth < 768;
+
+function openMobileSidebar() {
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('sidebarOverlay').classList.add('visible');
+  document.getElementById('fabToggle').textContent = '✕';
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarOverlay').classList.remove('visible');
+  document.getElementById('fabToggle').textContent = '☰';
+}
+function toggleMobileSidebar() {
+  if (document.getElementById('sidebar').classList.contains('mobile-open')) {
+    closeMobileSidebar();
+  } else {
+    openMobileSidebar();
+  }
+}
+
 // ── i18n ──────────────────────────────────────────────────────────────────────
 const LANG = navigator.language.toLowerCase().startsWith('it') ? 'it' : 'en';
 const T = {
@@ -442,9 +532,13 @@ const POINTS = {{ points | tojson }};
 // ── Meta ─────────────────────────────────────────────────────────────────────
 const nActive   = POINTS.filter(p => !p.isArchived).length;
 const nArchived = POINTS.filter(p =>  p.isArchived).length;
-document.getElementById('metaCount').innerHTML =
+const metaCountHtml =
   `<strong>${nActive}</strong> ${t('meta_active')}` +
   (nArchived ? ` · <strong>${nArchived}</strong> ${t('meta_archived')}` : '');
+document.getElementById('metaCount').innerHTML = metaCountHtml;
+document.getElementById('metaMobile').innerHTML =
+  metaCountHtml +
+  ` <span style="color:var(--border)">·</span> {{ meta.exported_at }} · v<strong>{{ meta.app_version }}</strong>`;
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false });
@@ -549,10 +643,12 @@ function selectPoint(id) {
   // Open detail panel
   buildDetail(p);
   document.getElementById('sidebar').classList.add('show-detail');
+  if (isMobile()) openMobileSidebar();
 }
 
 function showList() {
   document.getElementById('sidebar').classList.remove('show-detail');
+  // On mobile keep the sidebar open so the user can pick another point
   // deselect marker
   if (selectedId && markersById[selectedId]) {
     const prev = POINTS.find(x => x.id === selectedId);

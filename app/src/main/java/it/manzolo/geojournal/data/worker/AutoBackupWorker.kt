@@ -30,9 +30,9 @@ class AutoBackupWorker @AssistedInject constructor(
             if (prefs.driveBackupUri.isNotEmpty()) {
                 val driveResult = runCatching {
                     val uri = Uri.parse(prefs.driveBackupUri)
-                    applicationContext.contentResolver.openOutputStream(uri, "wt")?.use { out ->
-                        localFile.inputStream().use { it.copyTo(out) }
-                    }
+                    val out = applicationContext.contentResolver.openOutputStream(uri, "wt")
+                        ?: error("openOutputStream returned null for Drive URI")
+                    out.use { localFile.inputStream().use { inp -> inp.copyTo(out) } }
                 }
                 userPrefsRepository.setLastDriveBackup(
                     timestamp = System.currentTimeMillis(),
