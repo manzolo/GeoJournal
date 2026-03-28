@@ -4,7 +4,7 @@ App Android per diario geo-personale con GPS, foto, reminders e backup.
 
 ---
 
-## Stack tecnico (v0.3.0)
+## Stack tecnico
 
 | Tool | Versione |
 |---|---|
@@ -14,7 +14,7 @@ App Android per diario geo-personale con GPS, foto, reminders e backup.
 | KSP | 2.2.10-2.0.2 |
 | Compose BOM | 2026.03.00 (UI 1.10.5, M3 1.4.0) |
 | Hilt | 2.59 |
-| Room | 2.7.0 (schema v3) |
+| Room | 2.7.0 (schema v6) |
 | Firebase BOM | 33.7.0 |
 | minSdk / targetSdk | 26 / 36 |
 
@@ -40,19 +40,23 @@ Tutti i processori (Hilt + Room) usano **KSP**, niente KAPT.
 app/
 ├── data/
 │   ├── local/
-│   │   ├── dao/          # Room DAOs (GeoPoint, Reminder, Visit)
-│   │   ├── database/     # GeoJournalDatabase (schema v3)
+│   │   ├── dao/          # Room DAOs (GeoPoint, Reminder, Visit, PointKml)
+│   │   ├── database/     # GeoJournalDatabase (schema v6)
 │   │   └── datastore/    # UserPreferencesRepository
 │   ├── remote/           # FirebaseAuthRepositoryImpl, FirestoreRepository
-│   └── backup/           # BackupManager, GeoPointExporter, AutoBackupWorker
+│   ├── backup/           # BackupManager, GeoPointExporter, AutoBackupWorker
+│   ├── kml/              # KmlParser (XmlPullParser, no osmdroid-bonuspack)
+│   ├── photo/            # ExifReader (ExifInterface, solo file locali)
+│   └── repository/       # PointKmlRepositoryImpl (filesDir/kmls/{geoPointId}/)
 ├── domain/
-│   └── repository/       # interfacce (AuthRepository, GeoPointRepository, ...)
+│   ├── model/            # GeoPoint, PointKml, ...
+│   └── repository/       # interfacce (AuthRepository, GeoPointRepository, PointKmlRepository, ...)
 ├── ui/
 │   ├── auth/             # AuthScreen + AuthViewModel
-│   ├── map/              # MapScreen + MapViewModel (OSMDroid)
+│   ├── map/              # MapScreen + MapViewModel (OSMDroid) + KmlOverlayManager
 │   ├── list/             # ListScreen + ListViewModel
 │   ├── detail/           # PointDetailScreen
-│   ├── addedit/          # AddEditScreen
+│   ├── addedit/          # AddEditScreen (sezione "Dettagli aggiuntivi" collassabile)
 │   ├── calendar/         # CalendarScreen
 │   ├── profile/          # ProfileScreen + ProfileViewModel + BackupViewModel
 │   ├── navigation/       # NavGraph, Routes
@@ -61,7 +65,10 @@ app/
 ```
 
 **Entità principale — GeoPoint:**
-`id, title, description, lat, lon, emoji, tags, photoUrls, ownerId, isShared, rating (0=nessun rating), createdAt, updatedAt`
+`id, title, description, lat, lon, emoji, tags, photoUrls, ownerId, isShared, rating (0=nessun rating), notes, createdAt, updatedAt`
+
+**PointKml (DB v6 — tabella `point_kmls`):**
+`id, geoPointId, name, filePath (filesDir/kmls/{geoPointId}/{uuid}.kml), importedAt`
 
 **UserPreferences (DataStore):**
 `isDarkTheme, isPro, userId, isGuest, lastSyncTimestamp, autoBackupEnabled, driveBackupUri`
@@ -106,6 +113,23 @@ ksp { arg("hilt.enableAggregatingTask", "true") }
 - `.geoj` = `application/x-geojournal-point` (formato ZIP con punto.json + foto)
 - Intent filter registra anche `application/octet-stream` per compatibilità WhatsApp
 - `MainActivity.resolveFileName()` verifica l'estensione `.geoj` via `ContentResolver` prima di processare
+- `.geoj` **schemaVersion = 3**: esclusi `rating` e `notes` (campi personali, non condivisibili)
+
+---
+
+## Privacy dei dati
+
+| Campo | .geoj (condivisione) | backup.zip | Firestore (`syncGeoPoints`) |
+|---|---|---|---|
+| title, description, lat/lon, emoji, tags | ✅ | ✅ | opt-in |
+| photoUrls | ✅ (foto copiate) | ✅ | opt-in (`syncPhotos`) |
+| rating | ❌ escluso (v3) | ✅ | opt-in |
+| **notes** | ❌ escluso | ✅ | ❌ **mai** (locale-only by design) |
+| KML files | ❌ escluso | ✅ (file fisici) | ❌ **mai** (locale-only) |
+| reminders | ❌ | ✅ | opt-in (`syncReminders`) |
+
+I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `syncVisitLogs`) coprono tutti i casi.
+`notes` e KML non hanno flag separati perché non hanno percorso verso Firestore.
 
 ---
 
@@ -117,6 +141,15 @@ ksp { arg("hilt.enableAggregatingTask", "true") }
 | 9 | Trasferimento dati guest → cloud al login | Da fare |
 | 10 | Offline-first + Sync bidirezionale Firestore | Da fare |
 | 7 | Google Play Billing (unlock Pro) | Da fare (ultimo) |
+
+---
+
+## Feature principali
+
+- **Sezione "Dettagli aggiuntivi" (AddEditScreen):** collassata di default, auto-espansa se il punto ha già tag/reminders/rating/notes/kml. Badge riassuntivi quando collassata.
+- **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser` (no osmdroid-bonuspack). Storage in `filesDir/kmls/{geoPointId}/`.
+- **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.
+- **EXIF foto:** `ExifReader` legge `dateTaken` + `cameraModel` da file locali (off-thread via IO dispatcher). Null silenzioso per URL HTTPS. Mostrato come strip semitrasparente nel PhotoViewerDialog.
 
 ---
 

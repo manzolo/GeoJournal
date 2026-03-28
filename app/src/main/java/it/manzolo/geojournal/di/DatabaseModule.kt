@@ -11,9 +11,27 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import it.manzolo.geojournal.data.local.db.AppDatabase
 import it.manzolo.geojournal.data.local.db.GeoPointDao
+import it.manzolo.geojournal.data.local.db.PointKmlDao
 import it.manzolo.geojournal.data.local.db.ReminderDao
 import it.manzolo.geojournal.data.local.db.VisitLogDao
 import javax.inject.Singleton
+
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE geo_points ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `point_kmls` (
+                `id` TEXT NOT NULL PRIMARY KEY,
+                `geo_point_id` TEXT NOT NULL,
+                `name` TEXT NOT NULL,
+                `file_path` TEXT NOT NULL,
+                `imported_at` INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY(`geo_point_id`) REFERENCES `geo_points`(`id`) ON DELETE CASCADE
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_point_kmls_geo_point_id` ON `point_kmls`(`geo_point_id`)")
+    }
+}
 
 private val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -103,10 +121,11 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Provides fun provideGeoPointDao(db: AppDatabase): GeoPointDao = db.geoPointDao()
     @Provides fun provideReminderDao(db: AppDatabase): ReminderDao = db.reminderDao()
     @Provides fun provideVisitLogDao(db: AppDatabase): VisitLogDao = db.visitLogDao()
+    @Provides fun providePointKmlDao(db: AppDatabase): PointKmlDao = db.pointKmlDao()
 }

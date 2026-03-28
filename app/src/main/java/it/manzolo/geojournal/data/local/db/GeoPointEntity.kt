@@ -33,7 +33,9 @@ data class GeoPointEntity(
 
     @ColumnInfo(name = "rating") val rating: Int = 0,
 
-    @ColumnInfo(name = "is_archived") val isArchived: Boolean = false
+    @ColumnInfo(name = "is_archived") val isArchived: Boolean = false,
+
+    @ColumnInfo(name = "notes") val notes: String = ""
 )
 
 // ─── Mapper Domain ↔ Entity ──────────────────────────────────────────────────
@@ -52,7 +54,8 @@ fun GeoPointEntity.toDomain(): GeoPoint = GeoPoint(
     ownerId = ownerId,
     isShared = isShared,
     rating = rating,
-    isArchived = isArchived
+    isArchived = isArchived,
+    notes = notes
 )
 
 fun GeoPoint.toEntity(syncedToFirestore: Boolean = false): GeoPointEntity = GeoPointEntity(
@@ -70,5 +73,6 @@ fun GeoPoint.toEntity(syncedToFirestore: Boolean = false): GeoPointEntity = GeoP
     isShared = isShared,
     syncedToFirestore = syncedToFirestore,
     rating = rating,
-    isArchived = isArchived
+    isArchived = isArchived,
+    notes = notes
 )

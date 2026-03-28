@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.foundation.layout.Row
@@ -52,9 +53,11 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.content.Intent
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.DisposableEffect
@@ -234,6 +237,8 @@ fun MapScreen(
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
     // Overlay posizione + direzione utente (piazzato dal FAB MyLocation)
     val myLocationOverlayRef = remember { mutableStateOf<MyLocationOverlay?>(null) }
+    // KML overlay attivi nella sessione (kmlId → lista overlay OSMDroid)
+    val kmlOverlaysRef = remember { mutableStateOf<Map<String, List<org.osmdroid.views.overlay.Overlay>>>(emptyMap()) }
 
     // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
     // Al primo avvio usa lastKnownLocation (sincrona, nessun salto visivo).
@@ -381,6 +386,29 @@ fun MapScreen(
         }
     }
 
+    // KML overlays: aggiunge/rimuove in base allo stato di sessione
+    LaunchedEffect(uiState.kmlItems) {
+        val current = kmlOverlaysRef.value.toMutableMap()
+        // Rimuovi overlay per KML disattivati o rimossi dalla lista
+        val activeIds = uiState.kmlItems.filter { it.isActive }.map { it.kml.id }.toSet()
+        val toRemove = current.keys.filter { it !in activeIds }
+        toRemove.forEach { id ->
+            current[id]?.let { KmlOverlayManager.removeFromMap(mapView, it) }
+            current.remove(id)
+        }
+        // Aggiungi overlay per KML attivati di nuovo
+        val existingIds = current.keys
+        uiState.kmlItems.filter { it.isActive && it.kml.id !in existingIds }.forEach { item ->
+            val geometries = viewModel.parseKml(item.kml.id)
+            if (geometries.isNotEmpty()) {
+                val overlays = KmlOverlayManager.buildOverlays(mapView, geometries)
+                KmlOverlayManager.addToMap(mapView, overlays)
+                current[item.kml.id] = overlays
+            }
+        }
+        kmlOverlaysRef.value = current
+    }
+
     // Focus su punto specifico (es. da Lista): centra + auto-seleziona il punto
     LaunchedEffect(uiState.focusTarget) {
         uiState.focusTarget?.let { target ->
@@ -428,7 +456,7 @@ fun MapScreen(
             }
         }
 
-        // Pulsante Layer (sopra il parcheggio)
+        // Pulsante Layer (in alto a destra)
         SmallFloatingActionButton(
             onClick = {
                 currentLayer = when (currentLayer) {
@@ -439,7 +467,7 @@ fun MapScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 184.dp),
+                .padding(end = 16.dp, bottom = 232.dp),
             containerColor = when (currentLayer) {
                 MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
                 MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
@@ -459,7 +487,7 @@ fun MapScreen(
             exit = fadeOut() + scaleOut(targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 64.dp, bottom = 194.dp)
+                .padding(end = 64.dp, bottom = 242.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(50),
@@ -475,11 +503,60 @@ fun MapScreen(
             }
         }
 
-        // FAB posizione utente (lato destro)
+        // Pulsante KML (sotto Layers)
+        SmallFloatingActionButton(
+            onClick = { viewModel.toggleKmlPanel() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 184.dp),
+            containerColor = if (uiState.kmlItems.any { it.isActive })
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Polyline,
+                contentDescription = stringResource(R.string.map_kml_toggle_button)
+            )
+        }
+
+        // FAB parcheggio (sotto KML)
+        var isParkingActive by remember { mutableStateOf(false) }
         SmallFloatingActionButton(
             onClick = {
                 if (locationPermission.status.isGranted) {
                     coroutineScope.launch {
+                        isParkingActive = true
+                        getFreshLocation(context)?.let { (lat, lon) ->
+                            viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
+                        }
+                        isParkingActive = false
+                    }
+                } else {
+                    locationPermission.launchPermissionRequest()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 136.dp),
+            containerColor = if (isParkingActive)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.Filled.DirectionsCar,
+                contentDescription = stringResource(R.string.map_parking_fab)
+            )
+        }
+
+        // FAB posizione utente / centra (sotto parcheggio)
+        var isCenteringActive by remember { mutableStateOf(false) }
+        SmallFloatingActionButton(
+            onClick = {
+                if (locationPermission.status.isGranted) {
+                    coroutineScope.launch {
+                        isCenteringActive = true
                         val result = getFreshLocation(context)
                         if (result != null) {
                             val (lat, lon) = result
@@ -492,6 +569,7 @@ fun MapScreen(
                         } else {
                             snackbarHostState.showSnackbar(locationUnavailableText)
                         }
+                        isCenteringActive = false
                     }
                 } else {
                     locationPermission.launchPermissionRequest()
@@ -500,35 +578,14 @@ fun MapScreen(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 16.dp, bottom = 88.dp),
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = if (isCenteringActive)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer
         ) {
             Icon(
                 imageVector = Icons.Filled.MyLocation,
                 contentDescription = stringResource(R.string.map_my_location)
-            )
-        }
-
-        // Feature 6: FAB parcheggio
-        SmallFloatingActionButton(
-            onClick = {
-                if (locationPermission.status.isGranted) {
-                    coroutineScope.launch {
-                        getFreshLocation(context)?.let { (lat, lon) ->
-                            viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
-                        }
-                    }
-                } else {
-                    locationPermission.launchPermissionRequest()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 136.dp),
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Filled.DirectionsCar,
-                contentDescription = stringResource(R.string.map_parking_fab)
             )
         }
 
@@ -629,6 +686,15 @@ fun MapScreen(
             )
         }
 
+        // Pannello KML
+        if (uiState.showKmlPanel) {
+            KmlLayerSheet(
+                kmlItems = uiState.kmlItems,
+                onDismiss = viewModel::dismissKmlPanel,
+                onToggle = viewModel::toggleKml
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -662,6 +728,52 @@ private fun ClusterPickerSheet(
                     modifier = Modifier.clickable { onPointClick(point) }
                 )
                 HorizontalDivider()
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KmlLayerSheet(
+    kmlItems: List<KmlSessionItem>,
+    onDismiss: () -> Unit,
+    onToggle: (String) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = stringResource(R.string.map_kml_panel_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        if (kmlItems.isEmpty()) {
+            Text(
+                text = stringResource(R.string.map_kml_no_layers),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.5f)
+            ) {
+                items(kmlItems) { item ->
+                    ListItem(
+                        headlineContent = { Text(item.kml.name) },
+                        supportingContent = { Text(item.pointTitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = {
+                            Switch(
+                                checked = item.isActive,
+                                onCheckedChange = { onToggle(item.kml.id) }
+                            )
+                        },
+                        modifier = Modifier.clickable { onToggle(item.kml.id) }
+                    )
+                    HorizontalDivider()
+                }
             }
         }
         Spacer(Modifier.height(16.dp))

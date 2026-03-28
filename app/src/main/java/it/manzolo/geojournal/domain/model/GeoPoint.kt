@@ -17,5 +17,6 @@ data class GeoPoint(
     val ownerId: String = "",
     val isShared: Boolean = false,
     val rating: Int = 0,  // 0 = non valutato, 1-5 stelle
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val notes: String = ""  // note personali private, mai esportate in .geoj
 )

@@ -13,8 +13,10 @@ import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -48,7 +50,10 @@ data class AddEditUiState(
     val showDeleteConfirm: Boolean = false,
     val reminders: List<Reminder> = emptyList(),
     val showReminderSheet: Boolean = false,
-    val rating: Int = 0
+    val rating: Int = 0,
+    val notes: String = "",
+    val isAdditionalDetailsExpanded: Boolean = false,
+    val kmls: List<PointKml> = emptyList()
 )
 
 @HiltViewModel
@@ -60,6 +65,7 @@ class AddEditViewModel @Inject constructor(
     private val storage: FirebaseStorage,
     private val reminderRepository: ReminderRepository,
     private val scheduler: ReminderScheduler,
+    private val kmlRepository: PointKmlRepository,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
@@ -131,7 +137,8 @@ class AddEditViewModel @Inject constructor(
                         longitude = point.longitude,
                         photoUris = point.photoUrls,
                         isLoading = false,
-                        rating = point.rating
+                        rating = point.rating,
+                        notes = point.notes
                     )
                 }
             } else {
@@ -140,7 +147,25 @@ class AddEditViewModel @Inject constructor(
         }
         viewModelScope.launch {
             reminderRepository.observeByGeoPointId(pointId)
-                .collect { list -> _uiState.update { it.copy(reminders = list) } }
+                .collect { list ->
+                    _uiState.update { state ->
+                        val shouldExpand = state.isAdditionalDetailsExpanded ||
+                            list.isNotEmpty() || state.tags.isNotEmpty() ||
+                            state.rating > 0 || state.notes.isNotBlank() || state.kmls.isNotEmpty()
+                        state.copy(reminders = list, isAdditionalDetailsExpanded = shouldExpand)
+                    }
+                }
+        }
+        viewModelScope.launch {
+            kmlRepository.observeByGeoPointId(pointId)
+                .collect { list ->
+                    _uiState.update { state ->
+                        val shouldExpand = state.isAdditionalDetailsExpanded ||
+                            list.isNotEmpty() || state.tags.isNotEmpty() ||
+                            state.rating > 0 || state.notes.isNotBlank() || state.reminders.isNotEmpty()
+                        state.copy(kmls = list, isAdditionalDetailsExpanded = shouldExpand)
+                    }
+                }
         }
     }
 
@@ -243,6 +268,18 @@ class AddEditViewModel @Inject constructor(
 
     fun toggleReminderSheet() = _uiState.update { it.copy(showReminderSheet = !it.showReminderSheet) }
     fun updateRating(stars: Int) = _uiState.update { it.copy(rating = if (it.rating == stars) 0 else stars) }
+    fun updateNotes(value: String) = _uiState.update { it.copy(notes = value) }
+    fun toggleAdditionalDetails() = _uiState.update { it.copy(isAdditionalDetailsExpanded = !it.isAdditionalDetailsExpanded) }
+
+    fun importKml(uri: Uri, displayName: String) {
+        viewModelScope.launch {
+            runCatching { kmlRepository.importKml(uri, existingId, displayName) }
+        }
+    }
+
+    fun deleteKml(kml: PointKml) {
+        viewModelScope.launch { kmlRepository.deleteKml(kml) }
+    }
 
     fun addReminder(reminder: Reminder) {
         val r = reminder.copy(geoPointId = existingId)
@@ -294,7 +331,8 @@ class AddEditViewModel @Inject constructor(
                 createdAt = if (isEditMode) existingCreatedAt else Date(),
                 updatedAt = Date(),
                 ownerId = prefs.userId,
-                rating = state.rating
+                rating = state.rating,
+                notes = state.notes.trim()
             )
             repository.save(point)
             // Salva i reminder pendenti (solo nuovo modo, edit mode li salva subito)

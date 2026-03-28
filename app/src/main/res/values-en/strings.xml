@@ -21,6 +21,9 @@
     <string name="map_parking_update_action">Update location</string>
     <string name="map_parking_navigate">Take me there</string>
     <string name="map_layer_button">Change map layer</string>
+    <string name="map_kml_toggle_button">KML Layers</string>
+    <string name="map_kml_panel_title">KML Layers</string>
+    <string name="map_kml_no_layers">No KML files for visible points</string>
     <string name="map_layer_road">Road</string>
     <string name="map_layer_topo">Topographic</string>
     <string name="map_layer_satellite">Satellite</string>
@@ -184,6 +187,11 @@
     <string name="addedit_add_reminder">Add reminder</string>
     <string name="addedit_section_rating">Rating</string>
     <string name="addedit_stars">%d stars</string>
+    <string name="addedit_section_additional_details">Additional details</string>
+    <string name="addedit_section_notes">Personal notes</string>
+    <string name="addedit_notes_hint">Private notes (not exported in .geoj)</string>
+    <string name="addedit_section_kml">KML files</string>
+    <string name="addedit_import_kml">Import KML</string>
     <string name="addedit_map_tap_hint">Tap the map to move the point</string>
     <string name="addedit_location_selected">Location selected on map</string>
     <string name="addedit_gps_accuracy">Accuracy: ±%d m</string>
@@ -217,6 +225,7 @@
     <string name="detail_section_reminders">Reminders (%d)</string>
     <string name="detail_section_visits">Visit log (%d)</string>
     <string name="detail_section_rating">Rating</string>
+    <string name="detail_section_notes">Personal notes</string>
     <string name="detail_visited_today">I was here today</string>
     <string name="detail_save_to_gallery">Save to gallery</string>
     <string name="detail_photo_error">Unable to load photo</string>

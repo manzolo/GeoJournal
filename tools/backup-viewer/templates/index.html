@@ -463,6 +463,7 @@
   <img id="lbImg" src="" alt="" />
   <button class="lb-arrow next" id="lbNext" onclick="lbStep(1)">&#8250;</button>
   <div class="lb-counter" id="lbCounter"></div>
+  <div id="lbExif" style="position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:.75rem;padding:4px 12px;border-radius:8px;pointer-events:none;display:none"></div>
 </div>
 
 <script>
@@ -717,6 +718,14 @@ function _extraHtml(p) {
     h += `</div>`;
   }
 
+  // ── Note personali
+  if (p.notes) {
+    h += `<div class="detail-section">
+      <div class="detail-section-title">📝 Note</div>
+      <div class="detail-desc" style="margin:0">${escHtml(p.notes)}</div>
+    </div>`;
+  }
+
   // ── Reminder
   const reminders = p.reminders || [];
   if (reminders.length) {
@@ -878,12 +887,25 @@ function openLb(idx) {
   document.getElementById('lightbox').classList.add('open');
 }
 function renderLb() {
-  document.getElementById('lbImg').src = _photos[_lbIdx];
+  const url = _photos[_lbIdx];
+  document.getElementById('lbImg').src = url;
   const multi = _photos.length > 1;
   document.getElementById('lbPrev').style.display    = multi ? '' : 'none';
   document.getElementById('lbNext').style.display    = multi ? '' : 'none';
   document.getElementById('lbCounter').style.display = multi ? '' : 'none';
   if (multi) document.getElementById('lbCounter').textContent = `${_lbIdx + 1} / ${_photos.length}`;
+  // Fetch EXIF for local photos only
+  const exifEl = document.getElementById('lbExif');
+  exifEl.style.display = 'none';
+  if (url && url.startsWith('/photos/')) {
+    const path = url.replace('/photos/', '');
+    fetch(`/api/exif/${path}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.exifDate) { exifEl.textContent = d.exifDate; exifEl.style.display = ''; }
+      })
+      .catch(() => {});
+  }
 }
 function lbStep(d)      { _lbIdx = (_lbIdx + d + _photos.length) % _photos.length; renderLb(); }
 function closeLb()      { document.getElementById('lightbox').classList.remove('open'); }

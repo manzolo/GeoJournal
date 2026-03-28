@@ -25,7 +25,7 @@ class GeoPointExporter @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val SCHEMA_VERSION = 2
+        private const val SCHEMA_VERSION = 3
         private const val BACKUP_PHOTO_PREFIX = "geoj://photos/"
     }
 
@@ -71,7 +71,7 @@ class GeoPointExporter @Inject constructor(
             put("longitude", point.longitude)
             put("emoji", point.emoji)
             put("tags", JSONArray(point.tags))
-            put("rating", point.rating)
+            // rating e notes esclusi intenzionalmente: dati personali, non condivisibili via .geoj
             put("ownerId", point.ownerId)
             put("isShared", point.isShared)
             put("createdAt", point.createdAt.time)

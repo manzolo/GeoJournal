@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.kml.KmlParser
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -25,6 +28,13 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Date
 import javax.inject.Inject
+
+/** KML visibile nella sessione corrente, con titolo del punto associato */
+data class KmlSessionItem(
+    val kml: PointKml,
+    val pointTitle: String,
+    val isActive: Boolean
+)
 
 data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null, val zoom: Double = 17.0)
 
@@ -49,14 +59,19 @@ data class MapUiState(
     val showParkingOptions: Boolean = false,
     /** Posizione corrente in attesa di conferma aggiornamento parcheggio */
     val pendingParkingLat: Double = 0.0,
-    val pendingParkingLon: Double = 0.0
+    val pendingParkingLon: Double = 0.0,
+    /** KML caricati per i punti visibili, con stato on/off di sessione */
+    val kmlItems: List<KmlSessionItem> = emptyList(),
+    /** True = mostra bottom sheet con lista KML */
+    val showKmlPanel: Boolean = false
 )
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val repository: GeoPointRepository,
     private val exporter: GeoPointExporter,
-    private val userPrefs: UserPreferencesRepository
+    private val userPrefs: UserPreferencesRepository,
+    private val kmlRepository: PointKmlRepository
 ) : ViewModel() {
 
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
@@ -235,6 +250,50 @@ class MapViewModel @Inject constructor(
     fun dismissParkingOptions() {
         pendingParkingPointId = null
         _uiState.update { it.copy(showParkingOptions = false) }
+    }
+
+    // ─── KML session management ─────────────────────────────────────────────
+
+    fun toggleKmlPanel() {
+        val showing = !_uiState.value.showKmlPanel
+        if (showing) loadKmlsForCurrentPoints()
+        _uiState.update { it.copy(showKmlPanel = showing) }
+    }
+
+    fun dismissKmlPanel() = _uiState.update { it.copy(showKmlPanel = false) }
+
+    private fun loadKmlsForCurrentPoints() {
+        val points = _uiState.value.points
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentActiveIds = _uiState.value.kmlItems
+                .filter { it.isActive }.map { it.kml.id }.toSet()
+            val items = points.flatMap { point ->
+                kmlRepository.getByGeoPointId(point.id).map { kml ->
+                    KmlSessionItem(
+                        kml = kml,
+                        pointTitle = point.title,
+                        isActive = kml.id in currentActiveIds
+                    )
+                }
+            }
+            _uiState.update { it.copy(kmlItems = items) }
+        }
+    }
+
+    fun toggleKml(kmlId: String) {
+        _uiState.update { state ->
+            state.copy(
+                kmlItems = state.kmlItems.map { item ->
+                    if (item.kml.id == kmlId) item.copy(isActive = !item.isActive) else item
+                }
+            )
+        }
+    }
+
+    /** Parsing del KML: eseguito IO, restituisce le geometrie per l'overlay manager */
+    suspend fun parseKml(kmlId: String) = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val item = _uiState.value.kmlItems.find { it.kml.id == kmlId } ?: return@withContext emptyList()
+        KmlParser.parse(java.io.File(item.kml.filePath))
     }
 
     companion object {

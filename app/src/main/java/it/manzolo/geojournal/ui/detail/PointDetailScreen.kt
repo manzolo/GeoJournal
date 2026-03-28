@@ -49,6 +49,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -85,6 +86,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import it.manzolo.geojournal.data.photo.ExifReader
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -368,6 +370,20 @@ private fun PointDetailContent(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        // ── Note personali ────────────────────────────────────────────────────
+        if (point.notes.isNotBlank()) {
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionHeader(icon = Icons.AutoMirrored.Filled.Notes, title = stringResource(R.string.detail_section_notes))
+                    Text(
+                        text = point.notes,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -756,7 +772,32 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                 )
             }
 
+            // Strip EXIF bottom-center
             val currentUrl = urls[pagerState.currentPage]
+            var exifInfo by remember(currentUrl) { mutableStateOf<ExifReader.PhotoExifInfo?>(null) }
+            LaunchedEffect(currentUrl) {
+                exifInfo = withContext(Dispatchers.IO) { ExifReader.readExif(currentUrl) }
+            }
+            exifInfo?.let { info ->
+                val infoText = buildString {
+                    info.dateTaken?.let { append(it) }
+                    if (info.dateTaken != null && info.cameraModel != null) append("  ·  ")
+                    info.cameraModel?.let { append(it) }
+                }
+                if (infoText.isNotBlank()) {
+                    Text(
+                        text = infoText,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 40.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

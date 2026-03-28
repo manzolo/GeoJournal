@@ -26,6 +26,25 @@ def _fmt_ts(ts: int, fmt: str = "%d/%m/%Y") -> str:
     return datetime.fromtimestamp(ts / 1000).strftime(fmt)
 
 
+def _read_exif_date(img_bytes: bytes) -> str | None:
+    """Extract EXIF DateTimeOriginal from image bytes. Returns formatted string or None."""
+    try:
+        from PIL import Image
+        from PIL.ExifTags import TAGS
+        img = Image.open(io.BytesIO(img_bytes))
+        exif_data = img._getexif()
+        if not exif_data:
+            return None
+        for tag_id, value in exif_data.items():
+            tag_name = TAGS.get(tag_id, "")
+            if tag_name in ("DateTimeOriginal", "DateTime"):
+                dt = datetime.strptime(str(value), "%Y:%m:%d %H:%M:%S")
+                return dt.strftime("%d %b %Y, %H:%M")
+        return None
+    except Exception:
+        return None
+
+
 def _prepare_points(raw: list, reminders: list, visits: list) -> list:
     # Indice per geoPointId
     rem_by_point: dict = {}
@@ -73,6 +92,7 @@ def _prepare_points(raw: list, reminders: list, visits: list) -> list:
             "tagList":       p.get("tags", []),
             "reminders":     p_reminders,
             "visits":        p_visits,
+            "notes":         p.get("notes", ""),
         })
     return points
 
@@ -114,6 +134,21 @@ def serve_photo(photo_path):
     ext = photo_path.rsplit(".", 1)[-1].lower()
     mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}.get(ext, "image/jpeg")
     return send_file(io.BytesIO(data), mimetype=mime)
+
+
+@app.route("/api/exif/<path:photo_path>")
+def photo_exif(photo_path):
+    """Returns EXIF date for a local backup photo. Returns {exifDate: null} for HTTPS or missing files."""
+    zip_path = f"photos/{photo_path}"
+    try:
+        with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+            if zip_path not in z.namelist():
+                return jsonify({"exifDate": None})
+            img_bytes = z.read(zip_path)
+        exif_date = _read_exif_date(img_bytes)
+        return jsonify({"exifDate": exif_date})
+    except Exception:
+        return jsonify({"exifDate": None})
 
 
 if __name__ == "__main__":

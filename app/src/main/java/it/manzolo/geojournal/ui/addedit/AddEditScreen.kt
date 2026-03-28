@@ -52,8 +52,14 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import android.provider.OpenableColumns
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SuggestionChip
@@ -243,6 +249,18 @@ fun AddEditScreen(
                 )
             }
             viewModel.addPhotoUri(uri.toString())
+        }
+    }
+
+    // KML file picker
+    val kmlLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { u ->
+            val displayName = context.contentResolver.query(u, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                cursor.moveToFirst()
+                if (nameIndex >= 0) cursor.getString(nameIndex) else null
+            } ?: u.lastPathSegment ?: "file.kml"
+            viewModel.importKml(u, displayName)
         }
     }
 
@@ -675,158 +693,265 @@ fun AddEditScreen(
                 }
             }
 
-            // ── Promemoria ────────────────────────────────────────────────
+            // ── Dettagli aggiuntivi (collassabile) ───────────────────────
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.addedit_section_reminders),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    if (uiState.reminders.isNotEmpty()) {
-                        val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
-                        val reminderTimeFormat = remember { SimpleDateFormat("HH:mm", Locale.ITALIAN) }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            uiState.reminders.forEach { reminder ->
-                                val timeStr = reminderTimeFormat.format(Date(reminder.startDate))
-                                val dateStr = when (reminder.type) {
-                                    ReminderType.DATE_RANGE -> reminder.endDate?.let {
-                                        "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))} · $timeStr"
-                                    } ?: "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
-                                    ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ${stringResource(R.string.reminder_annual_suffix)} · $timeStr"
-                                    ReminderType.SINGLE -> "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
-                                }
-                                InputChip(
-                                    selected = false,
-                                    onClick = {},
-                                    label = { Text("🔔 ${reminder.title} · $dateStr") },
-                                    trailingIcon = {
-                                        IconButton(onClick = { viewModel.deleteReminder(reminder) },
-                                            modifier = Modifier.size(18.dp)) {
-                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                                modifier = Modifier.size(14.dp))
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    OutlinedButton(
-                        onClick = viewModel::toggleReminderSheet,
-                        modifier = Modifier.fillMaxWidth()
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    // Header cliccabile
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.toggleAdditionalDetails() },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(stringResource(R.string.addedit_add_reminder))
-                    }
-                }
-            }
-
-            // ── Tag ───────────────────────────────────────────────────────
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.field_tags),
+                        Icon(
+                            imageVector = if (uiState.isAdditionalDetailsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.addedit_section_additional_details),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    OutlinedTextField(
-                        value = uiState.tagInput,
-                        onValueChange = viewModel::updateTagInput,
-                        label = { Text(stringResource(R.string.addedit_add_tag)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        trailingIcon = {
-                            IconButton(onClick = viewModel::addTag) {
-                                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        // Badge riassuntivi quando collassata
+                        if (!uiState.isAdditionalDetailsExpanded) {
+                            if (uiState.reminders.isNotEmpty()) {
+                                Text("⏰${uiState.reminders.size}", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(6.dp))
                             }
-                        },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
-                    )
-                    if (uiState.tags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
-                                InputChip(
-                                    selected = false,
-                                    onClick = {},
-                                    label = { Text(tag) },
-                                    trailingIcon = {
-                                        IconButton(onClick = { viewModel.removeTag(tag) },
-                                            modifier = Modifier.size(18.dp)) {
-                                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                                modifier = Modifier.size(14.dp))
+                            if (uiState.tags.filter { !it.startsWith("_") }.isNotEmpty()) {
+                                Text("🏷️${uiState.tags.filter { !it.startsWith("_") }.size}", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            if (uiState.rating > 0) {
+                                Text("★${uiState.rating}", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(visible = uiState.isAdditionalDetailsExpanded) {
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            Spacer(Modifier.height(12.dp))
+
+                            // ── Promemoria ────────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Notifications, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_reminders),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            if (uiState.reminders.isNotEmpty()) {
+                                val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+                                val reminderTimeFormat = remember { SimpleDateFormat("HH:mm", Locale.ITALIAN) }
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.reminders.forEach { reminder ->
+                                        val timeStr = reminderTimeFormat.format(Date(reminder.startDate))
+                                        val dateStr = when (reminder.type) {
+                                            ReminderType.DATE_RANGE -> reminder.endDate?.let {
+                                                "${reminderDateFormat.format(Date(reminder.startDate))} → ${reminderDateFormat.format(Date(it))} · $timeStr"
+                                            } ?: "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
+                                            ReminderType.ANNUAL_RECURRING -> "${reminderDateFormat.format(Date(reminder.startDate))} · ${stringResource(R.string.reminder_annual_suffix)} · $timeStr"
+                                            ReminderType.SINGLE -> "${reminderDateFormat.format(Date(reminder.startDate))} · $timeStr"
                                         }
+                                        InputChip(
+                                            selected = false,
+                                            onClick = {},
+                                            label = { Text("🔔 ${reminder.title} · $dateStr") },
+                                            trailingIcon = {
+                                                IconButton(onClick = { viewModel.deleteReminder(reminder) },
+                                                    modifier = Modifier.size(18.dp)) {
+                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                        modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        )
                                     }
-                                )
+                                }
+                                Spacer(Modifier.height(8.dp))
                             }
-                        }
-                    }
-                    if (uiState.suggestedTags.isNotEmpty()) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            uiState.suggestedTags.forEach { tag ->
-                                SuggestionChip(
-                                    onClick = { viewModel.addTagFromSuggestion(tag) },
-                                    label = { Text(tag) }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Valutazione ───────────────────────────────────────────────
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Star, contentDescription = null,
-                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.addedit_section_rating),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        (1..5).forEach { star ->
-                            IconButton(
-                                onClick = { viewModel.updateRating(star) },
-                                modifier = Modifier.size(40.dp)
+                            OutlinedButton(
+                                onClick = viewModel::toggleReminderSheet,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(
-                                    imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
-                                    contentDescription = stringResource(R.string.addedit_stars, star),
-                                    tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(30.dp)
-                                )
+                                Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_add_reminder))
                             }
-                        }
-                        if (uiState.rating > 0) {
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "${uiState.rating}/5",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // ── Tag ───────────────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.field_tags),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = uiState.tagInput,
+                                onValueChange = viewModel::updateTagInput,
+                                label = { Text(stringResource(R.string.addedit_add_tag)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(16.dp),
+                                trailingIcon = {
+                                    IconButton(onClick = viewModel::addTag) {
+                                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
                             )
+                            if (uiState.tags.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
+                                        InputChip(
+                                            selected = false,
+                                            onClick = {},
+                                            label = { Text(tag) },
+                                            trailingIcon = {
+                                                IconButton(onClick = { viewModel.removeTag(tag) },
+                                                    modifier = Modifier.size(18.dp)) {
+                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                        modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            if (uiState.suggestedTags.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.suggestedTags.forEach { tag ->
+                                        SuggestionChip(
+                                            onClick = { viewModel.addTagFromSuggestion(tag) },
+                                            label = { Text(tag) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // ── Valutazione ───────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Star, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_rating),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                (1..5).forEach { star ->
+                                    IconButton(
+                                        onClick = { viewModel.updateRating(star) },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (star <= uiState.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                            contentDescription = stringResource(R.string.addedit_stars, star),
+                                            tint = if (star <= uiState.rating) MaterialTheme.colorScheme.primary
+                                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                    }
+                                }
+                                if (uiState.rating > 0) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("${uiState.rating}/5", style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // ── Note personali ────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_notes),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = uiState.notes,
+                                onValueChange = viewModel::updateNotes,
+                                placeholder = { Text(stringResource(R.string.addedit_notes_hint),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 6,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                            // ── File KML ──────────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Polyline, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_kml),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            if (uiState.kmls.isNotEmpty()) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.kmls.forEach { kml ->
+                                        InputChip(
+                                            selected = false,
+                                            onClick = {},
+                                            label = { Text(kml.name) },
+                                            trailingIcon = {
+                                                IconButton(onClick = { viewModel.deleteKml(kml) },
+                                                    modifier = Modifier.size(18.dp)) {
+                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                        modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            OutlinedButton(
+                                onClick = { kmlLauncher.launch("*/*") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Polyline, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_import_kml))
+                            }
+
+                            Spacer(Modifier.height(4.dp))
                         }
                     }
                 }
