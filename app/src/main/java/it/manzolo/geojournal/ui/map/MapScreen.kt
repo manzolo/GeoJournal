@@ -69,6 +69,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
@@ -83,6 +84,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
@@ -144,8 +146,24 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    // COARSE + FINE insieme: su Android 12+ il sistema mostra un unico dialog
+    // con la scelta "Precisa / Approssimativa". Su Android <12 equivale a chiedere solo FINE.
+    val locationPermissions = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+    )
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
     val snackbarHostState = remember { SnackbarHostState() }
+    val locationUnavailableText = stringResource(R.string.map_location_unavailable)
+
+    // Richiedi permesso posizione proattivamente all'avvio (prima apertura o dopo revoca)
+    LaunchedEffect(Unit) {
+        if (!locationPermission.status.isGranted) {
+            locationPermissions.launchMultiplePermissionRequest()
+        }
+    }
 
     // Richiedi permesso POST_NOTIFICATIONS su Android 13+ (necessario per i reminder)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -214,8 +232,8 @@ fun MapScreen(
     val pointsRef = remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
     // Punti del cluster troppo vicini da separare visivamente → mostra il picker
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
-    // Marker posizione utente (piazzato dal FAB MyLocation)
-    val userLocationMarkerRef = remember { mutableStateOf<UserLocationMarker?>(null) }
+    // Overlay posizione + direzione utente (piazzato dal FAB MyLocation)
+    val myLocationOverlayRef = remember { mutableStateOf<MyLocationOverlay?>(null) }
 
     // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
     // Al primo avvio usa lastKnownLocation (sincrona, nessun salto visivo).
@@ -224,7 +242,9 @@ fun MapScreen(
         Configuration.getInstance().userAgentValue = context.packageName
         val savedPosition = OsmGeoPoint(uiState.userLatitude, uiState.userLongitude)
         val isFirstOpen = !uiState.hasAppliedInitialZoom
-        val lastKnown = if (isFirstOpen) getLastKnownLocation(context) else null
+        val hasLocationPerm = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        val lastKnown = if (isFirstOpen && hasLocationPerm) getLastKnownLocation(context) else null
         val initialCenter = lastKnown?.let { OsmGeoPoint(it.latitude, it.longitude) } ?: savedPosition
         val initialZoom = if (lastKnown != null) 15.0 else uiState.zoomLevel
         MapView(context).apply {
@@ -309,6 +329,44 @@ fun MapScreen(
             mapView.overlays.clear()
             mapView.onDetach()
         }
+    }
+
+    // Bussola: registra il sensore solo mentre l'overlay "Sono qui" è visibile.
+    // TYPE_ROTATION_VECTOR → azimuth accurato anche con il telefono inclinato.
+    DisposableEffect(myLocationOverlayRef.value) {
+        val overlay = myLocationOverlayRef.value
+            ?: return@DisposableEffect onDispose { }
+        val sm = context.getSystemService(Context.SENSOR_SERVICE)
+            as android.hardware.SensorManager
+        val sensor = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR)
+            ?: return@DisposableEffect onDispose { }
+        var smoothAzimuth = 0f
+        val listener = object : android.hardware.SensorEventListener {
+            override fun onSensorChanged(event: android.hardware.SensorEvent) {
+                val rm  = FloatArray(9)
+                val rm2 = FloatArray(9)
+                android.hardware.SensorManager.getRotationMatrixFromVector(rm, event.values)
+                // Remap per telefono in portrait (asse Z → alto schermo)
+                android.hardware.SensorManager.remapCoordinateSystem(
+                    rm, android.hardware.SensorManager.AXIS_X,
+                    android.hardware.SensorManager.AXIS_Z, rm2
+                )
+                val or = FloatArray(3)
+                android.hardware.SensorManager.getOrientation(rm2, or)
+                val raw = ((Math.toDegrees(or[0].toDouble()).toFloat() + 360f) % 360f)
+                // Filtro passa-basso con gestione wraparound 359°→1°
+                val diff = ((raw - smoothAzimuth + 540f) % 360f) - 180f
+                smoothAzimuth = (smoothAzimuth + 0.12f * diff + 360f) % 360f
+                overlay.azimuth = smoothAzimuth
+                mapView.postInvalidate()
+            }
+            override fun onAccuracyChanged(s: android.hardware.Sensor, a: Int) {}
+        }
+        sm.registerListener(
+            listener, sensor,
+            android.hardware.SensorManager.SENSOR_DELAY_UI
+        )
+        onDispose { sm.unregisterListener(listener) }
     }
 
     LaunchedEffect(uiState.points) {
@@ -422,18 +480,17 @@ fun MapScreen(
             onClick = {
                 if (locationPermission.status.isGranted) {
                     coroutineScope.launch {
-                        getFreshLocation(context)?.let { (lat, lon) ->
-                            userLocationMarkerRef.value?.let { mapView.overlays.remove(it) }
-                            val marker = UserLocationMarker(mapView).apply {
-                                position = OsmGeoPoint(lat, lon)
-                                icon = createMyLocationDrawable(context)
-                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                                setOnMarkerClickListener { _, _ -> true }
-                            }
-                            mapView.overlays.add(marker)
-                            userLocationMarkerRef.value = marker
+                        val result = getFreshLocation(context)
+                        if (result != null) {
+                            val (lat, lon) = result
+                            myLocationOverlayRef.value?.let { mapView.overlays.remove(it) }
+                            val overlay = MyLocationOverlay(lat, lon)
+                            mapView.overlays.add(overlay)
+                            myLocationOverlayRef.value = overlay
                             mapView.invalidate()
                             mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                        } else {
+                            snackbarHostState.showSnackbar(locationUnavailableText)
                         }
                     }
                 } else {
@@ -621,25 +678,75 @@ private fun getLastKnownLocation(context: Context): android.location.Location? {
 }
 
 /**
- * Richiede una nuova fix GPS con alta accuratezza (timeout 3s),
- * con fallback automatico sulla cache del sistema se il GPS non risponde.
+ * Richiede una nuova fix GPS (timeout 5s) con tre livelli di fallback:
+ *  1. FusedLocationProvider (se Play Services aggiornato)
+ *  2. LocationManager.requestLocationUpdates — attiva il GPS e aspetta il primo fix
+ *  3. getLastKnownLocation — legge la cache (ultima risorsa)
  */
 private suspend fun getFreshLocation(context: Context): Pair<Double, Double>? {
-    val cts = CancellationTokenSource()
-    return try {
-        val location = withTimeoutOrNull(3_000L) {
-            LocationServices.getFusedLocationProviderClient(context)
-                .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
-                .await()
+    if (isPlayServicesAvailable(context)) {
+        val cts = CancellationTokenSource()
+        try {
+            val location = withTimeoutOrNull(5_000L) {
+                LocationServices.getFusedLocationProviderClient(context)
+                    .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
+                    .await()
+            }
+            if (location != null) return location.latitude to location.longitude
+        } catch (_: Exception) {
+        } finally {
+            cts.cancel()
         }
-        location?.let { it.latitude to it.longitude }
-            ?: getLastKnownLocation(context)?.let { it.latitude to it.longitude }
-    } catch (_: Exception) {
-        getLastKnownLocation(context)?.let { it.latitude to it.longitude }
-    } finally {
-        cts.cancel()
     }
+    // Fallback: attiva GPS direttamente e aspetta il primo fix (funziona senza Play Services)
+    return getLocationFromManager(context)
+        ?: getLastKnownLocation(context)?.let { it.latitude to it.longitude }
 }
+
+/**
+ * Attiva GPS (o rete) tramite LocationManager e aspetta il primo fix (max 5s).
+ * Necessario quando Play Services non è disponibile o non ha posizione in cache.
+ * Funziona anche con il mock GPS dell'emulatore (adb emu geo fix).
+ */
+@android.annotation.SuppressLint("MissingPermission")
+private suspend fun getLocationFromManager(context: Context): Pair<Double, Double>? =
+    withTimeoutOrNull(5_000L) {
+        suspendCancellableCoroutine { cont ->
+            val lm = context.getSystemService(Context.LOCATION_SERVICE)
+                as android.location.LocationManager
+            val listener = object : android.location.LocationListener {
+                override fun onLocationChanged(loc: android.location.Location) {
+                    lm.removeUpdates(this)
+                    if (cont.isActive) cont.resumeWith(Result.success(loc.latitude to loc.longitude))
+                }
+                override fun onStatusChanged(p: String, s: Int, e: android.os.Bundle?) {}
+                override fun onProviderEnabled(p: String) {}
+                override fun onProviderDisabled(p: String) {}
+            }
+            val provider = listOf(
+                android.location.LocationManager.GPS_PROVIDER,
+                android.location.LocationManager.NETWORK_PROVIDER
+            ).firstOrNull { lm.isProviderEnabled(it) }
+
+            if (provider != null) {
+                try {
+                    lm.requestLocationUpdates(
+                        provider, 0L, 0f, listener,
+                        android.os.Looper.getMainLooper()
+                    )
+                    cont.invokeOnCancellation { lm.removeUpdates(listener) }
+                } catch (_: SecurityException) {
+                    if (cont.isActive) cont.resumeWith(Result.success(null))
+                }
+            } else {
+                if (cont.isActive) cont.resumeWith(Result.success(null))
+            }
+        }
+    }
+
+private fun isPlayServicesAvailable(context: Context): Boolean =
+    com.google.android.gms.common.GoogleApiAvailability.getInstance()
+        .isGooglePlayServicesAvailable(context) == com.google.android.gms.common.ConnectionResult.SUCCESS
 
 private fun fitAllPoints(mapView: MapView, points: List<GeoPoint>) {
     if (points.isEmpty()) return
@@ -703,7 +810,7 @@ private fun updateClusteredMarkers(
 ) {
     val zoom = mapView.zoomLevelDouble
     val clusters = clusterPoints(points, zoom)
-    mapView.overlays.removeAll { it is Marker && it !is UserLocationMarker }
+    mapView.overlays.removeAll { it is Marker }
 
     clusters.forEach { cluster ->
         val marker = Marker(mapView).apply {
@@ -893,40 +1000,59 @@ private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable 
     return BitmapDrawable(context.resources, bitmap)
 }
 
-/** Marker dedicato alla posizione utente — escluso dal reset cluster. */
-private class UserLocationMarker(mapView: MapView) : Marker(mapView)
-
 /**
- * Punto "Sono qui": glow blu esterno + anello bianco + disco blu centrale.
- * Stile simile a Google Maps / Apple Maps.
+ * Overlay "Sono qui" con indicatore direzionale.
+ * Disegna direttamente su canvas: cono blu nella direzione del dispositivo
+ * + glow + anello bianco + disco blu centrale (stile Google Maps).
+ * [azimuth] viene aggiornato in tempo reale dal sensore TYPE_ROTATION_VECTOR.
  */
-private fun createMyLocationDrawable(context: Context): BitmapDrawable {
-    val d      = context.resources.displayMetrics.density
-    val glowR  = 17f * d
-    val ringR  = 12f * d
-    val dotR   =  9f * d
-    val size   = (glowR * 2 + 2f * d).toInt()
-    val cx = size / 2f
-    val cy = size / 2f
+private class MyLocationOverlay(var lat: Double, var lon: Double) :
+    org.osmdroid.views.overlay.Overlay() {
 
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
+    var azimuth: Float = 0f
 
-    // Glow esterno semitrasparente
-    canvas.drawCircle(cx, cy, glowR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(55, 33, 150, 243)
-        style = Paint.Style.FILL
-    })
-    // Anello bianco
-    canvas.drawCircle(cx, cy, ringR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.WHITE
-        style = Paint.Style.FILL
-    })
-    // Disco blu
-    canvas.drawCircle(cx, cy, dotR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.rgb(33, 150, 243)
-        style = Paint.Style.FILL
-    })
+    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
+        if (shadow) return
+        val pt = android.graphics.Point()
+        mapView.projection.toPixels(OsmGeoPoint(lat, lon), pt)
+        val x = pt.x.toFloat()
+        val y = pt.y.toFloat()
+        val d = mapView.context.resources.displayMetrics.density
+        val dotR  =  9f * d
+        val ringR = 12f * d
+        val glowR = 17f * d
 
-    return BitmapDrawable(context.resources, bitmap)
+        // Cono direzionale — ruotato sull'azimuth corrente
+        canvas.save()
+        canvas.rotate(azimuth, x, y)
+        val coneLen = 30f * d
+        val coneHW  = 10f * d
+        val conePath = Path().apply {
+            moveTo(x, y - dotR - 3f * d)          // base del cono (attaccata al disco)
+            lineTo(x - coneHW, y - coneLen)         // angolo sinistro
+            lineTo(x + coneHW, y - coneLen)         // angolo destro
+            close()
+        }
+        canvas.drawPath(conePath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.argb(200, 33, 150, 243)
+            style = Paint.Style.FILL
+        })
+        canvas.restore()
+
+        // Glow esterno
+        canvas.drawCircle(x, y, glowR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.argb(55, 33, 150, 243)
+            style = Paint.Style.FILL
+        })
+        // Anello bianco
+        canvas.drawCircle(x, y, ringR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.WHITE
+            style = Paint.Style.FILL
+        })
+        // Disco blu
+        canvas.drawCircle(x, y, dotR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.rgb(33, 150, 243)
+            style = Paint.Style.FILL
+        })
+    }
 }

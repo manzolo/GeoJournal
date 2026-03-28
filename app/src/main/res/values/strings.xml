@@ -10,6 +10,7 @@
     <!-- Map Screen -->
     <string name="map_add_point">Aggiungi punto</string>
     <string name="map_my_location">La mia posizione</string>
+    <string name="map_location_unavailable">Posizione non disponibile. Verifica che il GPS sia attivo.</string>
     <string name="map_loading">Caricamento mappa…</string>
     <string name="map_parking_fab">Ho parcheggiato qui</string>
     <string name="map_parking_point_title">Parcheggio</string>
@@ -187,7 +188,8 @@
     <string name="addedit_gps_acquiring">Acquisizione GPS…</string>
     <string name="addedit_gps_tap_to_select">Tocca la mappa per selezionare la posizione</string>
     <string name="addedit_gps_permission_settings">Permesso GPS disabilitato. Per usare il GPS abilitalo nelle impostazioni dell\'app.</string>
-    <string name="addedit_use_gps">Usa GPS</string>
+    <string name="addedit_use_gps">Riprendi GPS</string>
+    <string name="addedit_gps_lock">Blocca qui</string>
     <string name="addedit_use_location">Usa posizione</string>
     <string name="addedit_reminder_title_hint">Titolo promemoria</string>
     <string name="addedit_reminder_type">Tipo</string>

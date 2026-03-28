@@ -668,8 +668,8 @@ fun AddEditScreen(
                         onClick = { showPhotoSourceDialog = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.addedit_add_photo))
                     }
                 }
@@ -681,6 +681,15 @@ fun AddEditScreen(
                 colors = androidx.compose.material3.CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Notifications, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.addedit_section_reminders),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
                     if (uiState.reminders.isNotEmpty()) {
                         val reminderDateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
                         val reminderTimeFormat = remember { SimpleDateFormat("HH:mm", Locale.ITALIAN) }
@@ -713,8 +722,8 @@ fun AddEditScreen(
                         onClick = viewModel::toggleReminderSheet,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Filled.Notifications, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.addedit_add_reminder))
                     }
                 }
@@ -851,6 +860,10 @@ private fun navigateToMapFocus(navController: NavController, lat: Double, lon: D
     }
 }
 
+private fun isPlayServicesAvailable(context: Context): Boolean =
+    com.google.android.gms.common.GoogleApiAvailability.getInstance()
+        .isGooglePlayServicesAvailable(context) == com.google.android.gms.common.ConnectionResult.SUCCESS
+
 // ─── GPS Live Preview Dialog ──────────────────────────────────────────────────
 
 @SuppressLint("MissingPermission")
@@ -868,19 +881,40 @@ private fun GpsPreviewDialog(
     val manualTapState = remember { mutableStateOf<OsmGeoPoint?>(null) }
     var manualTapPosition by manualTapState
 
-    // Avvia aggiornamenti continui solo se il permesso è disponibile
+    // Avvia aggiornamenti continui solo se il permesso è disponibile.
+    // Usa FusedLocationProvider se Play Services è aggiornato, altrimenti LocationManager diretto.
     DisposableEffect(Unit) {
         if (!hasLocationPermission) return@DisposableEffect onDispose { }
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_000L)
-            .setMinUpdateIntervalMillis(500L)
-            .build()
-        val callback = object : LocationCallback() {
-            override fun onLocationResult(result: LocationResult) {
-                result.lastLocation?.let { location = it }
+        if (isPlayServicesAvailable(context)) {
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1_000L)
+                .setMinUpdateIntervalMillis(500L)
+                .build()
+            val callback = object : LocationCallback() {
+                override fun onLocationResult(result: LocationResult) {
+                    result.lastLocation?.let { location = it }
+                }
             }
+            fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
+            onDispose { fusedClient.removeLocationUpdates(callback) }
+        } else {
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+            // SAM conversion non funziona su API <29: LocationListener ha 4 metodi astratti.
+            val listener = object : android.location.LocationListener {
+                override fun onLocationChanged(loc: android.location.Location) { location = loc }
+                override fun onStatusChanged(p: String, s: Int, e: android.os.Bundle?) {}
+                override fun onProviderEnabled(p: String) {}
+                override fun onProviderDisabled(p: String) {}
+            }
+            listOf(
+                android.location.LocationManager.GPS_PROVIDER,
+                android.location.LocationManager.NETWORK_PROVIDER
+            ).forEach { provider ->
+                runCatching {
+                    lm.requestLocationUpdates(provider, 500L, 0f, listener, Looper.getMainLooper())
+                }
+            }
+            onDispose { lm.removeUpdates(listener) }
         }
-        fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
-        onDispose { fusedClient.removeLocationUpdates(callback) }
     }
 
     // Overlay tap: qualsiasi tocco sulla mappa imposta la posizione manuale
@@ -949,7 +983,7 @@ private fun GpsPreviewDialog(
                                 location?.let { loc ->
                                     val gp = OsmGeoPoint(loc.latitude, loc.longitude)
                                     if (firstFix) {
-                                        mv.controller.setZoom(17.0)
+                                        mv.controller.setZoom(19.0)
                                         mv.controller.setCenter(gp)
                                         firstFix = false
                                     } else if (!userScrolled) {
@@ -1080,18 +1114,38 @@ private fun GpsPreviewDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // "Usa GPS" visibile solo in modalità manuale E solo se il permesso è disponibile
-                        if (manualTapPosition != null && hasLocationPermission) {
-                            TextButton(onClick = { manualTapPosition = null }) {
-                                Icon(
-                                    Icons.Filled.GpsFixed,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                        when {
+                            // Posizione bloccata/manuale: "Riprendi GPS" riattiva il tracking
+                            manualTapPosition != null && hasLocationPermission -> {
+                                TextButton(onClick = {
+                                    manualTapPosition = null
+                                    userScrolled = false
+                                }) {
+                                    Icon(
+                                        Icons.Filled.GpsFixed,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(stringResource(R.string.addedit_use_gps))
+                                }
                                 Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.addedit_use_gps))
                             }
-                            Spacer(Modifier.width(4.dp))
+                            // GPS attivo con fix: "Blocca qui" congela la posizione corrente
+                            location != null && manualTapPosition == null -> {
+                                TextButton(onClick = {
+                                    manualTapPosition = OsmGeoPoint(location!!.latitude, location!!.longitude)
+                                }) {
+                                    Icon(
+                                        Icons.Filled.GpsFixed,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(stringResource(R.string.addedit_gps_lock))
+                                }
+                                Spacer(Modifier.width(4.dp))
+                            }
                         }
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                         Spacer(Modifier.width(8.dp))
