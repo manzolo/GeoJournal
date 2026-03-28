@@ -174,6 +174,7 @@ fun PointDetailScreen(
     // Dialog opzioni di condivisione
     if (uiState.showShareDialog) {
         ShareOptionsDialog(
+            availability = uiState.shareAvailability,
             onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
             onDismiss = viewModel::onShareDismissed
         )

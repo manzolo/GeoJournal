@@ -1,9 +1,13 @@
 package it.manzolo.geojournal.ui.list
 
+import io.mockk.every
 import io.mockk.mockk
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.fakes.FakeGeoPointRepository
+import kotlinx.coroutines.flow.emptyFlow
 import it.manzolo.geojournal.util.MainDispatcherRule
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -25,11 +29,15 @@ class ListViewModelTest {
     private lateinit var viewModel: ListViewModel
 
     private val exporter: GeoPointExporter = mockk(relaxed = true)
+    private val reminderRepository: ReminderRepository = mockk(relaxed = true) {
+        every { observeByGeoPointId(any()) } returns emptyFlow()
+    }
+    private val kmlRepository: PointKmlRepository = mockk(relaxed = true)
 
     @Before
     fun setup() {
         fakeRepo = FakeGeoPointRepository()
-        viewModel = ListViewModel(fakeRepo, exporter)
+        viewModel = ListViewModel(fakeRepo, exporter, reminderRepository, kmlRepository)
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

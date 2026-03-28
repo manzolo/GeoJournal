@@ -6,9 +6,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.backup.ShareAvailability
 import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,7 +52,9 @@ data class ListUiState(
 @HiltViewModel
 class ListViewModel @Inject constructor(
     private val repository: GeoPointRepository,
-    private val exporter: GeoPointExporter
+    private val exporter: GeoPointExporter,
+    private val reminderRepository: ReminderRepository,
+    private val kmlRepository: PointKmlRepository
 ) : ViewModel() {
 
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
@@ -56,8 +63,27 @@ class ListViewModel @Inject constructor(
     private val _pendingSharePoint = MutableStateFlow<GeoPoint?>(null)
     val pendingSharePoint: StateFlow<GeoPoint?> = _pendingSharePoint.asStateFlow()
 
+    private val _pendingShareAvailability = MutableStateFlow(ShareAvailability())
+    val pendingShareAvailability: StateFlow<ShareAvailability> = _pendingShareAvailability.asStateFlow()
+
     fun onShareRequested(point: GeoPoint) {
         _pendingSharePoint.value = point
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val kmls = kmlRepository.getByGeoPointId(point.id)
+            val reminders = reminderRepository.observeByGeoPointId(point.id).first()
+            _pendingShareAvailability.value = ShareAvailability(
+                hasPhotos = point.photoUrls.any { !it.startsWith("https://") && !it.startsWith("content://") },
+                hasTags = point.tags.isNotEmpty(),
+                hasKml = kmls.isNotEmpty(),
+                hasNotes = point.notes.isNotBlank(),
+                hasReminders = reminders.any { r ->
+                    r.type == ReminderType.ANNUAL_RECURRING ||
+                    r.type == ReminderType.DATE_RANGE ||
+                    (r.type == ReminderType.SINGLE && r.startDate >= now)
+                }
+            )
+        }
     }
 
     fun onShareConfirmed(message: String?, options: ShareOptions = ShareOptions()) {

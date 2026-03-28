@@ -9,6 +9,7 @@ import it.manzolo.geojournal.data.local.datastore.UserPreferences
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.PointKmlRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.fakes.FakeGeoPointRepository
 import it.manzolo.geojournal.util.MainDispatcherRule
 import kotlinx.coroutines.flow.emptyFlow
@@ -42,11 +43,14 @@ class MapViewModelTest {
     private val kmlRepository: PointKmlRepository = mockk(relaxed = true) {
         every { observeByGeoPointId(any()) } returns emptyFlow()
     }
+    private val reminderRepository: ReminderRepository = mockk(relaxed = true) {
+        every { observeByGeoPointId(any()) } returns emptyFlow()
+    }
 
     @Before
     fun setup() {
         fakeRepo = FakeGeoPointRepository()
-        viewModel = MapViewModel(fakeRepo, exporter, userPrefs, kmlRepository)
+        viewModel = MapViewModel(fakeRepo, exporter, userPrefs, kmlRepository, reminderRepository)
     }
 
     private fun makePoint(
@@ -177,7 +181,7 @@ class MapViewModelTest {
             every { preferences } returns flowOf(UserPreferences(mapLat = 41.9, mapLon = 12.5, mapZoom = 14.0))
             coJustRun { setMapPosition(any(), any(), any()) }
         }
-        val vmWithSavedPosition = MapViewModel(FakeGeoPointRepository(), exporter, prefsWithPosition, kmlRepository)
+        val vmWithSavedPosition = MapViewModel(FakeGeoPointRepository(), exporter, prefsWithPosition, kmlRepository, reminderRepository)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             vmWithSavedPosition.uiState.collect {}

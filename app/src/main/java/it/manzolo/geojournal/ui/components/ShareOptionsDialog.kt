@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -23,15 +24,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import it.manzolo.geojournal.R
+import it.manzolo.geojournal.data.backup.ShareAvailability
 import it.manzolo.geojournal.data.backup.ShareOptions
 
 @Composable
 fun ShareOptionsDialog(
+    availability: ShareAvailability = ShareAvailability(),
     onConfirm: (message: String?, options: ShareOptions) -> Unit,
     onDismiss: () -> Unit
 ) {
     var shareMessage by remember { mutableStateOf("") }
-    var includePhotos by remember { mutableStateOf(true) }
+    var includePhotos by remember { mutableStateOf(availability.hasPhotos) }
     var includeTags by remember { mutableStateOf(false) }
     var includeKml by remember { mutableStateOf(false) }
     var includeNotes by remember { mutableStateOf(false) }
@@ -62,26 +65,31 @@ fun ShareOptionsDialog(
                 ShareCheckRow(
                     label = stringResource(R.string.share_options_photos),
                     checked = includePhotos,
+                    enabled = availability.hasPhotos,
                     onCheckedChange = { includePhotos = it }
                 )
                 ShareCheckRow(
                     label = stringResource(R.string.share_options_tags),
                     checked = includeTags,
+                    enabled = availability.hasTags,
                     onCheckedChange = { includeTags = it }
                 )
                 ShareCheckRow(
                     label = stringResource(R.string.share_options_kml),
                     checked = includeKml,
+                    enabled = availability.hasKml,
                     onCheckedChange = { includeKml = it }
                 )
                 ShareCheckRow(
                     label = stringResource(R.string.share_options_notes),
                     checked = includeNotes,
+                    enabled = availability.hasNotes,
                     onCheckedChange = { includeNotes = it }
                 )
                 ShareCheckRow(
                     label = stringResource(R.string.share_options_reminders),
                     checked = includeReminders,
+                    enabled = availability.hasReminders,
                     onCheckedChange = { includeReminders = it }
                 )
             }
@@ -91,11 +99,11 @@ fun ShareOptionsDialog(
                 onConfirm(
                     shareMessage.ifBlank { null },
                     ShareOptions(
-                        includePhotos = includePhotos,
-                        includeTags = includeTags,
-                        includeKml = includeKml,
-                        includeNotes = includeNotes,
-                        includeReminders = includeReminders
+                        includePhotos = includePhotos && availability.hasPhotos,
+                        includeTags = includeTags && availability.hasTags,
+                        includeKml = includeKml && availability.hasKml,
+                        includeNotes = includeNotes && availability.hasNotes,
+                        includeReminders = includeReminders && availability.hasReminders
                     )
                 )
             }) {
@@ -114,6 +122,7 @@ fun ShareOptionsDialog(
 private fun ShareCheckRow(
     label: String,
     checked: Boolean,
+    enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
@@ -121,12 +130,18 @@ private fun ShareCheckRow(
         modifier = Modifier.fillMaxWidth()
     ) {
         Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange
+            checked = checked && enabled,
+            onCheckedChange = { if (enabled) onCheckedChange(it) },
+            enabled = enabled,
+            colors = CheckboxDefaults.colors(
+                disabledUncheckedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            )
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         )
     }
 }

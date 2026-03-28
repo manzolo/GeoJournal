@@ -8,14 +8,17 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.backup.ShareAvailability
 import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.data.tracking.LocationTrackingService
 import it.manzolo.geojournal.data.tracking.TrackingManager
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
+import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
 import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +45,8 @@ data class PointDetailUiState(
     val showArchiveConfirm: Boolean = false,
     val isTracking: Boolean = false,
     val trackingPointCount: Int = 0,
-    val showShareDialog: Boolean = false
+    val showShareDialog: Boolean = false,
+    val shareAvailability: ShareAvailability = ShareAvailability()
 )
 
 @HiltViewModel
@@ -52,6 +56,7 @@ class PointDetailViewModel @Inject constructor(
     private val visitLogRepository: VisitLogRepository,
     private val reminderRepository: ReminderRepository,
     private val reminderScheduler: ReminderScheduler,
+    private val kmlRepository: PointKmlRepository,
     private val exporter: GeoPointExporter,
     private val trackingManager: TrackingManager,
     savedStateHandle: SavedStateHandle
@@ -143,7 +148,26 @@ class PointDetailViewModel @Inject constructor(
     }
 
     fun onShareRequested() {
-        _uiState.update { it.copy(showShareDialog = true) }
+        val point = _uiState.value.point ?: return
+        val now = System.currentTimeMillis()
+        val futureReminders = _uiState.value.reminders.any { r ->
+            r.type == ReminderType.ANNUAL_RECURRING ||
+            r.type == ReminderType.DATE_RANGE ||
+            (r.type == ReminderType.SINGLE && r.startDate >= now)
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val kmls = kmlRepository.getByGeoPointId(point.id)
+            _uiState.update { it.copy(
+                showShareDialog = true,
+                shareAvailability = ShareAvailability(
+                    hasPhotos = point.photoUrls.any { !it.startsWith("https://") && !it.startsWith("content://") },
+                    hasTags = point.tags.isNotEmpty(),
+                    hasKml = kmls.isNotEmpty(),
+                    hasNotes = point.notes.isNotBlank(),
+                    hasReminders = futureReminders
+                )
+            ) }
+        }
     }
 
     fun onShareConfirmed(message: String?, options: ShareOptions) {

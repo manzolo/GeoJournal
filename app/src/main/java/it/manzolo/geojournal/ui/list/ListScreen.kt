@@ -108,6 +108,7 @@ fun ListScreen(navController: NavController) {
     val viewModel: ListViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val pendingSharePoint by viewModel.pendingSharePoint.collectAsStateWithLifecycle()
+    val pendingShareAvailability by viewModel.pendingShareAvailability.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val shareChooserLabel = stringResource(R.string.point_share)
     var showSortMenu by remember { mutableStateOf(false) }
@@ -137,6 +138,7 @@ fun ListScreen(navController: NavController) {
     // Dialog opzioni di condivisione
     if (pendingSharePoint != null) {
         ShareOptionsDialog(
+            availability = pendingShareAvailability,
             onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
             onDismiss = viewModel::onShareDismissed
         )

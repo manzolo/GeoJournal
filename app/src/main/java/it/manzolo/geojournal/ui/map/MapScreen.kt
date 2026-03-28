@@ -209,6 +209,7 @@ fun MapScreen(
     // Dialog opzioni di condivisione
     if (uiState.pendingSharePoint != null) {
         ShareOptionsDialog(
+            availability = uiState.pendingShareAvailability,
             onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
             onDismiss = viewModel::onShareDismissed
         )
