@@ -60,10 +60,12 @@ data class MapUiState(
     /** Posizione corrente in attesa di conferma aggiornamento parcheggio */
     val pendingParkingLat: Double = 0.0,
     val pendingParkingLon: Double = 0.0,
-    /** KML caricati per i punti visibili, con stato on/off di sessione */
+    /** KML caricati per i punti nel viewport corrente, con stato on/off di sessione */
     val kmlItems: List<KmlSessionItem> = emptyList(),
     /** True = mostra bottom sheet con lista KML */
-    val showKmlPanel: Boolean = false
+    val showKmlPanel: Boolean = false,
+    /** ID dei punti con header espanso nel pannello KML */
+    val expandedKmlPointIds: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -262,8 +264,22 @@ class MapViewModel @Inject constructor(
 
     fun dismissKmlPanel() = _uiState.update { it.copy(showKmlPanel = false) }
 
+    /** Calcola l'half-span in gradi lat/lon per il viewport corrente */
+    private fun viewportHalfSpan(): Double =
+        3.0 * 360.0 / Math.pow(2.0, _uiState.value.zoomLevel)
+
+    /** Filtra i punti attualmente visibili nel viewport della mappa */
+    private fun pointsInViewport(): List<it.manzolo.geojournal.domain.model.GeoPoint> {
+        val state = _uiState.value
+        val half = viewportHalfSpan()
+        return state.points.filter { p ->
+            p.latitude in (state.userLatitude - half)..(state.userLatitude + half) &&
+            p.longitude in (state.userLongitude - half * 1.5)..(state.userLongitude + half * 1.5)
+        }
+    }
+
     private fun loadKmlsForCurrentPoints() {
-        val points = _uiState.value.points
+        val points = pointsInViewport()
         viewModelScope.launch(Dispatchers.IO) {
             val currentActiveIds = _uiState.value.kmlItems
                 .filter { it.isActive }.map { it.kml.id }.toSet()
@@ -276,7 +292,17 @@ class MapViewModel @Inject constructor(
                     )
                 }
             }
-            _uiState.update { it.copy(kmlItems = items) }
+            // Espandi di default tutti i punti che hanno KML
+            val expandedIds = items.map { it.kml.geoPointId }.toSet()
+            _uiState.update { it.copy(kmlItems = items, expandedKmlPointIds = expandedIds) }
+        }
+    }
+
+    fun toggleKmlPointGroup(geoPointId: String) {
+        _uiState.update { state ->
+            val expanded = state.expandedKmlPointIds.toMutableSet()
+            if (geoPointId in expanded) expanded.remove(geoPointId) else expanded.add(geoPointId)
+            state.copy(expandedKmlPointIds = expanded)
         }
     }
 

@@ -26,6 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
@@ -690,8 +692,10 @@ fun MapScreen(
         if (uiState.showKmlPanel) {
             KmlLayerSheet(
                 kmlItems = uiState.kmlItems,
+                expandedPointIds = uiState.expandedKmlPointIds,
                 onDismiss = viewModel::dismissKmlPanel,
-                onToggle = viewModel::toggleKml
+                onToggle = viewModel::toggleKml,
+                onToggleGroup = viewModel::toggleKmlPointGroup
             )
         }
 
@@ -738,16 +742,24 @@ private fun ClusterPickerSheet(
 @Composable
 private fun KmlLayerSheet(
     kmlItems: List<KmlSessionItem>,
+    expandedPointIds: Set<String>,
     onDismiss: () -> Unit,
-    onToggle: (String) -> Unit
+    onToggle: (String) -> Unit,
+    onToggleGroup: (String) -> Unit
 ) {
+    // Raggruppa per punto: geoPointId → (pointTitle, items)
+    val groups = kmlItems
+        .groupBy { it.kml.geoPointId }
+        .entries
+        .sortedBy { (_, items) -> items.first().pointTitle }
+
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
             text = stringResource(R.string.map_kml_panel_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
-        if (kmlItems.isEmpty()) {
+        if (groups.isEmpty()) {
             Text(
                 text = stringResource(R.string.map_kml_no_layers),
                 style = MaterialTheme.typography.bodyMedium,
@@ -760,19 +772,62 @@ private fun KmlLayerSheet(
                     .fillMaxWidth()
                     .fillMaxHeight(0.5f)
             ) {
-                items(kmlItems) { item ->
-                    ListItem(
-                        headlineContent = { Text(item.kml.name) },
-                        supportingContent = { Text(item.pointTitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        trailingContent = {
-                            Switch(
-                                checked = item.isActive,
-                                onCheckedChange = { onToggle(item.kml.id) }
+                groups.forEach { (geoPointId, items) ->
+                    val pointTitle = items.first().pointTitle
+                    val isExpanded = geoPointId in expandedPointIds
+                    val activeCount = items.count { it.isActive }
+
+                    item(key = "header_$geoPointId") {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    pointTitle,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    "${items.size} KML" + if (activeCount > 0) " · $activeCount attivi" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingContent = {
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    contentDescription = null
+                                )
+                            },
+                            modifier = Modifier
+                                .clickable { onToggleGroup(geoPointId) }
+                        )
+                        HorizontalDivider()
+                    }
+
+                    if (isExpanded) {
+                        items(items, key = { it.kml.id }) { item ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        item.kml.name,
+                                        modifier = Modifier.padding(start = 16.dp),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                trailingContent = {
+                                    Switch(
+                                        checked = item.isActive,
+                                        onCheckedChange = { onToggle(item.kml.id) }
+                                    )
+                                },
+                                modifier = Modifier.clickable { onToggle(item.kml.id) }
                             )
-                        },
-                        modifier = Modifier.clickable { onToggle(item.kml.id) }
-                    )
-                    HorizontalDivider()
+                            HorizontalDivider()
+                        }
+                    }
                 }
             }
         }
