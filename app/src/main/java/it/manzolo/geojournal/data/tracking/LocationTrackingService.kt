@@ -84,7 +84,7 @@ class LocationTrackingService : Service() {
         val (geoPointId, coords) = trackingManager.stopTrackingAndCollect()
         scope.launch {
             if (geoPointId != null && coords.size >= 2) {
-                val name = SimpleDateFormat("yyyy-MM-dd_HH:mm", Locale.getDefault()).format(Date())
+                val name = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
                 val content = KmlWriter.buildTrackKml(name, coords)
                 if (content != null) {
                     runCatching { kmlRepository.saveKml(geoPointId, "$name.kml", content) }
