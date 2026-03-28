@@ -135,6 +135,7 @@
 
     <!-- GPS Track Recording -->
     <string name="tracking_start_button">Record session</string>
+    <string name="tracking_info_hint">Records the GPS route while you move. The track is saved as a KML file linked to this point.</string>
     <string name="tracking_stop_button">Stop recording</string>
     <string name="tracking_point_count">%d GPS points recorded</string>
     <string name="tracking_notif_title">Track recording in progress</string>

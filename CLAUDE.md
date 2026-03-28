@@ -138,10 +138,9 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 
 | # | Task | Stato |
 |---|---|---|
-| 8h | Migrazione Google Sign-In → Credential Manager | Da fare |
+| 8h | Migrazione Google Sign-In → Credential Manager | ✅ Done |
 | 9 | Trasferimento dati guest → cloud al login | Da fare |
 | 10 | Offline-first + Sync bidirezionale Firestore | Da fare |
-| 7 | Google Play Billing (unlock Pro) | Da fare (ultimo) |
 
 ---
 
@@ -159,6 +158,6 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 
 | Warning | Nota |
 |---|---|
-| `GoogleSignIn`/`GoogleSignInOptions` deprecated | Task 8h |
+| ~~`GoogleSignIn`/`GoogleSignInOptions` deprecated~~ | ✅ Migrato a Credential Manager |
 | `disallowKotlinSourceSets=false` experimental | Atteso, KSP 2.3+ fix |
 | KSP `MainApplication_ComponentTreeDeps` incremental | Atteso, KSP 2.3+ fix |
