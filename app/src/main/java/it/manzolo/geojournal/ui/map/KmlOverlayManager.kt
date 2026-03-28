@@ -15,6 +15,9 @@ import org.osmdroid.views.overlay.Overlay
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 
+/** Marker subclass used for KML overlays — excluded from the cluster-rebuild removeAll. */
+class KmlMarker(mapView: MapView) : Marker(mapView)
+
 object KmlOverlayManager {
 
     private const val COLOR_START   = 0xFF22C55E.toInt()  // green-500
@@ -85,7 +88,7 @@ object KmlOverlayManager {
             when (geom.type) {
                 KmlGeometryType.POINT -> {
                     val (lon, lat) = geom.coordinates.first()
-                    Marker(mapView).apply {
+                    KmlMarker(mapView).apply {
                         position  = GeoPoint(lat, lon)
                         title     = geom.name.ifBlank { null }
                         icon      = markerForName(mapView, geom.name)

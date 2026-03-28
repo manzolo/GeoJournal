@@ -922,7 +922,7 @@ private fun updateClusteredMarkers(
 ) {
     val zoom = mapView.zoomLevelDouble
     val clusters = clusterPoints(points, zoom)
-    mapView.overlays.removeAll { it is Marker }
+    mapView.overlays.removeAll { it is Marker && it !is KmlMarker }
 
     clusters.forEach { cluster ->
         val marker = Marker(mapView).apply {
