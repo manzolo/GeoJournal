@@ -8,6 +8,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,7 +29,9 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val userPrefs: UserPreferencesRepository,
     private val geoPointRepository: GeoPointRepository,
-    private val geojExporter: GeoPointExporter
+    private val geojExporter: GeoPointExporter,
+    private val reminderRepository: ReminderRepository,
+    private val kmlRepository: PointKmlRepository
 ) : ViewModel() {
 
     // ─── Import .geoj da intent esterno ──────────────────────────────────────
@@ -60,7 +64,13 @@ class MainViewModel @Inject constructor(
             runCatching { geojExporter.importFromUri(uri) }
                 .onSuccess { result ->
                     Log.d(TAG, "importGeojPoint: parsed OK title=${result.point.title}")
-                    runCatching { geoPointRepository.save(result.point) }
+                    runCatching {
+                        geoPointRepository.save(result.point)
+                        result.reminders.forEach { reminderRepository.save(it) }
+                        result.kmlFiles.forEach { (name, bytes) ->
+                            kmlRepository.restoreFromBackup(result.point.id, name, bytes)
+                        }
+                    }
                         .onSuccess {
                             _geojImportMessage.emit("✓ Punto \"${result.point.title}\" importato")
                             if (!result.senderMessage.isNullOrBlank()) {

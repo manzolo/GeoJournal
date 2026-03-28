@@ -9,6 +9,8 @@ import it.manzolo.geojournal.data.backup.BackupManager
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
+import it.manzolo.geojournal.domain.repository.ReminderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,9 @@ class BackupViewModel @Inject constructor(
     private val userPrefsRepository: UserPreferencesRepository,
     private val autoBackupScheduler: AutoBackupScheduler,
     private val geojExporter: GeoPointExporter,
-    private val geoPointRepository: GeoPointRepository
+    private val geoPointRepository: GeoPointRepository,
+    private val reminderRepository: ReminderRepository,
+    private val kmlRepository: PointKmlRepository
 ) : ViewModel() {
 
     sealed class State {
@@ -119,6 +123,10 @@ class BackupViewModel @Inject constructor(
             _state.value = runCatching {
                 val result = geojExporter.importFromUri(uri)
                 geoPointRepository.save(result.point)
+                result.reminders.forEach { reminderRepository.save(it) }
+                result.kmlFiles.forEach { (name, bytes) ->
+                    kmlRepository.restoreFromBackup(result.point.id, name, bytes)
+                }
                 State.ImportPointOk(result.point.title)
             }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione del punto") }
         }

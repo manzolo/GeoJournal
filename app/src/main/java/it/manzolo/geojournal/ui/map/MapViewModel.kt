@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.data.kml.KmlParser
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.model.GeoPoint
@@ -83,11 +84,11 @@ class MapViewModel @Inject constructor(
         _uiState.update { it.copy(pendingSharePoint = point) }
     }
 
-    fun onShareConfirmed(message: String?) {
+    fun onShareConfirmed(message: String?, options: ShareOptions = ShareOptions()) {
         val point = _uiState.value.pendingSharePoint ?: return
         _uiState.update { it.copy(pendingSharePoint = null) }
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { exporter.exportPointToCache(point, message) }
+            runCatching { exporter.exportPointToCache(point, message, options) }
                 .onSuccess { _shareFileEvent.emit(it) }
         }
     }

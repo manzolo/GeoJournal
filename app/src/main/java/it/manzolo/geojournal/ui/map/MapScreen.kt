@@ -52,6 +52,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -94,6 +95,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.components.PointBottomSheet
+import it.manzolo.geojournal.ui.components.ShareOptionsDialog
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlin.math.abs
 import kotlin.math.pow
@@ -204,32 +206,11 @@ fun MapScreen(
         }
     }
 
-    // Dialog messaggio prima di condividere
-    uiState.pendingSharePoint?.let {
-        var shareMessage by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { viewModel.onShareDismissed() },
-            title = { Text(stringResource(R.string.share_message_dialog_title)) },
-            text = {
-                OutlinedTextField(
-                    value = shareMessage,
-                    onValueChange = { if (it.length <= 200) shareMessage = it },
-                    placeholder = { Text(stringResource(R.string.share_message_hint)) },
-                    minLines = 3,
-                    maxLines = 5,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = { viewModel.onShareConfirmed(shareMessage.ifBlank { null }) }) {
-                    Text(stringResource(R.string.point_share))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onShareConfirmed(null) }) {
-                    Text(stringResource(R.string.share_message_skip))
-                }
-            }
+    // Dialog opzioni di condivisione
+    if (uiState.pendingSharePoint != null) {
+        ShareOptionsDialog(
+            onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
+            onDismiss = viewModel::onShareDismissed
         )
     }
 
@@ -704,7 +685,15 @@ fun MapScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 96.dp)
-        )
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                shape = RoundedCornerShape(50),
+                containerColor = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.92f),
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+            )
+        }
     }
 }
 

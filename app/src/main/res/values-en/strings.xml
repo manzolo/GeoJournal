@@ -298,6 +298,12 @@
     <string name="share_message_dialog_title">Add a message</string>
     <string name="share_message_hint">Write something for the recipient… (optional)</string>
     <string name="share_message_skip">Skip</string>
+    <string name="share_options_include_section">Include in sharing</string>
+    <string name="share_options_photos">Photos</string>
+    <string name="share_options_tags">Tags</string>
+    <string name="share_options_kml">KML files</string>
+    <string name="share_options_notes">Personal notes</string>
+    <string name="share_options_reminders">Reminders</string>
 
     <!-- Firebase placeholder notice -->
     <string name="firebase_not_configured">Firebase not configured. Add google-services.json to enable sync.</string>

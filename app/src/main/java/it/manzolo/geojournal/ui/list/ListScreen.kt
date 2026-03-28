@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontStyle
 import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.LocalContext
+import it.manzolo.geojournal.ui.components.ShareOptionsDialog
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -133,32 +134,11 @@ fun ListScreen(navController: NavController) {
         }
     }
 
-    // Dialog messaggio prima di condividere
-    pendingSharePoint?.let {
-        var shareMessage by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { viewModel.onShareDismissed() },
-            title = { Text(stringResource(R.string.share_message_dialog_title)) },
-            text = {
-                OutlinedTextField(
-                    value = shareMessage,
-                    onValueChange = { if (it.length <= 200) shareMessage = it },
-                    placeholder = { Text(stringResource(R.string.share_message_hint)) },
-                    minLines = 3,
-                    maxLines = 5,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = { viewModel.onShareConfirmed(shareMessage.ifBlank { null }) }) {
-                    Text(stringResource(R.string.point_share))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onShareConfirmed(null) }) {
-                    Text(stringResource(R.string.share_message_skip))
-                }
-            }
+    // Dialog opzioni di condivisione
+    if (pendingSharePoint != null) {
+        ShareOptionsDialog(
+            onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
+            onDismiss = viewModel::onShareDismissed
         )
     }
 

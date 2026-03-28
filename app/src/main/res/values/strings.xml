@@ -298,6 +298,12 @@
     <string name="share_message_dialog_title">Aggiungi un messaggio</string>
     <string name="share_message_hint">Scrivi qualcosa per chi riceverà questo punto… (opzionale)</string>
     <string name="share_message_skip">Salta</string>
+    <string name="share_options_include_section">Includi nella condivisione</string>
+    <string name="share_options_photos">Foto</string>
+    <string name="share_options_tags">Tag</string>
+    <string name="share_options_kml">File KML</string>
+    <string name="share_options_notes">Note personali</string>
+    <string name="share_options_reminders">Promemoria</string>
 
     <!-- Firebase placeholder notice -->
     <string name="firebase_not_configured">Firebase non configurato. Aggiungi google-services.json per abilitare la sincronizzazione.</string>

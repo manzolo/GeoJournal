@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import kotlinx.coroutines.Dispatchers
@@ -59,11 +60,11 @@ class ListViewModel @Inject constructor(
         _pendingSharePoint.value = point
     }
 
-    fun onShareConfirmed(message: String?) {
+    fun onShareConfirmed(message: String?, options: ShareOptions = ShareOptions()) {
         val point = _pendingSharePoint.value ?: return
         _pendingSharePoint.value = null
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { exporter.exportPointToCache(point, message) }
+            runCatching { exporter.exportPointToCache(point, message, options) }
                 .onSuccess { _shareFileEvent.emit(it) }
         }
     }

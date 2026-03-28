@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.data.tracking.LocationTrackingService
 import it.manzolo.geojournal.data.tracking.TrackingManager
 import it.manzolo.geojournal.domain.model.GeoPoint
@@ -17,8 +18,12 @@ import it.manzolo.geojournal.data.notification.ReminderScheduler
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.domain.repository.VisitLogRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -36,7 +41,8 @@ data class PointDetailUiState(
     val showDeleteConfirm: Boolean = false,
     val showArchiveConfirm: Boolean = false,
     val isTracking: Boolean = false,
-    val trackingPointCount: Int = 0
+    val trackingPointCount: Int = 0,
+    val showShareDialog: Boolean = false
 )
 
 @HiltViewModel
@@ -54,6 +60,9 @@ class PointDetailViewModel @Inject constructor(
     private val context get() = getApplication<Application>()
 
     private val pointId: String = savedStateHandle.get<String>("pointId") ?: ""
+
+    private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
+    val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
 
     private val _uiState = MutableStateFlow(PointDetailUiState())
     val uiState: StateFlow<PointDetailUiState> = _uiState.asStateFlow()
@@ -133,7 +142,22 @@ class PointDetailViewModel @Inject constructor(
         viewModelScope.launch { reminderRepository.delete(reminder) }
     }
 
-    fun exportGeojToCache(): File? = _uiState.value.point?.let { exporter.exportPointToCache(it) }
+    fun onShareRequested() {
+        _uiState.update { it.copy(showShareDialog = true) }
+    }
+
+    fun onShareConfirmed(message: String?, options: ShareOptions) {
+        _uiState.update { it.copy(showShareDialog = false) }
+        val point = _uiState.value.point ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { exporter.exportPointToCache(point, message, options) }
+                .onSuccess { _shareFileEvent.emit(it) }
+        }
+    }
+
+    fun onShareDismissed() {
+        _uiState.update { it.copy(showShareDialog = false) }
+    }
 
     fun toggleDeleteConfirm() = _uiState.update { it.copy(showDeleteConfirm = !it.showDeleteConfirm) }
 

@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.MediaStore
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -78,6 +77,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -120,6 +120,7 @@ import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
+import it.manzolo.geojournal.ui.components.ShareOptionsDialog
 import it.manzolo.geojournal.ui.map.MapViewModel
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
@@ -155,6 +156,27 @@ fun PointDetailScreen(
     // Feature 1: naviga indietro automaticamente se il punto è eliminato/archiviato
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) navController.popBackStack()
+    }
+
+    // Share file event → apre il chooser di sistema
+    LaunchedEffect(Unit) {
+        viewModel.shareFileEvent.collect { file ->
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/x-geojournal-point"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, null))
+        }
+    }
+
+    // Dialog opzioni di condivisione
+    if (uiState.showShareDialog) {
+        ShareOptionsDialog(
+            onConfirm = { message, options -> viewModel.onShareConfirmed(message, options) },
+            onDismiss = viewModel::onShareDismissed
+        )
     }
 
     // Feature 2: dialog conferma eliminazione
@@ -197,7 +219,17 @@ fun PointDetailScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    shape = RoundedCornerShape(50),
+                    containerColor = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text(uiState.point?.title ?: fallbackTitle) },
@@ -250,12 +282,8 @@ fun PointDetailScreen(
                 onDeleteReminder = viewModel::deleteReminder,
                 onArchiveToggle = viewModel::toggleArchiveConfirm,
                 onDelete = viewModel::toggleDeleteConfirm,
-                onShareGeoj = {
-                    scope.launch {
-                        val file = withContext(Dispatchers.IO) { viewModel.exportGeojToCache() }
-                        file?.let { shareGeojPoint(context, it) }
-                    }
-                },
+                onShareGeoj = viewModel::onShareRequested,
+                onMessage = { snackbarHostState.showSnackbar(it) },
                 navController = navController,
                 modifier = Modifier.padding(innerPadding)
             )
@@ -279,6 +307,7 @@ private fun PointDetailContent(
     onArchiveToggle: () -> Unit,
     onDelete: () -> Unit,
     onShareGeoj: () -> Unit,
+    onMessage: suspend (String) -> Unit,
     navController: NavController,
     modifier: Modifier = Modifier
 ) {
@@ -289,7 +318,8 @@ private fun PointDetailContent(
         PhotoViewerDialog(
             urls = point.photoUrls,
             initialIndex = index,
-            onDismiss = { selectedPhotoIndex = null }
+            onDismiss = { selectedPhotoIndex = null },
+            onMessage = onMessage
         )
     }
 
@@ -765,7 +795,7 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: () -> Unit) {
+private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: () -> Unit, onMessage: suspend (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = initialIndex) { urls.size }
@@ -872,10 +902,10 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row {
-                    IconButton(onClick = { scope.launch { sharePhoto(context, currentUrl) } }) {
+                    IconButton(onClick = { scope.launch { sharePhoto(context, currentUrl, onMessage) } }) {
                         Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.point_share), tint = Color.White)
                     }
-                    IconButton(onClick = { scope.launch { saveToGallery(context, currentUrl) } }) {
+                    IconButton(onClick = { scope.launch { saveToGallery(context, currentUrl, onMessage) } }) {
                         Icon(Icons.Filled.FileDownload, contentDescription = stringResource(R.string.detail_save_to_gallery), tint = Color.White)
                     }
                 }
@@ -903,25 +933,10 @@ private suspend fun loadBitmap(context: android.content.Context, url: String): a
     return (result as? SuccessResult)?.drawable?.toBitmap()
 }
 
-private suspend fun shareGeojPoint(context: android.content.Context, file: java.io.File) {
-    val uri = withContext(Dispatchers.IO) {
-        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    }
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "application/x-geojournal-point"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    withContext(Dispatchers.Main) {
-        context.startActivity(Intent.createChooser(intent, null))
-    }
-}
 
-private suspend fun sharePhoto(context: android.content.Context, url: String) {
+private suspend fun sharePhoto(context: android.content.Context, url: String, onMessage: suspend (String) -> Unit) {
     val bitmap = loadBitmap(context, url) ?: run {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, context.getString(R.string.detail_photo_error), Toast.LENGTH_SHORT).show()
-        }
+        onMessage(context.getString(R.string.detail_photo_error))
         return
     }
     val cacheFile = withContext(Dispatchers.IO) {
@@ -940,11 +955,9 @@ private suspend fun sharePhoto(context: android.content.Context, url: String) {
     }
 }
 
-private suspend fun saveToGallery(context: android.content.Context, url: String) {
+private suspend fun saveToGallery(context: android.content.Context, url: String, onMessage: suspend (String) -> Unit) {
     val bitmap = loadBitmap(context, url) ?: run {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, context.getString(R.string.detail_photo_error), Toast.LENGTH_SHORT).show()
-        }
+        onMessage(context.getString(R.string.detail_photo_error))
         return
     }
     withContext(Dispatchers.IO) {
@@ -970,7 +983,5 @@ private suspend fun saveToGallery(context: android.content.Context, url: String)
             android.media.MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), null, null)
         }
     }
-    withContext(Dispatchers.Main) {
-        Toast.makeText(context, context.getString(R.string.detail_photo_saved), Toast.LENGTH_SHORT).show()
-    }
+    onMessage(context.getString(R.string.detail_photo_saved))
 }
