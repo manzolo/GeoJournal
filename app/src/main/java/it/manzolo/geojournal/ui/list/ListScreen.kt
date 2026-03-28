@@ -196,7 +196,7 @@ fun ListScreen(navController: NavController) {
                             viewModel.onShareRequested(point)
                         }
                     )
-                    if (state.showArchived) {
+                    if (point.isArchived) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_unarchive_point)) },
                             leadingIcon = { Icon(Icons.Filled.Unarchive, null) },
@@ -454,7 +454,7 @@ fun ListScreen(navController: NavController) {
                             LaunchedEffect(swipeState.currentValue) {
                                 when (swipeState.currentValue) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
-                                        if (state.showArchived) viewModel.unarchivePoint(point)
+                                        if (point.isArchived) viewModel.unarchivePoint(point)
                                         else viewModel.archivePoint(point)
                                         swipeState.snapTo(SwipeToDismissBoxValue.Settled)
                                     }
@@ -482,13 +482,13 @@ fun ListScreen(navController: NavController) {
                                         else    -> Color.Transparent
                                     }
                                     val icon = when {
-                                        isRight -> if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                                        isRight -> if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
                                         isLeft  -> Icons.Filled.Delete
                                         else    -> null
                                     }
                                     val iconTint = if (isLeft) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF5D4037)
                                     val label = when {
-                                        isRight -> stringResource(if (state.showArchived) R.string.point_unarchive else R.string.point_archive)
+                                        isRight -> stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive)
                                         isLeft  -> stringResource(R.string.point_delete_confirm_button)
                                         else    -> null
                                     }
@@ -520,7 +520,8 @@ fun ListScreen(navController: NavController) {
                                 GeoPointCard(
                                     point = point,
                                     onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
-                                    onLongClick = { contextMenuPoint = point }
+                                    onLongClick = { contextMenuPoint = point },
+                                    showArchivedBadge = state.isSearchingAll
                                 )
                             }
                         }
@@ -533,7 +534,12 @@ fun ListScreen(navController: NavController) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun GeoPointCard(
+    point: GeoPoint,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    showArchivedBadge: Boolean = false
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -596,6 +602,32 @@ private fun GeoPointCard(point: GeoPoint, onClick: () -> Unit, onLongClick: () -
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+                if (showArchivedBadge && point.isArchived) {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Filled.Archive,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = stringResource(R.string.list_badge_archived),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontStyle = FontStyle.Italic
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(

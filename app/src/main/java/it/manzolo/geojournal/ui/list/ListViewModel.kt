@@ -38,7 +38,8 @@ data class ListUiState(
     val selectedTags: Set<String> = emptySet(),
     val sortOrder: SortOrder = SortOrder.NEWEST,
     val isLoading: Boolean = true,
-    val showArchived: Boolean = false
+    val showArchived: Boolean = false,
+    val isSearchingAll: Boolean = false
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,10 +77,18 @@ class ListViewModel @Inject constructor(
     private val _sortOrder = MutableStateFlow(SortOrder.NEWEST)
     private val _showArchived = MutableStateFlow(false)
 
+    private val _pointsSource = combine(_showArchived, _query) { showArchived, query ->
+        showArchived to query
+    }.flatMapLatest { (showArchived, query) ->
+        when {
+            query.isNotBlank() -> repository.observeAll()
+            showArchived -> repository.observeArchived()
+            else -> repository.observeActive()
+        }
+    }
+
     val uiState: StateFlow<ListUiState> = combine(
-        _showArchived.flatMapLatest { archived ->
-            if (archived) repository.observeArchived() else repository.observeActive()
-        },
+        _pointsSource,
         _query,
         _selectedTags,
         _sortOrder,
@@ -98,11 +107,12 @@ class ListViewModel @Inject constructor(
                 matchesQuery && matchesTags
             }
             .let { list ->
-                when (sortOrder) {
+                val sorted = when (sortOrder) {
                     SortOrder.NEWEST -> list.sortedByDescending { it.createdAt }
                     SortOrder.OLDEST -> list.sortedBy { it.createdAt }
                     SortOrder.TITLE_AZ -> list.sortedBy { it.title.lowercase() }
                 }
+                if (query.isNotBlank()) sorted.sortedBy { it.isArchived } else sorted
             }
 
         ListUiState(
@@ -112,7 +122,8 @@ class ListViewModel @Inject constructor(
             selectedTags = selectedTags,
             sortOrder = sortOrder,
             isLoading = false,
-            showArchived = showArchived
+            showArchived = showArchived,
+            isSearchingAll = query.isNotBlank()
         )
     }.stateIn(
         scope = viewModelScope,

@@ -214,6 +214,8 @@ fun MapScreen(
     val pointsRef = remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
     // Punti del cluster troppo vicini da separare visivamente → mostra il picker
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
+    // Marker posizione utente (piazzato dal FAB MyLocation)
+    val userLocationMarkerRef = remember { mutableStateOf<UserLocationMarker?>(null) }
 
     // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
     // Al primo avvio usa lastKnownLocation (sincrona, nessun salto visivo).
@@ -421,6 +423,16 @@ fun MapScreen(
                 if (locationPermission.status.isGranted) {
                     coroutineScope.launch {
                         getFreshLocation(context)?.let { (lat, lon) ->
+                            userLocationMarkerRef.value?.let { mapView.overlays.remove(it) }
+                            val marker = UserLocationMarker(mapView).apply {
+                                position = OsmGeoPoint(lat, lon)
+                                icon = createMyLocationDrawable(context)
+                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                setOnMarkerClickListener { _, _ -> true }
+                            }
+                            mapView.overlays.add(marker)
+                            userLocationMarkerRef.value = marker
+                            mapView.invalidate()
                             mapView.controller.animateTo(OsmGeoPoint(lat, lon))
                         }
                     }
@@ -691,7 +703,7 @@ private fun updateClusteredMarkers(
 ) {
     val zoom = mapView.zoomLevelDouble
     val clusters = clusterPoints(points, zoom)
-    mapView.overlays.removeAll { it is Marker }
+    mapView.overlays.removeAll { it is Marker && it !is UserLocationMarker }
 
     clusters.forEach { cluster ->
         val marker = Marker(mapView).apply {
@@ -876,6 +888,44 @@ private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable 
         textSize = 13f * d
         typeface = Typeface.DEFAULT_BOLD
         textAlign = Paint.Align.CENTER
+    })
+
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+/** Marker dedicato alla posizione utente — escluso dal reset cluster. */
+private class UserLocationMarker(mapView: MapView) : Marker(mapView)
+
+/**
+ * Punto "Sono qui": glow blu esterno + anello bianco + disco blu centrale.
+ * Stile simile a Google Maps / Apple Maps.
+ */
+private fun createMyLocationDrawable(context: Context): BitmapDrawable {
+    val d      = context.resources.displayMetrics.density
+    val glowR  = 17f * d
+    val ringR  = 12f * d
+    val dotR   =  9f * d
+    val size   = (glowR * 2 + 2f * d).toInt()
+    val cx = size / 2f
+    val cy = size / 2f
+
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Glow esterno semitrasparente
+    canvas.drawCircle(cx, cy, glowR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.argb(55, 33, 150, 243)
+        style = Paint.Style.FILL
+    })
+    // Anello bianco
+    canvas.drawCircle(cx, cy, ringR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        style = Paint.Style.FILL
+    })
+    // Disco blu
+    canvas.drawCircle(cx, cy, dotR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.rgb(33, 150, 243)
+        style = Paint.Style.FILL
     })
 
     return BitmapDrawable(context.resources, bitmap)
