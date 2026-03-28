@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import os
@@ -201,6 +202,23 @@ def photo_exif(photo_path):
 
 _SEMICIRCLES_TO_DEG = 180.0 / (2 ** 31)
 
+# Self-contained SVG icons for KML start/end markers (no external URLs)
+def _svg_b64(svg: str) -> str:
+    return "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
+
+_KML_ICON_START = _svg_b64(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+    '<circle cx="16" cy="16" r="14" fill="#22c55e" stroke="white" stroke-width="2.5"/>'
+    '<polygon points="12,9 12,23 24,16" fill="white"/>'
+    '</svg>'
+)
+_KML_ICON_END = _svg_b64(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+    '<circle cx="16" cy="16" r="14" fill="#ef4444" stroke="white" stroke-width="2.5"/>'
+    '<rect x="10" y="10" width="12" height="12" fill="white"/>'
+    '</svg>'
+)
+
 
 def _fit_to_kml(fit_bytes: bytes, activity_name: str) -> str:
     """Parse a Garmin .fit file and return a KML string."""
@@ -247,12 +265,12 @@ def _fit_to_kml(fit_bytes: bytes, activity_name: str) -> str:
     </Style>
     <Style id="startStyle">
       <IconStyle><color>ff00cc00</color><scale>1.2</scale>
-        <Icon><href>http://maps.google.com/mapfiles/kml/paddle/go.png</href></Icon>
+        <Icon><href>{_KML_ICON_START}</href></Icon>
       </IconStyle>
     </Style>
     <Style id="endStyle">
       <IconStyle><color>ff0000cc</color><scale>1.2</scale>
-        <Icon><href>http://maps.google.com/mapfiles/kml/paddle/stop.png</href></Icon>
+        <Icon><href>{_KML_ICON_END}</href></Icon>
       </IconStyle>
     </Style>
     <Placemark>

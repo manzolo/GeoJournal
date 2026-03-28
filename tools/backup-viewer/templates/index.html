@@ -977,11 +977,35 @@ document.addEventListener('keydown', e => {
 // ── KML overlay management ────────────────────────────────────────────────────
 const _kmlLayers = new Map(); // key = pointId_url → Leaflet layer
 
+function _makeKmlGeoJsonLayer() {
+  return L.geoJSON(null, {
+    pointToLayer(feature, latlng) {
+      const n = (feature.properties && feature.properties.name) || '';
+      const nameLow = n.toLowerCase();
+      let color = '#6c8cff', radius = 7;
+      if (nameLow === 'partenza') { color = '#22c55e'; radius = 9; }
+      else if (nameLow === 'arrivo')   { color = '#ef4444'; radius = 9; }
+      const marker = L.circleMarker(latlng, {
+        radius, fillColor: color, color: 'white',
+        weight: 2.5, fillOpacity: 1
+      });
+      if (n) marker.bindTooltip(n, { permanent: false, direction: 'top' });
+      return marker;
+    },
+    style() {
+      return { color: '#4477ff', weight: 3, opacity: 0.9 };
+    },
+    onEachFeature(feature, layer) {
+      const desc = feature.properties && feature.properties.description;
+      if (desc) layer.bindPopup(desc);
+    }
+  });
+}
+
 function toggleKmlLayer(pointId, url, name, btnId) {
   const key = `${pointId}|${url}`;
   const btn = document.getElementById(btnId);
   if (_kmlLayers.has(key)) {
-    // already loaded → remove
     map.removeLayer(_kmlLayers.get(key));
     _kmlLayers.delete(key);
     if (btn) {
@@ -989,11 +1013,11 @@ function toggleKmlLayer(pointId, url, name, btnId) {
       btn.querySelector('span:last-child').textContent = 'mostra';
     }
   } else {
-    // load and add
     if (btn) btn.querySelector('span:last-child').textContent = '...';
-    const layer = omnivore.kml(url)
+    const customLayer = _makeKmlGeoJsonLayer();
+    const layer = omnivore.kml(url, null, customLayer)
       .on('ready', () => {
-        map.fitBounds(layer.getBounds());
+        try { map.fitBounds(layer.getBounds()); } catch (_) {}
         if (btn) {
           btn.classList.add('active');
           btn.querySelector('span:last-child').textContent = 'nascondi';
