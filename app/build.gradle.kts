@@ -15,8 +15,8 @@ android {
         applicationId = "it.manzolo.geojournal"
         minSdk = 26
         targetSdk = 36
-        versionCode = 102
-        versionName = "0.5.10"
+        versionCode = 103
+        versionName = "0.5.11"
         
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -114,6 +114,9 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+
+    // ExifInterface
+    implementation(libs.androidx.exifinterface)
 
     // Firebase
     implementation(platform(libs.firebase.bom))
