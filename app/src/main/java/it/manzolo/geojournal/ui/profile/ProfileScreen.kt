@@ -797,6 +797,13 @@ private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel
                 onCheckedChange = viewModel::setSyncGeoPointsEnabled
             )
             Spacer(Modifier.height(4.dp))
+            SyncToggleRow(
+                title = stringResource(R.string.profile_sync_photos_title),
+                desc = stringResource(R.string.profile_sync_photos_desc),
+                checked = uiState.syncPhotosEnabled,
+                onCheckedChange = viewModel::setSyncPhotosEnabled
+            )
+            Spacer(Modifier.height(4.dp))
             HorizontalDivider()
             Spacer(Modifier.height(4.dp))
             SyncToggleRow(

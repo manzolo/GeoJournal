@@ -42,4 +42,5 @@ class FakeReminderRepository : ReminderRepository {
     }
 
     override suspend fun pullFromFirestore(): Int = 0
+    override suspend fun syncAllToFirestore() = Unit
 }

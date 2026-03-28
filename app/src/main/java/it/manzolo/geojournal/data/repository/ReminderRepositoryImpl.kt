@@ -89,6 +89,33 @@ class ReminderRepositoryImpl @Inject constructor(
         } catch (_: Exception) { }
     }
 
+    // ─── Sync all locals → Firestore (retry) ───────────────────────────────
+
+    override suspend fun syncAllToFirestore() {
+        if (!userPrefs.preferences.first().syncRemindersEnabled) return
+        val uid = auth.currentUser?.uid ?: return
+        dao.getAll().forEach { entity ->
+            try {
+                val reminder = entity.toDomain()
+                val data = mapOf(
+                    "id" to reminder.id,
+                    "geoPointId" to reminder.geoPointId,
+                    "title" to reminder.title,
+                    "startDate" to reminder.startDate,
+                    "endDate" to reminder.endDate,
+                    "type" to reminder.type.name,
+                    "isActive" to reminder.isActive,
+                    "notificationId" to reminder.notificationId
+                )
+                firestore
+                    .collection("users").document(uid)
+                    .collection("reminders").document(reminder.id)
+                    .set(data)
+                    .await()
+            } catch (_: Exception) { }
+        }
+    }
+
     // ─── Pull da Firestore al login ─────────────────────────────────────────
 
     override suspend fun pullFromFirestore(): Int {

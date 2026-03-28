@@ -85,6 +85,29 @@ class VisitLogRepositoryImpl @Inject constructor(
         } catch (_: Exception) { }
     }
 
+    // ─── Sync all locals → Firestore (retry) ───────────────────────────────
+
+    override suspend fun syncAllToFirestore() {
+        if (!userPrefs.preferences.first().syncVisitLogsEnabled) return
+        val uid = auth.currentUser?.uid ?: return
+        dao.getAll().forEach { entity ->
+            try {
+                val entry = entity.toDomain()
+                val data = mapOf(
+                    "id" to entry.id,
+                    "geoPointId" to entry.geoPointId,
+                    "visitedAt" to entry.visitedAt,
+                    "note" to entry.note
+                )
+                firestore
+                    .collection("users").document(uid)
+                    .collection("visit_logs").document(entry.id)
+                    .set(data)
+                    .await()
+            } catch (_: Exception) { }
+        }
+    }
+
     // ─── Pull da Firestore al login ─────────────────────────────────────────
 
     override suspend fun pullFromFirestore(): Int {

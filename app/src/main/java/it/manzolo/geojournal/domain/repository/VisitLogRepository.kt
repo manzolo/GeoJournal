@@ -11,4 +11,5 @@ interface VisitLogRepository {
     suspend fun logVisit(geoPointId: String, note: String = "")
     suspend fun delete(entry: VisitLogEntry)
     suspend fun pullFromFirestore(): Int
+    suspend fun syncAllToFirestore()
 }

@@ -315,8 +315,8 @@
     <string name="onboarding_guest_body">The most private option. Your places, photos, reminders and visits stay only on this device — no server, no cloud, not even I as the developer can see them. To avoid losing your data, export a periodic backup from Profile → Export backup.</string>
     <string name="onboarding_guest_badge">⭐ Recommended for privacy · No registration</string>
     <string name="onboarding_cloud_title">Synced to the cloud</string>
-    <string name="onboarding_cloud_body">With a Google account you can sync your data to Firebase — but nothing is sent automatically. You decide what to share: points, reminders and visits can be toggled individually from Profile → Sync &amp; Privacy. Everything is OFF by default. Photos and audio always stay on your device only — they are never uploaded to any server. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console. If maximum privacy matters to you, use guest mode.</string>
-    <string name="onboarding_cloud_badge">Opt-in backup · Photos always local</string>
+    <string name="onboarding_cloud_body">With a Google account you can sync your data to Firebase — but nothing is sent automatically. You decide what to share: enable or disable points, photos, reminders and visits individually from Profile → Sync &amp; Privacy. Everything is OFF by default. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console. If maximum privacy matters to you, use guest mode.</string>
+    <string name="onboarding_cloud_badge">Opt-in backup · Everything OFF by default</string>
     <string name="onboarding_open_source_note">🔓 GeoJournal is open source (AGPL-3.0): the code is public on GitHub and anyone can verify what it does with your data. You don\'t have to take my word for it.</string>
     <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
     <string name="onboarding_cta">Got it</string>
