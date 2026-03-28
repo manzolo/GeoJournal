@@ -44,6 +44,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontStyle
 import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.LocalContext
@@ -62,6 +63,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -111,6 +115,8 @@ fun ListScreen(navController: NavController) {
     var archiveConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteTagConfirm by remember { mutableStateOf<String?>(null) }
     var tagsExpanded by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Emette il file .geoj da condividere via share sheet
     LaunchedEffect(Unit) {
@@ -346,6 +352,17 @@ fun ListScreen(navController: NavController) {
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_point_title))
             }
+        },
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    shape = RoundedCornerShape(50),
+                    containerColor = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+                )
+            }
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
@@ -447,6 +464,8 @@ fun ListScreen(navController: NavController) {
                             BuyMeCoffeeBanner(context = context)
                         }
                         items(state.points, key = { it.id }) { point ->
+                            val archivedMsg = stringResource(R.string.list_swipe_archived)
+                            val unarchivedMsg = stringResource(R.string.list_swipe_unarchived)
                             val swipeState = rememberSwipeToDismissBoxState(
                                 positionalThreshold = { it * 0.35f }
                             )
@@ -454,8 +473,13 @@ fun ListScreen(navController: NavController) {
                             LaunchedEffect(swipeState.currentValue) {
                                 when (swipeState.currentValue) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
-                                        if (point.isArchived) viewModel.unarchivePoint(point)
-                                        else viewModel.archivePoint(point)
+                                        if (point.isArchived) {
+                                            viewModel.unarchivePoint(point)
+                                            scope.launch { snackbarHostState.showSnackbar(unarchivedMsg) }
+                                        } else {
+                                            viewModel.archivePoint(point)
+                                            scope.launch { snackbarHostState.showSnackbar(archivedMsg) }
+                                        }
                                         swipeState.snapTo(SwipeToDismissBoxValue.Settled)
                                     }
                                     SwipeToDismissBoxValue.EndToStart -> {

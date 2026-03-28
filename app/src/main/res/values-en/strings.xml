@@ -141,6 +141,8 @@
     <string name="list_search_placeholder">Search your memories…</string>
     <string name="list_search_clear">Clear</string>
     <string name="list_badge_archived">Archived</string>
+    <string name="list_swipe_archived">Point archived</string>
+    <string name="list_swipe_unarchived">Point restored</string>
     <string name="list_view_on_map">View on map</string>
     <string name="list_delete_point_title">Delete point</string>
     <string name="list_delete_point_message">Delete \"%s\"? This action cannot be undone.</string>

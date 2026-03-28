@@ -141,6 +141,8 @@
     <string name="list_search_placeholder">Cerca nei tuoi ricordi…</string>
     <string name="list_search_clear">Cancella</string>
     <string name="list_badge_archived">Archiviato</string>
+    <string name="list_swipe_archived">Punto archiviato</string>
+    <string name="list_swipe_unarchived">Punto ripristinato</string>
     <string name="list_view_on_map">Vedi sulla mappa</string>
     <string name="list_delete_point_title">Elimina punto</string>
     <string name="list_delete_point_message">Vuoi eliminare \"%s\"? L\'operazione non è reversibile.</string>
