@@ -1,12 +1,15 @@
 package it.manzolo.geojournal.ui.detail
 
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
+import it.manzolo.geojournal.data.tracking.LocationTrackingService
+import it.manzolo.geojournal.data.tracking.TrackingManager
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.VisitLogEntry
@@ -31,7 +34,9 @@ data class PointDetailUiState(
     val reminders: List<Reminder> = emptyList(),
     val isDeleted: Boolean = false,
     val showDeleteConfirm: Boolean = false,
-    val showArchiveConfirm: Boolean = false
+    val showArchiveConfirm: Boolean = false,
+    val isTracking: Boolean = false,
+    val trackingPointCount: Int = 0
 )
 
 @HiltViewModel
@@ -42,6 +47,7 @@ class PointDetailViewModel @Inject constructor(
     private val reminderRepository: ReminderRepository,
     private val reminderScheduler: ReminderScheduler,
     private val exporter: GeoPointExporter,
+    private val trackingManager: TrackingManager,
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(application) {
 
@@ -54,6 +60,36 @@ class PointDetailViewModel @Inject constructor(
 
     init {
         loadPoint()
+        observeTrackingState()
+    }
+
+    private fun observeTrackingState() {
+        viewModelScope.launch {
+            trackingManager.state.collect { trackState ->
+                val isForThisPoint = trackState.isTracking && trackState.geoPointId == pointId
+                _uiState.update {
+                    it.copy(
+                        isTracking = isForThisPoint,
+                        trackingPointCount = if (isForThisPoint) trackState.pointCount else 0
+                    )
+                }
+            }
+        }
+    }
+
+    fun startTracking() {
+        val intent = Intent(context, LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_START
+            putExtra(LocationTrackingService.EXTRA_GEO_POINT_ID, pointId)
+        }
+        context.startForegroundService(intent)
+    }
+
+    fun stopTracking() {
+        val intent = Intent(context, LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_STOP
+        }
+        context.startService(intent)
     }
 
     private fun loadPoint() {

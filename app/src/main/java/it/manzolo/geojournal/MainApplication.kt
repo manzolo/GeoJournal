@@ -16,6 +16,7 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.notification.ReminderBroadcastReceiver
+import it.manzolo.geojournal.data.tracking.LocationTrackingService
 import it.manzolo.geojournal.data.worker.RescheduleWorker
 import it.manzolo.geojournal.data.worker.SyncUnsyncedPointsWorker
 import kotlinx.coroutines.CoroutineScope
@@ -46,15 +47,25 @@ class MainApplication : Application(), Configuration.Provider {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                ReminderBroadcastReceiver.CHANNEL_ID,
-                getString(R.string.notif_channel_reminders_name),
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = getString(R.string.notif_channel_reminders_desc)
-            }
-            getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    ReminderBroadcastReceiver.CHANNEL_ID,
+                    getString(R.string.notif_channel_reminders_name),
+                    NotificationManager.IMPORTANCE_DEFAULT
+                ).apply {
+                    description = getString(R.string.notif_channel_reminders_desc)
+                }
+            )
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    LocationTrackingService.CHANNEL_ID,
+                    getString(R.string.notif_channel_tracking_name),
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = getString(R.string.notif_channel_tracking_desc)
+                }
+            )
         }
     }
 

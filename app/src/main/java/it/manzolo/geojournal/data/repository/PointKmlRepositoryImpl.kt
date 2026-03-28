@@ -60,4 +60,13 @@ class PointKmlRepositoryImpl @Inject constructor(
         dao.insert(kml.toEntity())
         return kml
     }
+
+    override suspend fun saveKml(geoPointId: String, name: String, content: String): PointKml {
+        val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
+        val dest = File(dir, "${UUID.randomUUID()}.kml")
+        dest.writeText(content, Charsets.UTF_8)
+        val kml = PointKml(geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
+        dao.insert(kml.toEntity())
+        return kml
+    }
 }

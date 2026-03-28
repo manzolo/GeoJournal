@@ -130,6 +130,18 @@
     <!-- Notification channel -->
     <string name="notif_channel_reminders_name">Promemoria luoghi</string>
     <string name="notif_channel_reminders_desc">Notifiche per i tuoi luoghi speciali</string>
+    <string name="notif_channel_tracking_name">Registrazione percorso</string>
+    <string name="notif_channel_tracking_desc">Notifica attiva durante la registrazione GPS</string>
+
+    <!-- GPS Track Recording -->
+    <string name="tracking_start_button">Registra sessione</string>
+    <string name="tracking_stop_button">Stop registrazione</string>
+    <string name="tracking_point_count">%d punti GPS registrati</string>
+    <string name="tracking_notif_title">Registrazione percorso in corso</string>
+    <string name="tracking_notif_text">GeoJournal sta registrando il tuo percorso GPS</string>
+    <string name="tracking_action_stop">Stop</string>
+    <string name="tracking_too_few_points">Percorso troppo breve per essere salvato (min. 2 punti)</string>
+    <string name="tracking_permission_denied">Permesso posizione negato, impossibile registrare</string>
 
     <!-- List Screen -->
     <string name="list_title">Il tuo diario</string>

@@ -1,10 +1,15 @@
 package it.manzolo.geojournal.ui.detail
 
+import android.Manifest
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -73,6 +78,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -135,6 +142,15 @@ fun PointDetailScreen(
     val fallbackTitle = stringResource(R.string.detail_title_fallback)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val permissionDeniedMsg = stringResource(R.string.tracking_permission_denied)
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) viewModel.startTracking()
+        else scope.launch { snackbarHostState.showSnackbar(permissionDeniedMsg) }
+    }
 
     // Feature 1: naviga indietro automaticamente se il punto è eliminato/archiviato
     LaunchedEffect(uiState.isDeleted) {
@@ -181,6 +197,7 @@ fun PointDetailScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(uiState.point?.title ?: fallbackTitle) },
@@ -218,6 +235,16 @@ fun PointDetailScreen(
                 point = uiState.point!!,
                 visitLogs = uiState.visitLogs,
                 reminders = uiState.reminders,
+                isTracking = uiState.isTracking,
+                trackingPointCount = uiState.trackingPointCount,
+                onStartTracking = {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (hasPermission) viewModel.startTracking()
+                    else locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onStopTracking = viewModel::stopTracking,
                 onLogVisitToday = viewModel::logVisitToday,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
@@ -242,6 +269,10 @@ private fun PointDetailContent(
     point: GeoPoint,
     visitLogs: List<VisitLogEntry>,
     reminders: List<Reminder>,
+    isTracking: Boolean,
+    trackingPointCount: Int,
+    onStartTracking: () -> Unit,
+    onStopTracking: () -> Unit,
     onLogVisitToday: () -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
@@ -560,6 +591,38 @@ private fun PointDetailContent(
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer
                     )
+                }
+                // ── Registrazione percorso GPS ────────────────────────────────
+                if (!isTracking) {
+                    Button(
+                        onClick = onStartTracking,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.tracking_start_button))
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            stringResource(R.string.tracking_point_count, trackingPointCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Button(
+                            onClick = onStopTracking,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.tracking_stop_button))
+                        }
+                    }
                 }
             }
         }

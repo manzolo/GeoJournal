@@ -130,6 +130,18 @@
     <!-- Notification channel -->
     <string name="notif_channel_reminders_name">Place reminders</string>
     <string name="notif_channel_reminders_desc">Notifications for your special places</string>
+    <string name="notif_channel_tracking_name">Track recording</string>
+    <string name="notif_channel_tracking_desc">Active notification during GPS recording</string>
+
+    <!-- GPS Track Recording -->
+    <string name="tracking_start_button">Record session</string>
+    <string name="tracking_stop_button">Stop recording</string>
+    <string name="tracking_point_count">%d GPS points recorded</string>
+    <string name="tracking_notif_title">Track recording in progress</string>
+    <string name="tracking_notif_text">GeoJournal is recording your GPS track</string>
+    <string name="tracking_action_stop">Stop</string>
+    <string name="tracking_too_few_points">Track too short to save (min. 2 points)</string>
+    <string name="tracking_permission_denied">Location permission denied, cannot record</string>
 
     <!-- List Screen -->
     <string name="list_title">My journal</string>
