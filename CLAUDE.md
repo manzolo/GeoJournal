@@ -45,8 +45,9 @@ app/
 │   │   └── datastore/    # UserPreferencesRepository
 │   ├── remote/           # FirebaseAuthRepositoryImpl, FirestoreRepository
 │   ├── backup/           # BackupManager, GeoPointExporter, AutoBackupWorker
-│   ├── kml/              # KmlParser (XmlPullParser, no osmdroid-bonuspack)
+│   ├── kml/              # KmlParser (XmlPullParser), KmlWriter (genera KML da traccia)
 │   ├── photo/            # ExifReader (ExifInterface, solo file locali)
+│   ├── tracking/         # LocationTrackingService (foreground), TrackingManager (singleton state)
 │   └── repository/       # PointKmlRepositoryImpl (filesDir/kmls/{geoPointId}/)
 ├── domain/
 │   ├── model/            # GeoPoint, PointKml, ...
@@ -147,7 +148,8 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 ## Feature principali
 
 - **Sezione "Dettagli aggiuntivi" (AddEditScreen):** collassata di default, auto-espansa se il punto ha già tag/reminders/rating/notes/kml. Badge riassuntivi quando collassata.
-- **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser` (no osmdroid-bonuspack). Storage in `filesDir/kmls/{geoPointId}/`.
+- **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser` (no osmdroid-bonuspack). Storage in `filesDir/kmls/{geoPointId}/`. Marker custom Canvas (verde ▶ Partenza, rosso ■ Arrivo). `KmlMarker` subclass esclusa dal `removeAll` clustering.
+- **Tracciamento GPS (tracking):** `LocationTrackingService` foreground service (tipo `location`), avviato da `PointDetailScreen`. Ogni 5s o 5m registra coordinate in `TrackingManager` (singleton Hilt). Allo stop genera KML via `KmlWriter` e lo salva via `PointKmlRepository.saveKml()`. Permessi: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`.
 - **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.
 - **EXIF foto:** `ExifReader` legge `dateTaken` + `cameraModel` da file locali (off-thread via IO dispatcher). Null silenzioso per URL HTTPS. Mostrato come strip semitrasparente nel PhotoViewerDialog.
 
