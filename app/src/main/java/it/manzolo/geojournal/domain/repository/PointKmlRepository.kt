@@ -11,4 +11,6 @@ interface PointKmlRepository {
     suspend fun importKml(uri: Uri, geoPointId: String, displayName: String): PointKml
     suspend fun deleteKml(kml: PointKml)
     suspend fun deleteByGeoPointId(geoPointId: String)
+    /** Restore a KML file from raw bytes (used by BackupManager import). */
+    suspend fun restoreFromBackup(geoPointId: String, name: String, bytes: ByteArray): PointKml
 }

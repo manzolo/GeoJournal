@@ -9,6 +9,7 @@ import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
+import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
 import it.manzolo.geojournal.domain.repository.VisitLogRepository
 import kotlinx.coroutines.flow.first
@@ -34,12 +35,15 @@ class BackupManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val geoPointRepository: GeoPointRepository,
     private val reminderRepository: ReminderRepository,
-    private val visitLogRepository: VisitLogRepository
+    private val visitLogRepository: VisitLogRepository,
+    private val kmlRepository: PointKmlRepository
 ) {
     companion object {
         const val SCHEMA_VERSION = 1
         // Prefisso usato nel JSON per le foto locali nel backup ("backup://photos/...")
         private const val BACKUP_PHOTO_PREFIX = "backup://photos/"
+        // Prefisso usato nel JSON per i file KML nel backup ("backup://kmls/...")
+        private const val BACKUP_KML_PREFIX = "backup://kmls/"
         private const val AUTO_BACKUP_DIR = "backups"
         private const val AUTO_BACKUP_KEEP = 5
     }
@@ -53,13 +57,15 @@ class BackupManager @Inject constructor(
         val points    = geoPointRepository.observeAll().first()
         val reminders = reminderRepository.getAll()
         val visits    = visitLogRepository.getAll()
+        val allKmls   = kmlRepository.getAll()
+        val kmlsByPoint = allKmls.groupBy { it.geoPointId }
 
         val dateTag = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         val file = File(backupDir, "geojournal_backup_$dateTag.zip")
 
         FileOutputStream(file).use { out ->
             ZipOutputStream(BufferedOutputStream(out)).use { zip ->
-                val json = buildJson(points, reminders, visits)
+                val json = buildJson(points, reminders, visits, kmlsByPoint)
                 zip.putNextEntry(ZipEntry("backup.json"))
                 zip.write(json.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
@@ -73,6 +79,14 @@ class BackupManager @Inject constructor(
                                 photoFile.inputStream().use { it.copyTo(zip) }
                                 zip.closeEntry()
                             }
+                        }
+                    }
+                    kmlsByPoint[point.id]?.forEach { kml ->
+                        val kmlFile = File(kml.filePath)
+                        if (kmlFile.exists()) {
+                            zip.putNextEntry(ZipEntry("kmls/${point.id}/${kmlFile.name}"))
+                            kmlFile.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
                         }
                     }
                 }
@@ -96,12 +110,14 @@ class BackupManager @Inject constructor(
         val points    = geoPointRepository.observeAll().first()
         val reminders = reminderRepository.getAll()
         val visits    = visitLogRepository.getAll()
+        val allKmls   = kmlRepository.getAll()
+        val kmlsByPoint = allKmls.groupBy { it.geoPointId }
 
         context.contentResolver.openOutputStream(uri)?.use { out ->
             ZipOutputStream(BufferedOutputStream(out)).use { zip ->
 
                 // 1. backup.json
-                val json = buildJson(points, reminders, visits)
+                val json = buildJson(points, reminders, visits, kmlsByPoint)
                 zip.putNextEntry(ZipEntry("backup.json"))
                 zip.write(json.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
@@ -118,6 +134,15 @@ class BackupManager @Inject constructor(
                             }
                         }
                     }
+                    // 3. File KML associati al punto
+                    kmlsByPoint[point.id]?.forEach { kml ->
+                        val kmlFile = File(kml.filePath)
+                        if (kmlFile.exists()) {
+                            zip.putNextEntry(ZipEntry("kmls/${point.id}/${kmlFile.name}"))
+                            kmlFile.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
                 }
             }
         }
@@ -127,7 +152,8 @@ class BackupManager @Inject constructor(
     private fun buildJson(
         points: List<GeoPoint>,
         reminders: List<Reminder>,
-        visits: List<VisitLogEntry>
+        visits: List<VisitLogEntry>,
+        kmlsByPoint: Map<String, List<it.manzolo.geojournal.domain.model.PointKml>> = emptyMap()
     ): String {
         val root = JSONObject().apply {
             put("schemaVersion", SCHEMA_VERSION)
@@ -154,7 +180,20 @@ class BackupManager @Inject constructor(
                             else "$BACKUP_PHOTO_PREFIX${p.id}/${File(url).name}"
                         }))
                         put("rating", p.rating)
+                        put("notes", p.notes)
                         put("isArchived", p.isArchived)
+                        // KML metadata (file path in ZIP: kmls/{pointId}/{filename})
+                        put("kmls", JSONArray().also { kmlArr ->
+                            kmlsByPoint[p.id]?.forEach { kml ->
+                                val fileName = File(kml.filePath).name
+                                kmlArr.put(JSONObject().apply {
+                                    put("id", kml.id)
+                                    put("name", kml.name)
+                                    put("backupPath", "$BACKUP_KML_PREFIX${p.id}/$fileName")
+                                    put("importedAt", kml.importedAt)
+                                })
+                            }
+                        })
                     })
                 }
             })
@@ -195,6 +234,8 @@ class BackupManager @Inject constructor(
         val photoEntries = mutableMapOf<String, ByteArray>() // "photos/pointId/file.jpg" → bytes
         var jsonContent: String? = null
 
+        val kmlEntries = mutableMapOf<String, ByteArray>() // "kmls/pointId/file.kml" → bytes
+
         context.contentResolver.openInputStream(uri)?.use { ins ->
             ZipInputStream(ins).use { zip ->
                 var entry = zip.nextEntry
@@ -204,6 +245,8 @@ class BackupManager @Inject constructor(
                             jsonContent = zip.readBytes().toString(Charsets.UTF_8)
                         entry.name.startsWith("photos/") ->
                             photoEntries[entry.name] = zip.readBytes()
+                        entry.name.startsWith("kmls/") ->
+                            kmlEntries[entry.name] = zip.readBytes()
                     }
                     zip.closeEntry()
                     entry = zip.nextEntry
@@ -254,10 +297,26 @@ class BackupManager @Inject constructor(
                 createdAt   = Date(obj.getLong("createdAt")),
                 updatedAt   = Date(obj.getLong("updatedAt")),
                 rating      = obj.optInt("rating", 0),
+                notes       = obj.optString("notes", ""),
                 isArchived  = obj.optBoolean("isArchived", false)
             )
             geoPointRepository.save(point)
             pointCount++
+
+            // Ripristina i file KML associati al punto
+            val kmlsArr = obj.optJSONArray("kmls") ?: JSONArray()
+            for (k in 0 until kmlsArr.length()) {
+                val kObj = kmlsArr.getJSONObject(k)
+                // backupPath = "backup://kmls/{pointId}/{filename}"
+                // ZIP entry  = "kmls/{pointId}/{filename}"
+                val backupPath = kObj.optString("backupPath", "")
+                val zipEntry = "kmls/" + backupPath.removePrefix(BACKUP_KML_PREFIX)
+                val kmlBytes = kmlEntries[zipEntry]
+                if (kmlBytes != null) {
+                    val kmlName = kObj.optString("name", File(zipEntry).name)
+                    kmlRepository.restoreFromBackup(point.id, kmlName, kmlBytes)
+                }
+            }
         }
 
         // Reminders

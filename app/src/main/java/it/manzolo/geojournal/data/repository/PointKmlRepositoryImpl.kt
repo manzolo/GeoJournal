@@ -51,4 +51,13 @@ class PointKmlRepositoryImpl @Inject constructor(
         kmls.forEach { File(it.filePath).delete() }
         dao.deleteByGeoPointId(geoPointId)
     }
+
+    override suspend fun restoreFromBackup(geoPointId: String, name: String, bytes: ByteArray): PointKml {
+        val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
+        val dest = File(dir, "${UUID.randomUUID()}.kml")
+        dest.writeBytes(bytes)
+        val kml = PointKml(geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
+        dao.insert(kml.toEntity())
+        return kml
+    }
 }

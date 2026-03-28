@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoJournal Viewer</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z' fill='%236c8cff'/><circle cx='12' cy='9' r='2.5' fill='white'/></svg>"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="/static/leaflet.css" />
+  <script src="/static/leaflet.js"></script>
+  <script src="/static/leaflet-omnivore.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -38,6 +39,27 @@
     .meta { margin-left: auto; display: flex; gap: 14px; font-size: 0.75rem; color: var(--muted); flex-wrap: wrap; align-items: center; }
     .meta strong { color: var(--text); }
     .sep { color: var(--border); }
+
+    .kml-toggle-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--muted);
+      cursor: pointer; transition: all .15s; width: 100%;
+    }
+    .kml-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
+    .kml-toggle-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, var(--surface2)); color: var(--text); }
+    .kml-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kml-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .kml-toggle-btn.active .kml-indicator { background: var(--accent); }
+
+    .fit-btn {
+      margin-left: 12px; flex-shrink: 0;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .fit-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .fit-btn:disabled { opacity: .5; cursor: not-allowed; }
 
     .body { display: flex; flex: 1; overflow: hidden; }
 
@@ -375,6 +397,11 @@
       <span class="sep">·</span>
       <div>v<strong>{{ meta.app_version }}</strong></div>
     </div>
+    <!-- FIT → KML converter -->
+    <input type="file" id="fitInput" accept=".fit" style="display:none" onchange="convertFit(this)">
+    <button class="fit-btn" onclick="document.getElementById('fitInput').click()" title="Converti file Garmin .fit in .kml">
+      <span id="fitBtnIcon">🏃</span> FIT → KML
+    </button>
   </header>
 
   <!-- Meta info mobile (sotto header) -->
@@ -649,6 +676,7 @@ function selectPoint(id) {
 
 function showList() {
   document.getElementById('sidebar').classList.remove('show-detail');
+  _clearKmlLayers();
   // On mobile keep the sidebar open so the user can pick another point
   // deselect marker
   if (selectedId && markersById[selectedId]) {
@@ -724,6 +752,24 @@ function _extraHtml(p) {
       <div class="detail-section-title">📝 Note</div>
       <div class="detail-desc" style="margin:0">${escHtml(p.notes)}</div>
     </div>`;
+  }
+
+  // ── KML files
+  const kmls = p.webKmls || [];
+  if (kmls.length) {
+    h += `<div class="detail-section">
+      <div class="detail-section-title">🗺 KML (${kmls.length})</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:4px">`;
+    kmls.forEach((k, i) => {
+      const btnId = `kmlbtn_${p.id}_${i}`;
+      h += `<button id="${btnId}" class="kml-toggle-btn"
+          onclick="toggleKmlLayer('${escHtml(p.id)}','${escHtml(k.url)}','${escHtml(k.name)}','${btnId}')">
+        <span class="kml-indicator"></span>
+        <span class="kml-name">${escHtml(k.name)}</span>
+        <span style="font-size:0.7rem;color:var(--muted)">mostra</span>
+      </button>`;
+    });
+    h += `</div></div>`;
   }
 
   // ── Reminder
@@ -927,6 +973,82 @@ document.addEventListener('keydown', e => {
   if (!lbOpen && e.key === 'ArrowLeft')  cStep(-1);
   if (!lbOpen && e.key === 'ArrowRight') cStep(1);
 });
+
+// ── KML overlay management ────────────────────────────────────────────────────
+const _kmlLayers = new Map(); // key = pointId_url → Leaflet layer
+
+function toggleKmlLayer(pointId, url, name, btnId) {
+  const key = `${pointId}|${url}`;
+  const btn = document.getElementById(btnId);
+  if (_kmlLayers.has(key)) {
+    // already loaded → remove
+    map.removeLayer(_kmlLayers.get(key));
+    _kmlLayers.delete(key);
+    if (btn) {
+      btn.classList.remove('active');
+      btn.querySelector('span:last-child').textContent = 'mostra';
+    }
+  } else {
+    // load and add
+    if (btn) btn.querySelector('span:last-child').textContent = '...';
+    const layer = omnivore.kml(url)
+      .on('ready', () => {
+        map.fitBounds(layer.getBounds());
+        if (btn) {
+          btn.classList.add('active');
+          btn.querySelector('span:last-child').textContent = 'nascondi';
+        }
+      })
+      .on('error', () => {
+        if (btn) btn.querySelector('span:last-child').textContent = 'errore';
+      })
+      .addTo(map);
+    _kmlLayers.set(key, layer);
+  }
+}
+
+function _clearKmlLayers() {
+  _kmlLayers.forEach(layer => map.removeLayer(layer));
+  _kmlLayers.clear();
+}
+
+async function convertFit(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';  // reset so same file can be re-selected
+
+  const btn = document.querySelector('.fit-btn');
+  const icon = document.getElementById('fitBtnIcon');
+  btn.disabled = true;
+  icon.textContent = '⏳';
+
+  try {
+    const fd = new FormData();
+    fd.append('fit_file', file);
+    const resp = await fetch('/fit/convert', { method: 'POST', body: fd });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      alert('Errore conversione: ' + txt);
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name.replace(/\.fit$/i, '.kml');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    icon.textContent = '✅';
+    setTimeout(() => { icon.textContent = '🏃'; }, 2000);
+  } catch (e) {
+    alert('Errore: ' + e.message);
+    icon.textContent = '🏃';
+  } finally {
+    btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>
