@@ -313,7 +313,7 @@
     /* ── Mobile FAB toggle ───────────────────────────────────────────────── */
     .fab-toggle {
       display: none;
-      position: fixed; bottom: 100px; right: 14px; z-index: 1100;
+      position: fixed; bottom: 24px; left: 16px; z-index: 1100;
       width: 52px; height: 52px; border-radius: 50%;
       background: var(--accent); border: 2px solid rgba(255,255,255,.25); color: white;
       font-size: 1.5rem; cursor: pointer; align-items: center; justify-content: center;
@@ -542,7 +542,7 @@ document.getElementById('metaMobile').innerHTML =
 
 // ── Map ───────────────────────────────────────────────────────────────────────
 const map = L.map('map', { zoomControl: false });
-L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.control.zoom({ position: 'topleft' }).addTo(map);
 
 const baseLayers = {
   '🗺️ Mappa':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
