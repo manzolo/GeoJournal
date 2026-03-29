@@ -8,7 +8,9 @@ import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.location.LocationManager
@@ -1159,8 +1161,8 @@ private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable 
 
 /**
  * Overlay "Sono qui" con indicatore direzionale.
- * Disegna direttamente su canvas: cono blu nella direzione del dispositivo
- * + glow + anello bianco + disco blu centrale (stile Google Maps).
+ * Disegna su canvas: settore circolare con RadialGradient (opaco vicino al punto,
+ * trasparente in lontananza) + glow + anello bianco + disco blu centrale.
  * [azimuth] viene aggiornato in tempo reale dal sensore TYPE_ROTATION_VECTOR.
  */
 private class MyLocationOverlay(var lat: Double, var lon: Double) :
@@ -1179,19 +1181,33 @@ private class MyLocationOverlay(var lat: Double, var lon: Double) :
         val ringR = 12f * d
         val glowR = 17f * d
 
-        // Cono direzionale — ruotato sull'azimuth corrente
+        // Settore direzionale con sfumatura radiale — ruotato sull'azimuth corrente
         canvas.save()
         canvas.rotate(azimuth, x, y)
-        val coneLen = 30f * d
-        val coneHW  = 10f * d
-        val conePath = Path().apply {
-            moveTo(x, y - dotR - 3f * d)          // base del cono (attaccata al disco)
-            lineTo(x - coneHW, y - coneLen)         // angolo sinistro
-            lineTo(x + coneHW, y - coneLen)         // angolo destro
+        val beamLen   = 55f * d   // lunghezza del raggio
+        val halfAngle = 22f       // semi-ampiezza del settore in gradi
+        // Settore: dal centro, arco nella direzione "su" (−90° ± halfAngle)
+        val sectorPath = Path().apply {
+            moveTo(x, y)
+            arcTo(
+                RectF(x - beamLen, y - beamLen, x + beamLen, y + beamLen),
+                -90f - halfAngle,
+                halfAngle * 2f,
+                false
+            )
             close()
         }
-        canvas.drawPath(conePath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = AndroidColor.argb(200, 33, 150, 243)
+        canvas.drawPath(sectorPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = RadialGradient(
+                x, y, beamLen,
+                intArrayOf(
+                    AndroidColor.argb(200, 33, 150, 243),  // opaco vicino al punto
+                    AndroidColor.argb(60,  33, 150, 243),  // semi-trasparente a metà
+                    AndroidColor.argb(0,   33, 150, 243)   // invisibile al bordo
+                ),
+                floatArrayOf(0.05f, 0.55f, 1.0f),
+                Shader.TileMode.CLAMP
+            )
             style = Paint.Style.FILL
         })
         canvas.restore()
