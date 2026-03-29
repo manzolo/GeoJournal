@@ -366,8 +366,12 @@ private fun PointDetailContent(
                 ) {
                     val photoUrl = point.photoUrls.firstOrNull()
                     if (photoUrl != null) {
+                        val coverVersion = photoVersions[photoUrl] ?: 0L
                         AsyncImage(
-                            model = if (photoUrl.startsWith("/")) File(photoUrl) else photoUrl,
+                            model = ImageRequest.Builder(context)
+                                .data(if (photoUrl.startsWith("/")) File(photoUrl) else photoUrl)
+                                .memoryCacheKey("$photoUrl?v=$coverVersion")
+                                .build(),
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
