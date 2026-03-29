@@ -343,7 +343,6 @@
     <!-- Onboarding aggiornato -->
     <string name="onboarding_cloud_privacy_note">Scegli tu cosa sincronizzare: puoi attivare o disattivare ogni tipo di dato (punti, foto, promemoria, visite) singolarmente dalle impostazioni Profilo → Sincronizzazione &amp; Privacy. Tutto è OFF per default.</string>
     <!-- Strumenti -->
-    <string name="tools_title">Strumenti</string>
     <string name="tools_compress_photos">Comprimi foto esistenti</string>
     <string name="tools_compress_ok">Risparmiate %d KB</string>
 </resources>

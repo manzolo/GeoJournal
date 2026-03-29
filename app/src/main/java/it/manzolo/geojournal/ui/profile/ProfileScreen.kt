@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -180,11 +179,7 @@ fun ProfileScreen(
                 importGeojLauncher.launch(
                     arrayOf("application/x-geojournal-point", "application/zip", "application/octet-stream", "*/*")
                 )
-            }
-        )
-
-        StrumentiCard(
-            backupState = backupState,
+            },
             onCompressPhotos = backupViewModel::compressExistingPhotos
         )
 
@@ -458,7 +453,8 @@ private fun BackupCard(
     onDriveRemove: () -> Unit,
     onExport: () -> Unit,
     onImportRequest: () -> Unit,
-    onImportGeoj: () -> Unit
+    onImportGeoj: () -> Unit,
+    onCompressPhotos: () -> Unit
 ) {
     var showBackupInfoDialog by remember { mutableStateOf(false) }
     if (showBackupInfoDialog) {
@@ -646,15 +642,27 @@ private fun BackupCard(
                 )
             }
             AnimatedVisibility(visible = showAdvanced) {
-                OutlinedButton(
-                    onClick = onImportGeoj,
-                    enabled = !isWorking,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.size(6.dp))
-                    Text(stringResource(R.string.profile_import_geoj))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onImportGeoj,
+                        enabled = !isWorking,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text(stringResource(R.string.profile_import_geoj))
+                    }
+                    OutlinedButton(
+                        onClick = onCompressPhotos,
+                        enabled = !isWorking,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Default.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.size(6.dp))
+                        Text(stringResource(R.string.tools_compress_photos))
+                    }
                 }
             }
 
@@ -680,6 +688,14 @@ private fun BackupCard(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "✓ Punto \"${s.title}\" importato",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                is BackupViewModel.State.CompressOk -> {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.tools_compress_ok, s.savedKb),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -833,46 +849,6 @@ private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-// ─── Strumenti ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun StrumentiCard(
-    backupState: BackupViewModel.State,
-    onCompressPhotos: () -> Unit
-) {
-    val isWorking = backupState is BackupViewModel.State.Working
-    val compressOk = backupState as? BackupViewModel.State.CompressOk
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.tools_title), style = MaterialTheme.typography.titleMedium)
-
-            if (compressOk != null) {
-                Text(
-                    stringResource(R.string.tools_compress_ok, compressOk.savedKb),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            OutlinedButton(
-                onClick = onCompressPhotos,
-                enabled = !isWorking,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isWorking) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                } else {
-                    Icon(Icons.Default.PhotoSizeSelectLarge, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text(stringResource(R.string.tools_compress_photos))
-            }
         }
     }
 }
