@@ -373,6 +373,12 @@ class AddEditViewModel @Inject constructor(
         quality: Int = 80
     ): ByteArray? = runCatching {
         val uri = Uri.parse(uriStr)
+        // Read EXIF once — used for both rotation and metadata preservation
+        val srcExif = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { ExifInterface(it) }
+        }.getOrNull()
+        val orientation = srcExif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            ?: ExifInterface.ORIENTATION_NORMAL
         // Pass 1: bounds only, no pixel allocation
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
@@ -392,23 +398,22 @@ class AddEditViewModel @Inject constructor(
             Bitmap.createScaledBitmap(decoded, (decoded.width * r).toInt(), (decoded.height * r).toInt(), true)
                 .also { decoded.recycle() }
         } else decoded
-        // Apply EXIF orientation
-        val orientation = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { ExifInterface(it) }
-                ?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-                ?: ExifInterface.ORIENTATION_NORMAL
-        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
-        val matrix = exifOrientationMatrix(orientation)
+        // Apply EXIF orientation into pixels
         val oriented = if (orientation != ExifInterface.ORIENTATION_NORMAL &&
             orientation != ExifInterface.ORIENTATION_UNDEFINED) {
-            Bitmap.createBitmap(scaled, 0, 0, scaled.width, scaled.height, matrix, true)
+            Bitmap.createBitmap(scaled, 0, 0, scaled.width, scaled.height, exifOrientationMatrix(orientation), true)
                 .also { scaled.recycle() }
         } else scaled
+        // Compress to temp file so we can write EXIF metadata back
+        val tmp = java.io.File.createTempFile("cmp_", ".jpg", context.cacheDir)
         try {
-            val baos = java.io.ByteArrayOutputStream()
-            oriented.compress(Bitmap.CompressFormat.JPEG, quality, baos)
-            baos.toByteArray()
-        } finally { oriented.recycle() }
+            tmp.outputStream().use { oriented.compress(Bitmap.CompressFormat.JPEG, quality, it) }
+            oriented.recycle()
+            copyExifTags(srcExif, tmp)
+            tmp.readBytes()
+        } finally {
+            tmp.delete()
+        }
     }.getOrNull()
 
     private fun exifOrientationMatrix(orientation: Int) = Matrix().apply {
@@ -421,6 +426,20 @@ class AddEditViewModel @Inject constructor(
             ExifInterface.ORIENTATION_TRANSPOSE -> { postRotate(90f); postScale(-1f, 1f) }
             ExifInterface.ORIENTATION_TRANSVERSE -> { postRotate(-90f); postScale(-1f, 1f) }
         }
+    }
+
+    private fun copyExifTags(src: ExifInterface?, destFile: java.io.File) = runCatching {
+        if (src == null) return@runCatching
+        val dst = ExifInterface(destFile.absolutePath)
+        listOf(ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME,
+               ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_MODEL,
+               ExifInterface.TAG_MAKE, ExifInterface.TAG_GPS_LATITUDE,
+               ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE,
+               ExifInterface.TAG_GPS_LONGITUDE_REF, ExifInterface.TAG_GPS_ALTITUDE,
+               ExifInterface.TAG_GPS_ALTITUDE_REF)
+            .forEach { tag -> src.getAttribute(tag)?.let { dst.setAttribute(tag, it) } }
+        dst.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+        dst.saveAttributes()
     }
 
     private suspend fun resolvePhotos(uris: List<String>, pointId: String): List<String> {

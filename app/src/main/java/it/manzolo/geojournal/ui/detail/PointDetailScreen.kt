@@ -118,6 +118,7 @@ import coil.request.SuccessResult
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.runtime.mutableStateListOf
@@ -319,13 +320,15 @@ private fun PointDetailContent(
 ) {
     val context = LocalContext.current
     var selectedPhotoIndex by remember { mutableStateOf<Int?>(null) }
+    val photoVersions = remember { androidx.compose.runtime.snapshots.SnapshotStateMap<String, Long>() }
 
     selectedPhotoIndex?.let { index ->
         PhotoViewerDialog(
             urls = point.photoUrls,
             initialIndex = index,
             onDismiss = { selectedPhotoIndex = null },
-            onMessage = onMessage
+            onMessage = onMessage,
+            photoVersions = photoVersions
         )
     }
 
@@ -427,7 +430,10 @@ private fun PointDetailContent(
                     ) {
                         point.photoUrls.forEachIndexed { index, url ->
                             AsyncImage(
-                                model = if (url.startsWith("/")) File(url) else url,
+                                model = ImageRequest.Builder(context)
+                                    .data(if (url.startsWith("/")) File(url) else url)
+                                    .memoryCacheKey("$url?v=${photoVersions[url] ?: 0L}")
+                                    .build(),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(100.dp)
@@ -819,11 +825,16 @@ private fun InfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: () -> Unit, onMessage: suspend (String) -> Unit) {
+private fun PhotoViewerDialog(
+    urls: List<String>,
+    initialIndex: Int,
+    onDismiss: () -> Unit,
+    onMessage: suspend (String) -> Unit,
+    photoVersions: MutableMap<String, Long>
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = initialIndex) { urls.size }
-    val reloadKeys = remember(urls) { mutableStateListOf(*IntArray(urls.size) { 0 }.toTypedArray()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -855,7 +866,7 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(if (url.startsWith("/")) File(url) else url)
-                        .memoryCacheKey("$url?r=${reloadKeys[page]}")
+                        .memoryCacheKey("$url?v=${photoVersions[url] ?: 0L}")
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
@@ -941,7 +952,7 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                             scope.launch(Dispatchers.IO) {
                                 rotateLocalFile90CW(currentUrl)
                                 withContext(Dispatchers.Main) {
-                                    reloadKeys[pagerState.currentPage]++
+                                    photoVersions[currentUrl] = (photoVersions[currentUrl] ?: 0L) + 1L
                                 }
                             }
                         }) {
@@ -996,6 +1007,7 @@ private suspend fun sharePhoto(context: android.content.Context, url: String, on
 }
 
 private fun rotateLocalFile90CW(path: String) = runCatching {
+    val srcExif = runCatching { ExifInterface(path) }.getOrNull()
     val src = BitmapFactory.decodeFile(path) ?: return@runCatching
     val matrix = Matrix().apply { postRotate(90f) }
     val rotated = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
@@ -1003,6 +1015,20 @@ private fun rotateLocalFile90CW(path: String) = runCatching {
     val tmp = File(File(path).parent, "${File(path).nameWithoutExtension}_rot.jpg")
     try {
         tmp.outputStream().use { rotated.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        // Preserve EXIF metadata
+        if (srcExif != null) {
+            val dst = ExifInterface(tmp.absolutePath)
+            listOf(
+                ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME,
+                ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_MODEL,
+                ExifInterface.TAG_MAKE, ExifInterface.TAG_GPS_LATITUDE,
+                ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE,
+                ExifInterface.TAG_GPS_LONGITUDE_REF, ExifInterface.TAG_GPS_ALTITUDE,
+                ExifInterface.TAG_GPS_ALTITUDE_REF
+            ).forEach { tag -> srcExif.getAttribute(tag)?.let { dst.setAttribute(tag, it) } }
+            dst.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+            dst.saveAttributes()
+        }
         tmp.renameTo(File(path))
     } finally {
         rotated.recycle()

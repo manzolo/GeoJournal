@@ -189,11 +189,10 @@ class BackupViewModel @Inject constructor(
                 .also { decoded.recycle() }
         } else decoded
 
-        // Apply EXIF orientation
-        val orientation = runCatching {
-            ExifInterface(file.absolutePath)
-                .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        // Read EXIF before decoding (for orientation + metadata preservation)
+        val srcExif = runCatching { ExifInterface(file.absolutePath) }.getOrNull()
+        val orientation = srcExif?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            ?: ExifInterface.ORIENTATION_NORMAL
         val oriented = if (orientation != ExifInterface.ORIENTATION_NORMAL &&
             orientation != ExifInterface.ORIENTATION_UNDEFINED) {
             val matrix = Matrix().apply {
@@ -214,6 +213,20 @@ class BackupViewModel @Inject constructor(
         val tmp = File(file.parent, "${file.nameWithoutExtension}_tmp.jpg")
         try {
             tmp.outputStream().use { oriented.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+            // Preserve EXIF metadata
+            if (srcExif != null) {
+                val dst = ExifInterface(tmp.absolutePath)
+                listOf(
+                    ExifInterface.TAG_DATETIME_ORIGINAL, ExifInterface.TAG_DATETIME,
+                    ExifInterface.TAG_DATETIME_DIGITIZED, ExifInterface.TAG_MODEL,
+                    ExifInterface.TAG_MAKE, ExifInterface.TAG_GPS_LATITUDE,
+                    ExifInterface.TAG_GPS_LATITUDE_REF, ExifInterface.TAG_GPS_LONGITUDE,
+                    ExifInterface.TAG_GPS_LONGITUDE_REF, ExifInterface.TAG_GPS_ALTITUDE,
+                    ExifInterface.TAG_GPS_ALTITUDE_REF
+                ).forEach { tag -> srcExif.getAttribute(tag)?.let { dst.setAttribute(tag, it) } }
+                dst.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+                dst.saveAttributes()
+            }
             tmp.renameTo(file)
         } finally {
             oriented.recycle()
