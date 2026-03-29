@@ -596,7 +596,8 @@ private fun BackupCard(
             // ── Azioni manuali ────────────────────────────────────────────
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            val isWorking = backupState is BackupViewModel.State.Working
+            val workingOp = (backupState as? BackupViewModel.State.Working)?.op
+            val isWorking = workingOp != null
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -606,7 +607,7 @@ private fun BackupCard(
                     enabled = !isWorking,
                     modifier = Modifier.weight(1f)
                 ) {
-                    if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    if (workingOp == BackupViewModel.Op.EXPORT) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     else Icon(Icons.Filled.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))
                     Text(stringResource(R.string.profile_export))
@@ -616,7 +617,8 @@ private fun BackupCard(
                     enabled = !isWorking,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    if (workingOp == BackupViewModel.Op.IMPORT) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.size(6.dp))
                     Text(stringResource(R.string.profile_import))
                 }
@@ -648,7 +650,7 @@ private fun BackupCard(
                         enabled = !isWorking,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        if (workingOp == BackupViewModel.Op.IMPORT_POINT) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         else Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.size(6.dp))
                         Text(stringResource(R.string.profile_import_geoj))
@@ -658,7 +660,7 @@ private fun BackupCard(
                         enabled = !isWorking,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        if (isWorking) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        if (workingOp == BackupViewModel.Op.COMPRESS) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         else Icon(Icons.Default.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.size(6.dp))
                         Text(stringResource(R.string.tools_compress_photos))

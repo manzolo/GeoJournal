@@ -115,7 +115,12 @@ import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.runtime.mutableStateListOf
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
@@ -818,6 +823,7 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(initialPage = initialIndex) { urls.size }
+    val reloadKeys = remember(urls) { mutableStateListOf(*IntArray(urls.size) { 0 }.toTypedArray()) }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -847,7 +853,10 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                 }
 
                 AsyncImage(
-                    model = if (url.startsWith("/")) File(url) else url,
+                    model = ImageRequest.Builder(context)
+                        .data(if (url.startsWith("/")) File(url) else url)
+                        .memoryCacheKey("$url?r=${reloadKeys[page]}")
+                        .build(),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -927,6 +936,18 @@ private fun PhotoViewerDialog(urls: List<String>, initialIndex: Int, onDismiss: 
                     IconButton(onClick = { scope.launch { saveToGallery(context, currentUrl, onMessage) } }) {
                         Icon(Icons.Filled.FileDownload, contentDescription = stringResource(R.string.detail_save_to_gallery), tint = Color.White)
                     }
+                    if (currentUrl.startsWith("/")) {
+                        IconButton(onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                rotateLocalFile90CW(currentUrl)
+                                withContext(Dispatchers.Main) {
+                                    reloadKeys[pagerState.currentPage]++
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Filled.RotateRight, contentDescription = stringResource(R.string.detail_rotate_photo), tint = Color.White)
+                        }
+                    }
                 }
                 if (urls.size > 1) {
                     Text(
@@ -971,6 +992,21 @@ private suspend fun sharePhoto(context: android.content.Context, url: String, on
     }
     withContext(Dispatchers.Main) {
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_share_photo)))
+    }
+}
+
+private fun rotateLocalFile90CW(path: String) = runCatching {
+    val src = BitmapFactory.decodeFile(path) ?: return@runCatching
+    val matrix = Matrix().apply { postRotate(90f) }
+    val rotated = Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+    src.recycle()
+    val tmp = File(File(path).parent, "${File(path).nameWithoutExtension}_rot.jpg")
+    try {
+        tmp.outputStream().use { rotated.compress(Bitmap.CompressFormat.JPEG, 95, it) }
+        tmp.renameTo(File(path))
+    } finally {
+        rotated.recycle()
+        if (tmp.exists()) tmp.delete()
     }
 }
 

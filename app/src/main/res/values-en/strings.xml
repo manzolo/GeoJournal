@@ -341,5 +341,6 @@
     <string name="onboarding_cloud_privacy_note">You choose what to sync: enable or disable each data type (points, photos, reminders, visits) individually from Profile → Sync &amp; Privacy. Everything is OFF by default.</string>
     <!-- Tools -->
     <string name="tools_compress_photos">Compress existing photos</string>
+    <string name="detail_rotate_photo">Rotate photo</string>
     <string name="tools_compress_ok">Saved %d KB</string>
 </resources>

@@ -3,7 +3,9 @@ package it.manzolo.geojournal.ui.profile
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,9 +42,11 @@ class BackupViewModel @Inject constructor(
     private val kmlRepository: PointKmlRepository
 ) : ViewModel() {
 
+    enum class Op { EXPORT, IMPORT, IMPORT_POINT, COMPRESS }
+
     sealed class State {
         object Idle : State()
-        object Working : State()
+        data class Working(val op: Op) : State()
         data class ExportOk(val pointCount: Int) : State()
         data class ImportOk(val pointCount: Int, val reminderCount: Int, val visitCount: Int) : State()
         data class ImportPointOk(val title: String) : State()
@@ -107,7 +111,7 @@ class BackupViewModel @Inject constructor(
 
     fun export(uri: Uri) {
         viewModelScope.launch {
-            _state.value = State.Working
+            _state.value = State.Working(Op.EXPORT)
             _state.value = runCatching {
                 val count = backupManager.exportToUri(uri)
                 userPrefsRepository.setLastLocalBackup(System.currentTimeMillis())
@@ -118,7 +122,7 @@ class BackupViewModel @Inject constructor(
 
     fun import(uri: Uri) {
         viewModelScope.launch {
-            _state.value = State.Working
+            _state.value = State.Working(Op.IMPORT)
             _state.value = runCatching {
                 val r = backupManager.importFromUri(uri)
                 State.ImportOk(r.pointCount, r.reminderCount, r.visitCount)
@@ -128,7 +132,7 @@ class BackupViewModel @Inject constructor(
 
     fun importGeojPoint(uri: Uri) {
         viewModelScope.launch {
-            _state.value = State.Working
+            _state.value = State.Working(Op.IMPORT_POINT)
             _state.value = runCatching {
                 val result = geojExporter.importFromUri(uri)
                 geoPointRepository.save(result.point)
@@ -143,7 +147,7 @@ class BackupViewModel @Inject constructor(
 
     fun compressExistingPhotos() {
         viewModelScope.launch {
-            _state.value = State.Working
+            _state.value = State.Working(Op.COMPRESS)
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val photosDir = File(context.filesDir, "photos")
@@ -185,12 +189,34 @@ class BackupViewModel @Inject constructor(
                 .also { decoded.recycle() }
         } else decoded
 
+        // Apply EXIF orientation
+        val orientation = runCatching {
+            ExifInterface(file.absolutePath)
+                .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        val oriented = if (orientation != ExifInterface.ORIENTATION_NORMAL &&
+            orientation != ExifInterface.ORIENTATION_UNDEFINED) {
+            val matrix = Matrix().apply {
+                when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
+                    ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+                    ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+                    ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
+                    ExifInterface.ORIENTATION_FLIP_VERTICAL -> postScale(1f, -1f)
+                    ExifInterface.ORIENTATION_TRANSPOSE -> { postRotate(90f); postScale(-1f, 1f) }
+                    ExifInterface.ORIENTATION_TRANSVERSE -> { postRotate(-90f); postScale(-1f, 1f) }
+                }
+            }
+            Bitmap.createBitmap(scaled, 0, 0, scaled.width, scaled.height, matrix, true)
+                .also { scaled.recycle() }
+        } else scaled
+
         val tmp = File(file.parent, "${file.nameWithoutExtension}_tmp.jpg")
         try {
-            tmp.outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+            tmp.outputStream().use { oriented.compress(Bitmap.CompressFormat.JPEG, 80, it) }
             tmp.renameTo(file)
         } finally {
-            scaled.recycle()
+            oriented.recycle()
             if (tmp.exists()) tmp.delete()
         }
         Unit

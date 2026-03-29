@@ -3,7 +3,9 @@ package it.manzolo.geojournal.ui.addedit
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -390,12 +392,36 @@ class AddEditViewModel @Inject constructor(
             Bitmap.createScaledBitmap(decoded, (decoded.width * r).toInt(), (decoded.height * r).toInt(), true)
                 .also { decoded.recycle() }
         } else decoded
+        // Apply EXIF orientation
+        val orientation = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { ExifInterface(it) }
+                ?.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+                ?: ExifInterface.ORIENTATION_NORMAL
+        }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
+        val matrix = exifOrientationMatrix(orientation)
+        val oriented = if (orientation != ExifInterface.ORIENTATION_NORMAL &&
+            orientation != ExifInterface.ORIENTATION_UNDEFINED) {
+            Bitmap.createBitmap(scaled, 0, 0, scaled.width, scaled.height, matrix, true)
+                .also { scaled.recycle() }
+        } else scaled
         try {
             val baos = java.io.ByteArrayOutputStream()
-            scaled.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+            oriented.compress(Bitmap.CompressFormat.JPEG, quality, baos)
             baos.toByteArray()
-        } finally { scaled.recycle() }
+        } finally { oriented.recycle() }
     }.getOrNull()
+
+    private fun exifOrientationMatrix(orientation: Int) = Matrix().apply {
+        when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> postRotate(90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> postRotate(180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> postRotate(270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> postScale(-1f, 1f)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> postScale(1f, -1f)
+            ExifInterface.ORIENTATION_TRANSPOSE -> { postRotate(90f); postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> { postRotate(-90f); postScale(-1f, 1f) }
+        }
+    }
 
     private suspend fun resolvePhotos(uris: List<String>, pointId: String): List<String> {
         val prefs = userPrefs.preferences.first()
