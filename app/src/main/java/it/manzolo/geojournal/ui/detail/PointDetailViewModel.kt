@@ -188,6 +188,8 @@ class PointDetailViewModel @Inject constructor(
     fun deletePoint() {
         viewModelScope.launch {
             _uiState.update { it.copy(showDeleteConfirm = false) }
+            // Cancella gli alarm dei promemoria prima di eliminare il punto
+            _uiState.value.reminders.forEach { reminderScheduler.cancelReminder(it) }
             repository.deleteById(pointId)
             // La navigazione back viene gestita da loadPoint() tramite wasLoaded+isDeleted
         }
