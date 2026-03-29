@@ -26,8 +26,10 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -128,6 +130,7 @@ fun ProfileScreen(
         if (backupState is BackupViewModel.State.ExportOk ||
             backupState is BackupViewModel.State.ImportOk ||
             backupState is BackupViewModel.State.ImportPointOk ||
+            backupState is BackupViewModel.State.CompressOk ||
             backupState is BackupViewModel.State.Error
         ) {
             kotlinx.coroutines.delay(5_000)
@@ -178,6 +181,11 @@ fun ProfileScreen(
                     arrayOf("application/x-geojournal-point", "application/zip", "application/octet-stream", "*/*")
                 )
             }
+        )
+
+        StrumentiCard(
+            backupState = backupState,
+            onCompressPhotos = backupViewModel::compressExistingPhotos
         )
 
         if (uiState.isLoggedIn) {
@@ -825,6 +833,46 @@ private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+// ─── Strumenti ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun StrumentiCard(
+    backupState: BackupViewModel.State,
+    onCompressPhotos: () -> Unit
+) {
+    val isWorking = backupState is BackupViewModel.State.Working
+    val compressOk = backupState as? BackupViewModel.State.CompressOk
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.tools_title), style = MaterialTheme.typography.titleMedium)
+
+            if (compressOk != null) {
+                Text(
+                    stringResource(R.string.tools_compress_ok, compressOk.savedKb),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            OutlinedButton(
+                onClick = onCompressPhotos,
+                enabled = !isWorking,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isWorking) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                } else {
+                    Icon(Icons.Default.PhotoSizeSelectLarge, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(stringResource(R.string.tools_compress_photos))
+            }
         }
     }
 }

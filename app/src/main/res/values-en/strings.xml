@@ -339,4 +339,8 @@
     <string name="profile_sync_requires_geo_points">Requires geographic data to be enabled</string>
     <!-- Updated onboarding -->
     <string name="onboarding_cloud_privacy_note">You choose what to sync: enable or disable each data type (points, photos, reminders, visits) individually from Profile → Sync &amp; Privacy. Everything is OFF by default.</string>
+    <!-- Tools -->
+    <string name="tools_title">Tools</string>
+    <string name="tools_compress_photos">Compress existing photos</string>
+    <string name="tools_compress_ok">Saved %d KB</string>
 </resources>

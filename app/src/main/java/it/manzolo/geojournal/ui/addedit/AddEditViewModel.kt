@@ -1,6 +1,8 @@
 package it.manzolo.geojournal.ui.addedit
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -363,6 +365,38 @@ class AddEditViewModel @Inject constructor(
 
     // ─── Photo resolution ────────────────────────────────────────────────────
 
+    private fun compressedImageBytes(
+        uriStr: String,
+        maxDim: Int = 1920,
+        quality: Int = 80
+    ): ByteArray? = runCatching {
+        val uri = Uri.parse(uriStr)
+        // Pass 1: bounds only, no pixel allocation
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+        val rawW = opts.outWidth; val rawH = opts.outHeight
+        if (rawW <= 0 || rawH <= 0) return null
+        // Calculate inSampleSize (power of 2)
+        var sampleSize = 1; var halfW = rawW / 2; var halfH = rawH / 2
+        while (halfW >= maxDim && halfH >= maxDim) { sampleSize *= 2; halfW /= 2; halfH /= 2 }
+        // Pass 2: decode at reduced resolution
+        val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        val decoded = context.contentResolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, decodeOpts)
+        } ?: return null
+        // Scale down further if still > maxDim
+        val scaled = if (decoded.width > maxDim || decoded.height > maxDim) {
+            val r = maxDim.toFloat() / maxOf(decoded.width, decoded.height)
+            Bitmap.createScaledBitmap(decoded, (decoded.width * r).toInt(), (decoded.height * r).toInt(), true)
+                .also { decoded.recycle() }
+        } else decoded
+        try {
+            val baos = java.io.ByteArrayOutputStream()
+            scaled.compress(Bitmap.CompressFormat.JPEG, quality, baos)
+            baos.toByteArray()
+        } finally { scaled.recycle() }
+    }.getOrNull()
+
     private suspend fun resolvePhotos(uris: List<String>, pointId: String): List<String> {
         val prefs = userPrefs.preferences.first()
         return uris.mapNotNull { uri ->
@@ -383,9 +417,9 @@ class AddEditViewModel @Inject constructor(
             val uid = auth.currentUser!!.uid
             val filename = "${UUID.randomUUID()}.jpg"
             val ref = storage.reference.child("users/$uid/photos/$pointId/$filename")
-            val bytes = context.contentResolver
-                .openInputStream(Uri.parse(uriStr))
-                ?.use { it.readBytes() } ?: return null
+            val bytes = compressedImageBytes(uriStr)
+                ?: context.contentResolver.openInputStream(Uri.parse(uriStr))?.use { it.readBytes() }
+                ?: return null
             ref.putBytes(bytes).await()
             ref.downloadUrl.await().toString()
         } catch (_: Exception) { null }
@@ -395,9 +429,10 @@ class AddEditViewModel @Inject constructor(
         return try {
             val dir = File(context.filesDir, "photos/$pointId").apply { mkdirs() }
             val dest = File(dir, "${UUID.randomUUID()}.jpg")
-            context.contentResolver.openInputStream(Uri.parse(uriStr))?.use { input ->
-                dest.outputStream().use { out -> input.copyTo(out) }
-            } ?: return null
+            val bytes = compressedImageBytes(uriStr)
+                ?: context.contentResolver.openInputStream(Uri.parse(uriStr))?.use { it.readBytes() }
+                ?: return null
+            dest.writeBytes(bytes)
             dest.absolutePath
         } catch (_: Exception) { null }
     }
