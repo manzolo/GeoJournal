@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -47,11 +49,14 @@ fun ShareOptionsDialog(
             Column {
                 OutlinedTextField(
                     value = shareMessage,
-                    onValueChange = { if (it.length <= 200) shareMessage = it },
+                    onValueChange = { v ->
+                        if (v.length <= 200) shareMessage = if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                    },
                     placeholder = { Text(stringResource(R.string.share_message_hint)) },
                     minLines = 2,
                     maxLines = 4,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 )
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider()

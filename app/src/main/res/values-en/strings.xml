@@ -207,6 +207,9 @@
     <string name="addedit_import_kml">Import KML</string>
     <string name="addedit_kml_rename_title">Rename KML file</string>
     <string name="addedit_kml_rename_hint">Name</string>
+    <string name="addedit_discard_title">Unsaved changes</string>
+    <string name="addedit_discard_body">You have unsaved changes. Do you want to leave and lose them?</string>
+    <string name="addedit_discard_confirm">Leave without saving</string>
     <string name="addedit_map_tap_hint">Tap the map to move the point</string>
     <string name="addedit_location_selected">Location selected on map</string>
     <string name="addedit_gps_accuracy">Accuracy: ±%d m</string>

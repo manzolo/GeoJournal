@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.os.Looper
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -205,6 +206,13 @@ fun AddEditScreen(
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var permissionLaunchedOnce by remember { mutableStateOf(false) }
     var kmlToRename by remember { mutableStateOf<PointKml?>(null) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var pendingDiscardAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    BackHandler(enabled = uiState.isDirty) {
+        showDiscardDialog = true
+        pendingDiscardAction = { navController.popBackStack() }
+    }
 
     // Feature 2: auto-focus sul campo Titolo solo per nuovi punti
     LaunchedEffect(Unit) {
@@ -392,7 +400,14 @@ fun AddEditScreen(
             TopAppBar(
                 title = { Text(if (viewModel.isEditMode) stringResource(R.string.edit_point_title) else stringResource(R.string.add_point_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = {
+                        if (uiState.isDirty) {
+                            pendingDiscardAction = { navController.popBackStack() }
+                            showDiscardDialog = true
+                        } else {
+                            navController.popBackStack()
+                        }
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
@@ -543,8 +558,14 @@ fun AddEditScreen(
                         }
                         // Vedi sulla mappa (solo edit mode)
                         if (viewModel.isEditMode && hasLocation) {
-                            IconButton(onClick = { navigateToMapFocus(navController, uiState.latitude, uiState.longitude) },
-                                modifier = Modifier.size(32.dp)) {
+                            IconButton(onClick = {
+                                if (uiState.isDirty) {
+                                    pendingDiscardAction = { navigateToMapFocus(navController, uiState.latitude, uiState.longitude) }
+                                    showDiscardDialog = true
+                                } else {
+                                    navigateToMapFocus(navController, uiState.latitude, uiState.longitude)
+                                }
+                            }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Map, contentDescription = stringResource(R.string.addedit_view_on_map),
                                     modifier = Modifier.size(18.dp),
                                     tint = MaterialTheme.colorScheme.primary)
@@ -807,6 +828,33 @@ fun AddEditScreen(
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
+                            // ── Note personali ────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_notes),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = uiState.notes,
+                                onValueChange = { v ->
+                                    viewModel.updateNotes(if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v)
+                                },
+                                placeholder = { Text(stringResource(R.string.addedit_notes_hint),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 6,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                            )
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
                             // ── Tag ───────────────────────────────────────
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null,
@@ -901,30 +949,6 @@ fun AddEditScreen(
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                            // ── Note personali ────────────────────────────
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null,
-                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.addedit_section_notes),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = uiState.notes,
-                                onValueChange = viewModel::updateNotes,
-                                placeholder = { Text(stringResource(R.string.addedit_notes_hint),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 2,
-                                maxLines = 6,
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
                             // ── File KML ──────────────────────────────────
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Filled.Polyline, contentDescription = null,
@@ -972,6 +996,29 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    // --- Discard Changes Confirmation Dialog ---
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text(stringResource(R.string.addedit_discard_title)) },
+            text = { Text(stringResource(R.string.addedit_discard_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDiscardDialog = false
+                        pendingDiscardAction?.invoke()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.addedit_discard_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     // --- KML Rename Dialog ---

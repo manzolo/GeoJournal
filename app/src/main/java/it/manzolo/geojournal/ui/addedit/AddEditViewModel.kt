@@ -57,7 +57,8 @@ data class AddEditUiState(
     val rating: Int = 0,
     val notes: String = "",
     val isAdditionalDetailsExpanded: Boolean = false,
-    val kmls: List<PointKml> = emptyList()
+    val kmls: List<PointKml> = emptyList(),
+    val isDirty: Boolean = false
 )
 
 @HiltViewModel
@@ -227,8 +228,8 @@ class AddEditViewModel @Inject constructor(
         return null
     }
 
-    fun updateTitle(value: String) = _uiState.update { it.copy(title = value) }
-    fun updateDescription(value: String) = _uiState.update { it.copy(description = value) }
+    fun updateTitle(value: String) = _uiState.update { it.copy(title = value, isDirty = true) }
+    fun updateDescription(value: String) = _uiState.update { it.copy(description = value, isDirty = true) }
     fun updateTagInput(value: String) {
         _uiState.update { it.copy(tagInput = value) }
         // Debounce: evita filtri su ogni singolo carattere digitato
@@ -238,47 +239,48 @@ class AddEditViewModel @Inject constructor(
             recomputeSuggestions()
         }
     }
-    fun selectEmoji(emoji: String) = _uiState.update { it.copy(emoji = emoji, showEmojiPicker = false) }
+    fun selectEmoji(emoji: String) = _uiState.update { it.copy(emoji = emoji, showEmojiPicker = false, isDirty = true) }
     fun toggleEmojiPicker() = _uiState.update { it.copy(showEmojiPicker = !it.showEmojiPicker) }
-    fun updateLocation(lat: Double, lon: Double) = _uiState.update { it.copy(latitude = lat, longitude = lon) }
+    fun updateLocation(lat: Double, lon: Double) = _uiState.update { it.copy(latitude = lat, longitude = lon, isDirty = true) }
 
     fun addTag() {
         val tag = _uiState.value.tagInput.trim().lowercase()
         if (tag.isNotBlank() && !_uiState.value.tags.contains(tag)) {
-            _uiState.update { it.copy(tags = it.tags + tag, tagInput = "") }
+            _uiState.update { it.copy(tags = it.tags + tag, tagInput = "", isDirty = true) }
             recomputeSuggestions()
         }
     }
 
     fun addTagFromSuggestion(tag: String) {
         if (!_uiState.value.tags.contains(tag)) {
-            _uiState.update { it.copy(tags = it.tags + tag) }
+            _uiState.update { it.copy(tags = it.tags + tag, isDirty = true) }
             recomputeSuggestions()
         }
     }
 
     fun removeTag(tag: String) {
-        _uiState.update { it.copy(tags = it.tags - tag) }
+        _uiState.update { it.copy(tags = it.tags - tag, isDirty = true) }
         recomputeSuggestions()
     }
     fun toggleDeleteConfirm() = _uiState.update { it.copy(showDeleteConfirm = !it.showDeleteConfirm) }
 
-    fun addPhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris + uri) }
-    fun removePhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris - uri) }
+    fun addPhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris + uri, isDirty = true) }
+    fun removePhotoUri(uri: String) = _uiState.update { it.copy(photoUris = it.photoUris - uri, isDirty = true) }
     fun movePhotoLeft(uri: String) = _uiState.update {
         val list = it.photoUris.toMutableList()
         val idx = list.indexOf(uri)
         if (idx > 0) { list.add(idx - 1, list.removeAt(idx)) }
-        it.copy(photoUris = list)
+        it.copy(photoUris = list, isDirty = true)
     }
 
     fun toggleReminderSheet() = _uiState.update { it.copy(showReminderSheet = !it.showReminderSheet) }
-    fun updateRating(stars: Int) = _uiState.update { it.copy(rating = if (it.rating == stars) 0 else stars) }
-    fun updateNotes(value: String) = _uiState.update { it.copy(notes = value) }
+    fun updateRating(stars: Int) = _uiState.update { it.copy(rating = if (it.rating == stars) 0 else stars, isDirty = true) }
+    fun updateNotes(value: String) = _uiState.update { it.copy(notes = value, isDirty = true) }
     fun toggleAdditionalDetails() = _uiState.update { it.copy(isAdditionalDetailsExpanded = !it.isAdditionalDetailsExpanded) }
 
     fun importKml(uri: Uri, displayName: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isDirty = true) }
             if (isEditMode) {
                 runCatching { kmlRepository.importKml(uri, existingId, displayName) }
             } else {
@@ -310,6 +312,7 @@ class AddEditViewModel @Inject constructor(
 
     fun deleteKml(kml: PointKml) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isDirty = true) }
             if (!isEditMode && pendingNewKmls.removeIf { it.id == kml.id }) {
                 File(kml.filePath).delete()
                 _uiState.update { state -> state.copy(kmls = state.kmls.filter { it.id != kml.id }) }
@@ -345,11 +348,12 @@ class AddEditViewModel @Inject constructor(
             }
         } else {
             // Nuovo punto: teniamo i reminder in stato locale, li salviamo insieme al punto
-            _uiState.update { it.copy(reminders = it.reminders + r) }
+            _uiState.update { it.copy(reminders = it.reminders + r, isDirty = true) }
         }
     }
 
     fun deleteReminder(reminder: Reminder) {
+        _uiState.update { it.copy(isDirty = true) }
         if (isEditMode) {
             viewModelScope.launch {
                 reminderRepository.delete(reminder)
@@ -402,7 +406,7 @@ class AddEditViewModel @Inject constructor(
                 // Nuovo punto: centra la mappa su di esso dopo il salvataggio
                 MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
             }
-            _uiState.update { it.copy(isLoading = false, isSaved = true) }
+            _uiState.update { it.copy(isLoading = false, isSaved = true, isDirty = false) }
         }
     }
 
