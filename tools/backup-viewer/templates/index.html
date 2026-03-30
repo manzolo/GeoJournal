@@ -402,6 +402,11 @@
     <button class="fit-btn" onclick="document.getElementById('fitInput').click()" title="Converti file Garmin .fit in .kml">
       <span id="fitBtnIcon">🏃</span> FIT → KML
     </button>
+    <!-- Backup uploader -->
+    <input type="file" id="backupInput" accept=".zip" style="display:none" onchange="uploadBackup(this)">
+    <button class="fit-btn" id="uploadBtn" onclick="document.getElementById('backupInput').click()" title="Carica un backup GeoJournal (.zip)">
+      <span id="uploadBtnIcon">📂</span> Carica backup
+    </button>
   </header>
 
   <!-- Meta info mobile (sotto header) -->
@@ -1069,6 +1074,36 @@ async function convertFit(input) {
   } catch (e) {
     alert('Errore: ' + e.message);
     icon.textContent = '🏃';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function uploadBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  const btn = document.getElementById('uploadBtn');
+  const icon = document.getElementById('uploadBtnIcon');
+  btn.disabled = true;
+  icon.textContent = '⏳';
+
+  try {
+    const fd = new FormData();
+    fd.append('backup_file', file);
+    const resp = await fetch('/upload', { method: 'POST', redirect: 'manual', body: fd });
+    if (!resp.ok && resp.type !== 'opaqueredirect') {
+      const txt = await resp.text();
+      alert('Errore caricamento: ' + txt);
+      icon.textContent = '📂';
+      return;
+    }
+    icon.textContent = '✅';
+    setTimeout(() => { window.location.reload(); }, 500);
+  } catch (e) {
+    alert('Errore: ' + e.message);
+    icon.textContent = '📂';
   } finally {
     btn.disabled = false;
   }

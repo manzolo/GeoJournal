@@ -6,19 +6,25 @@ import zipfile
 from datetime import datetime, timezone
 from xml.sax.saxutils import escape as xml_escape
 
-from flask import Flask, abort, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_file
 
 app = Flask(__name__)
 
 BACKUP_PATH = os.environ.get("BACKUP_PATH", "/data/backup.zip")
+_UPLOAD_PATH = "/tmp/uploaded_backup.zip"
 
 _cache: dict | None = None
+_override_path: str | None = None
+
+
+def _current_path() -> str:
+    return _override_path or BACKUP_PATH
 
 
 def _load() -> dict:
     global _cache
     if _cache is None:
-        with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+        with zipfile.ZipFile(_current_path(), "r") as z:
             with z.open("backup.json") as f:
                 _cache = json.load(f)
     return _cache
@@ -49,7 +55,7 @@ def _read_exif_date(img_bytes: bytes) -> str | None:
 
 def _list_kmls_in_zip() -> set[str]:
     """Return the set of KML zip paths present in the backup."""
-    with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+    with zipfile.ZipFile(_current_path(), "r") as z:
         return {n for n in z.namelist() if n.startswith("kmls/") and n.endswith(".kml")}
 
 
@@ -160,7 +166,7 @@ def api_points():
 @app.route("/photos/<path:photo_path>")
 def serve_photo(photo_path):
     zip_path = f"photos/{photo_path}"
-    with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+    with zipfile.ZipFile(_current_path(), "r") as z:
         if zip_path not in z.namelist():
             abort(404)
         data = z.read(zip_path)
@@ -173,7 +179,7 @@ def serve_photo(photo_path):
 @app.route("/kmls/<path:kml_path>")
 def serve_kml(kml_path):
     zip_entry = f"kmls/{kml_path}"
-    with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+    with zipfile.ZipFile(_current_path(), "r") as z:
         if zip_entry not in z.namelist():
             abort(404)
         data = z.read(zip_entry)
@@ -190,7 +196,7 @@ def photo_exif(photo_path):
     """Returns EXIF date for a local backup photo. Returns {exifDate: null} for HTTPS or missing files."""
     zip_path = f"photos/{photo_path}"
     try:
-        with zipfile.ZipFile(BACKUP_PATH, "r") as z:
+        with zipfile.ZipFile(_current_path(), "r") as z:
             if zip_path not in z.namelist():
                 return jsonify({"exifDate": None})
             img_bytes = z.read(zip_path)
@@ -324,6 +330,29 @@ def fit_convert():
         as_attachment=True,
         download_name=download_name,
     )
+
+
+@app.route("/upload", methods=["POST"])
+def upload_backup():
+    global _cache, _override_path
+    if "backup_file" not in request.files:
+        abort(400, "Campo 'backup_file' mancante")
+    f = request.files["backup_file"]
+    if not f.filename or not f.filename.lower().endswith(".zip"):
+        abort(400, "Il file deve avere estensione .zip")
+    data = f.read()
+    # Validate it's a valid backup zip before accepting
+    try:
+        with zipfile.ZipFile(io.BytesIO(data), "r") as z:
+            if "backup.json" not in z.namelist():
+                abort(422, "Il file non contiene backup.json — non è un backup GeoJournal valido")
+    except zipfile.BadZipFile:
+        abort(422, "File ZIP non valido")
+    with open(_UPLOAD_PATH, "wb") as out:
+        out.write(data)
+    _override_path = _UPLOAD_PATH
+    _cache = None
+    return redirect("/")
 
 
 if __name__ == "__main__":
