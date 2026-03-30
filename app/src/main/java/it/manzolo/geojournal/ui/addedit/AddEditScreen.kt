@@ -141,6 +141,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint as OsmGeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import java.io.File
@@ -203,6 +204,7 @@ fun AddEditScreen(
     var showGpsPreview by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var permissionLaunchedOnce by remember { mutableStateOf(false) }
+    var kmlToRename by remember { mutableStateOf<PointKml?>(null) }
 
     // Feature 2: auto-focus sul campo Titolo solo per nuovi punti
     LaunchedEffect(Unit) {
@@ -939,7 +941,7 @@ fun AddEditScreen(
                                     uiState.kmls.forEach { kml ->
                                         InputChip(
                                             selected = false,
-                                            onClick = {},
+                                            onClick = { kmlToRename = kml },
                                             label = { Text(kml.name) },
                                             trailingIcon = {
                                                 IconButton(onClick = { viewModel.deleteKml(kml) },
@@ -970,6 +972,18 @@ fun AddEditScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    // --- KML Rename Dialog ---
+    kmlToRename?.let { kml ->
+        RenameKmlDialog(
+            currentName = kml.name,
+            onConfirm = { newName ->
+                viewModel.renameKml(kml, newName)
+                kmlToRename = null
+            },
+            onDismiss = { kmlToRename = null }
+        )
     }
 
     // --- Add Reminder Dialog ---
@@ -1421,6 +1435,39 @@ private fun AddReminderDialog(
                 },
                 enabled = title.isNotBlank()
             ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+// ─── KML Rename Dialog ────────────────────────────────────────────────────────
+
+@Composable
+private fun RenameKmlDialog(
+    currentName: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(currentName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.addedit_kml_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.addedit_kml_rename_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
+                enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.action_save))
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }

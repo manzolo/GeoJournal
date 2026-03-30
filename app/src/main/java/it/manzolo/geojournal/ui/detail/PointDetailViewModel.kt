@@ -135,8 +135,8 @@ class PointDetailViewModel @Inject constructor(
         }
     }
 
-    fun logVisitToday(note: String = "") {
-        viewModelScope.launch { visitLogRepository.logVisit(pointId, note) }
+    fun logVisitAt(timestamp: Long, note: String = "") {
+        viewModelScope.launch { visitLogRepository.logVisitAt(pointId, timestamp, note) }
     }
 
     fun deleteVisitLog(entry: VisitLogEntry) {

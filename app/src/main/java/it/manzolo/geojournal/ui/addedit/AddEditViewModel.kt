@@ -90,6 +90,8 @@ class AddEditViewModel @Inject constructor(
     private var existingCreatedAt: Date = Date()
     private var _allUsedTags: List<String> = emptyList()
     private var tagSuggestionsJob: Job? = null
+    // KMLs pending DB insert for new-point mode (foreign key constraint prevents early insert)
+    private val pendingNewKmls = mutableListOf<PointKml>()
 
     init {
         if (isEditMode) loadPoint() else _uiState.update {
@@ -277,12 +279,61 @@ class AddEditViewModel @Inject constructor(
 
     fun importKml(uri: Uri, displayName: String) {
         viewModelScope.launch {
-            runCatching { kmlRepository.importKml(uri, existingId, displayName) }
+            if (isEditMode) {
+                runCatching { kmlRepository.importKml(uri, existingId, displayName) }
+            } else {
+                // New-point mode: GeoPoint not in DB yet, so save file only and track pending
+                runCatching {
+                    // Dedup by name within pending list
+                    val existing = pendingNewKmls.firstOrNull { it.name == displayName }
+                    if (existing != null) {
+                        // Overwrite the existing pending KML file
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            File(existing.filePath).outputStream().use { output -> input.copyTo(output) }
+                        }
+                    } else {
+                        val dir = File(context.filesDir, "kmls/$existingId").apply { mkdirs() }
+                        val dest = File(dir, "${UUID.randomUUID()}.kml")
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            dest.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        val kml = PointKml(geoPointId = existingId, name = displayName, filePath = dest.absolutePath)
+                        pendingNewKmls.add(kml)
+                        _uiState.update { state ->
+                            state.copy(kmls = state.kmls + kml, isAdditionalDetailsExpanded = true)
+                        }
+                    }
+                }
+            }
         }
     }
 
     fun deleteKml(kml: PointKml) {
-        viewModelScope.launch { kmlRepository.deleteKml(kml) }
+        viewModelScope.launch {
+            if (!isEditMode && pendingNewKmls.removeIf { it.id == kml.id }) {
+                File(kml.filePath).delete()
+                _uiState.update { state -> state.copy(kmls = state.kmls.filter { it.id != kml.id }) }
+            } else {
+                kmlRepository.deleteKml(kml)
+            }
+        }
+    }
+
+    fun renameKml(kml: PointKml, newName: String) {
+        viewModelScope.launch {
+            if (!isEditMode) {
+                val idx = pendingNewKmls.indexOfFirst { it.id == kml.id }
+                if (idx >= 0) {
+                    val updated = pendingNewKmls[idx].copy(name = newName)
+                    pendingNewKmls[idx] = updated
+                    _uiState.update { state ->
+                        state.copy(kmls = state.kmls.map { if (it.id == kml.id) updated else it })
+                    }
+                }
+            } else {
+                kmlRepository.renameKml(kml, newName)
+            }
+        }
     }
 
     fun addReminder(reminder: Reminder) {
@@ -345,6 +396,9 @@ class AddEditViewModel @Inject constructor(
                     reminderRepository.save(r)
                     scheduler.scheduleReminder(r)
                 }
+                // Save pending KMLs now that the GeoPoint is in the DB
+                pendingNewKmls.forEach { kml -> runCatching { kmlRepository.insertKml(kml) } }
+                pendingNewKmls.clear()
                 // Nuovo punto: centra la mappa su di esso dopo il salvataggio
                 MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
             }

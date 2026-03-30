@@ -134,6 +134,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -284,7 +285,7 @@ fun PointDetailScreen(
                     else locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 },
                 onStopTracking = viewModel::stopTracking,
-                onLogVisitToday = viewModel::logVisitToday,
+                onLogVisitAt = viewModel::logVisitAt,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
                 onArchiveToggle = viewModel::toggleArchiveConfirm,
@@ -308,7 +309,7 @@ private fun PointDetailContent(
     trackingPointCount: Int,
     onStartTracking: () -> Unit,
     onStopTracking: () -> Unit,
-    onLogVisitToday: () -> Unit,
+    onLogVisitAt: (Long) -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
     onArchiveToggle: () -> Unit,
@@ -333,6 +334,17 @@ private fun PointDetailContent(
     }
 
     var showDates by remember { mutableStateOf(false) }
+    var showVisitDatePicker by remember { mutableStateOf(false) }
+
+    if (showVisitDatePicker) {
+        VisitDateTimeDialog(
+            onConfirm = { timestamp ->
+                onLogVisitAt(timestamp)
+                showVisitDatePicker = false
+            },
+            onDismiss = { showVisitDatePicker = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -558,7 +570,7 @@ private fun PointDetailContent(
                     HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
                 }
                 androidx.compose.material3.FilledTonalButton(
-                    onClick = onLogVisitToday,
+                    onClick = { showVisitDatePicker = true },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
@@ -1069,4 +1081,82 @@ private suspend fun saveToGallery(context: android.content.Context, url: String,
         }
     }
     onMessage(context.getString(R.string.detail_photo_saved))
+}
+
+// ─── Visit Date-Time Picker ───────────────────────────────────────────────────
+
+@Composable
+private fun VisitDateTimeDialog(
+    onConfirm: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val now = remember { Calendar.getInstance() }
+    var dateMillis by remember { mutableStateOf(
+        Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    ) }
+    var selectedHour by remember { mutableStateOf(now.get(Calendar.HOUR_OF_DAY)) }
+    var selectedMinute by remember { mutableStateOf((now.get(Calendar.MINUTE) / 5) * 5) }
+    val dateFormat = remember { SimpleDateFormat("d MMM yyyy", Locale.ITALIAN) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.detail_visit_datetime_title)) },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            ) {
+                Text(stringResource(R.string.detail_visit_datetime_date),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(onClick = { dateMillis -= 86400000L }) { Text("‹") }
+                    Text(dateFormat.format(Date(dateMillis)),
+                        style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = {
+                        val tomorrow = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis + 86400000L
+                        if (dateMillis + 86400000L <= tomorrow) dateMillis += 86400000L
+                    }) { Text("›") }
+                }
+                Text(stringResource(R.string.detail_visit_datetime_time),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
+                ) {
+                    TextButton(onClick = { selectedHour = (selectedHour - 1 + 24) % 24 }) { Text("‹") }
+                    Text(String.format("%02d", selectedHour), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedHour = (selectedHour + 1) % 24 }) { Text("›") }
+                    Text(":", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedMinute = (selectedMinute - 5 + 60) % 60 }) { Text("‹") }
+                    Text(String.format("%02d", selectedMinute), style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { selectedMinute = (selectedMinute + 5) % 60 }) { Text("›") }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val timestamp = Calendar.getInstance().apply {
+                    timeInMillis = dateMillis
+                    set(Calendar.HOUR_OF_DAY, selectedHour)
+                    set(Calendar.MINUTE, selectedMinute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                onConfirm(timestamp)
+            }) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
 }

@@ -39,10 +39,14 @@ class VisitLogRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logVisit(geoPointId: String, note: String) {
+        logVisitAt(geoPointId, System.currentTimeMillis(), note)
+    }
+
+    override suspend fun logVisitAt(geoPointId: String, timestamp: Long, note: String) {
         val entry = VisitLogEntry(
             id = UUID.randomUUID().toString(),
             geoPointId = geoPointId,
-            visitedAt = System.currentTimeMillis(),
+            visitedAt = timestamp,
             note = note
         )
         dao.insert(entry.toEntity())

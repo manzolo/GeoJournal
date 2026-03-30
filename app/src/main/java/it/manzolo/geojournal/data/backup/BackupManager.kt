@@ -313,8 +313,9 @@ class BackupManager @Inject constructor(
                 val zipEntry = "kmls/" + backupPath.removePrefix(BACKUP_KML_PREFIX)
                 val kmlBytes = kmlEntries[zipEntry]
                 if (kmlBytes != null) {
+                    val kmlId = kObj.optString("id").takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
                     val kmlName = kObj.optString("name", File(zipEntry).name)
-                    kmlRepository.restoreFromBackup(point.id, kmlName, kmlBytes)
+                    kmlRepository.restoreFromBackup(kmlId, point.id, kmlName, kmlBytes)
                 }
             }
         }

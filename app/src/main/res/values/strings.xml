@@ -205,6 +205,8 @@
     <string name="addedit_notes_hint">Note private (non esportate nel .geoj)</string>
     <string name="addedit_section_kml">File KML</string>
     <string name="addedit_import_kml">Importa KML</string>
+    <string name="addedit_kml_rename_title">Rinomina file KML</string>
+    <string name="addedit_kml_rename_hint">Nome</string>
     <string name="addedit_map_tap_hint">Tocca la mappa per spostare il punto</string>
     <string name="addedit_location_selected">Posizione selezionata sulla mappa</string>
     <string name="addedit_gps_accuracy">Precisione: ±%d m</string>
@@ -240,6 +242,9 @@
     <string name="detail_section_rating">Valutazione</string>
     <string name="detail_section_notes">Note personali</string>
     <string name="detail_visited_today">Sono stato qui oggi</string>
+    <string name="detail_visit_datetime_title">Quando ci sei stato?</string>
+    <string name="detail_visit_datetime_date">Data</string>
+    <string name="detail_visit_datetime_time">Ora</string>
     <string name="detail_save_to_gallery">Salva in galleria</string>
     <string name="detail_photo_error">Impossibile caricare la foto</string>
     <string name="detail_share_photo">Condividi foto</string>

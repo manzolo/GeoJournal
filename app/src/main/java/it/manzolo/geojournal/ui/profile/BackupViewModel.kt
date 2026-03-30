@@ -138,7 +138,7 @@ class BackupViewModel @Inject constructor(
                 geoPointRepository.save(result.point)
                 result.reminders.forEach { reminderRepository.save(it) }
                 result.kmlFiles.forEach { (name, bytes) ->
-                    kmlRepository.restoreFromBackup(result.point.id, name, bytes)
+                    kmlRepository.restoreFromBackup(java.util.UUID.randomUUID().toString(), result.point.id, name, bytes)
                 }
                 State.ImportPointOk(result.point.title)
             }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione del punto") }

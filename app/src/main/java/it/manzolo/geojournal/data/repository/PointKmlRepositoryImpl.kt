@@ -32,13 +32,19 @@ class PointKmlRepositoryImpl @Inject constructor(
 
     override suspend fun importKml(uri: Uri, geoPointId: String, displayName: String): PointKml {
         val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
-        val dest = File(dir, "${UUID.randomUUID()}.kml")
+        // Deduplication by name: overwrite if a KML with the same name exists for this point
+        val existing = dao.findByName(geoPointId, displayName)
+        val dest = if (existing != null) File(existing.filePath) else File(dir, "${UUID.randomUUID()}.kml")
         context.contentResolver.openInputStream(uri)?.use { input ->
             dest.outputStream().use { output -> input.copyTo(output) }
         }
-        val kml = PointKml(geoPointId = geoPointId, name = displayName, filePath = dest.absolutePath)
-        dao.insert(kml.toEntity())
-        return kml
+        return if (existing != null) {
+            existing.toDomain().also { dao.update(existing) }
+        } else {
+            val kml = PointKml(geoPointId = geoPointId, name = displayName, filePath = dest.absolutePath)
+            dao.insert(kml.toEntity())
+            kml
+        }
     }
 
     override suspend fun deleteKml(kml: PointKml) {
@@ -52,13 +58,28 @@ class PointKmlRepositoryImpl @Inject constructor(
         dao.deleteByGeoPointId(geoPointId)
     }
 
-    override suspend fun restoreFromBackup(geoPointId: String, name: String, bytes: ByteArray): PointKml {
+    override suspend fun restoreFromBackup(id: String, geoPointId: String, name: String, bytes: ByteArray): PointKml {
         val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
-        val dest = File(dir, "${UUID.randomUUID()}.kml")
-        dest.writeBytes(bytes)
-        val kml = PointKml(geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
+        val existing = dao.getById(id)
+        return if (existing != null) {
+            // Overwrite the existing file, keep the same DB record
+            File(existing.filePath).writeBytes(bytes)
+            existing.toDomain()
+        } else {
+            val dest = File(dir, "${UUID.randomUUID()}.kml")
+            dest.writeBytes(bytes)
+            val kml = PointKml(id = id, geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
+            dao.insert(kml.toEntity())
+            kml
+        }
+    }
+
+    override suspend fun renameKml(kml: PointKml, newName: String) {
+        dao.updateName(kml.id, newName)
+    }
+
+    override suspend fun insertKml(kml: PointKml) {
         dao.insert(kml.toEntity())
-        return kml
     }
 
     override suspend fun saveKml(geoPointId: String, name: String, content: String): PointKml {
