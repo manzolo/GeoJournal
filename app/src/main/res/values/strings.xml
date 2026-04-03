@@ -347,6 +347,27 @@
     <string name="onboarding_crashlytics_note">Report anonimi di crash vengono inviati a Firebase Crashlytics anche in modalità ospite. Non contengono dati personali.</string>
     <string name="onboarding_cta">Ho capito</string>
     <string name="profile_data_info_button">Informazioni su come gestiamo i dati</string>
+    <string name="profile_help_button">Guida alle funzionalità</string>
+
+    <!-- Help screen -->
+    <string name="help_title">Come usare GeoJournal</string>
+    <string name="help_subtitle">Una guida rapida alle funzionalità principali</string>
+    <string name="help_add_point_title">Salvare un punto</string>
+    <string name="help_add_point_body">Tieni premuto sulla mappa per aggiungere un punto nella posizione scelta, oppure usa il pulsante + per salvare la tua posizione attuale. Puoi assegnare titolo, descrizione, un\'emoji personalizzata e aggiungere foto.</string>
+    <string name="help_add_point_badge">Tieni premuto sulla mappa · Pulsante +</string>
+    <string name="help_track_title">Registrare un tracciato GPS</string>
+    <string name="help_track_body">Dalla schermata di dettaglio di un punto, avvia la registrazione GPS per tracciare il tuo percorso. Il servizio continua in background anche con lo schermo spento. Al termine viene generato un file KML visualizzabile come overlay sulla mappa.</string>
+    <string name="help_track_badge">Dettaglio punto → Avvia tracciamento</string>
+    <string name="help_details_title">Informazioni di un punto</string>
+    <string name="help_details_body">Ogni punto può contenere: tag per categorizzare, valutazione a stelle, note personali (solo locali, mai condivise), promemoria con notifica e uno o più tracciati KML. Trovi questi campi nella sezione \"Dettagli aggiuntivi\" della schermata di modifica.</string>
+    <string name="help_details_badge">Tag · Rating · Note · Promemoria · KML</string>
+    <string name="help_backup_title">Backup e ripristino</string>
+    <string name="help_backup_body">Dal Profilo puoi esportare tutti i tuoi punti in un file ZIP e reimportarli in qualsiasi momento. Il backup automatico salva periodicamente i dati in modo sicuro, anche su Google Drive se configurato.</string>
+    <string name="help_backup_badge">Profilo → Backup</string>
+    <string name="help_share_title">Condividere un punto</string>
+    <string name="help_share_body">Ogni punto può essere condiviso come file .geoj, che include le informazioni principali e le foto associate. Il destinatario può importarlo direttamente in GeoJournal. Note personali e tracciati KML non vengono inclusi per privacy.</string>
+    <string name="help_share_badge">Dettaglio punto → Condividi</string>
+    <string name="help_cta">Capito!</string>
 
     <!-- Sincronizzazione & Privacy -->
     <string name="profile_section_sync_privacy">Sincronizzazione &amp; Privacy</string>

@@ -344,6 +344,27 @@
     <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
     <string name="onboarding_cta">Got it</string>
     <string name="profile_data_info_button">How we handle your data</string>
+    <string name="profile_help_button">Feature guide</string>
+
+    <!-- Help screen -->
+    <string name="help_title">How to use GeoJournal</string>
+    <string name="help_subtitle">A quick guide to the main features</string>
+    <string name="help_add_point_title">Save a point</string>
+    <string name="help_add_point_body">Long-press on the map to add a point at a chosen location, or use the + button to save your current position. You can set a title, description, a custom emoji and attach photos.</string>
+    <string name="help_add_point_badge">Long press on map · + button</string>
+    <string name="help_track_title">Record a GPS track</string>
+    <string name="help_track_body">From the point detail screen, start GPS recording to trace your route. The service keeps running in the background even with the screen off. A KML file is generated at the end and can be shown as an overlay on the map.</string>
+    <string name="help_track_badge">Point detail → Start tracking</string>
+    <string name="help_details_title">Point information</string>
+    <string name="help_details_body">Each point can hold: tags for categorisation, a star rating, personal notes (local only, never shared), reminders with notifications, and one or more KML tracks. You\'ll find these fields under \"Additional details\" in the edit screen.</string>
+    <string name="help_details_badge">Tags · Rating · Notes · Reminders · KML</string>
+    <string name="help_backup_title">Backup and restore</string>
+    <string name="help_backup_body">From Profile you can export all your points to a ZIP file and re-import them at any time. Automatic backup periodically saves your data securely, and to Google Drive if configured.</string>
+    <string name="help_backup_badge">Profile → Backup</string>
+    <string name="help_share_title">Share a point</string>
+    <string name="help_share_body">Any point can be shared as a .geoj file, which includes the main information and attached photos. The recipient can import it directly into GeoJournal. Personal notes and KML tracks are excluded for privacy.</string>
+    <string name="help_share_badge">Point detail → Share</string>
+    <string name="help_cta">Got it!</string>
 
     <!-- Sync & Privacy -->
     <string name="profile_section_sync_privacy">Sync &amp; Privacy</string>

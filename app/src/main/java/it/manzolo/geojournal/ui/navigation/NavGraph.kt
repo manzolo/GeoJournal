@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import it.manzolo.geojournal.ui.addedit.AddEditScreen
 import it.manzolo.geojournal.ui.auth.AuthScreen
+import it.manzolo.geojournal.ui.help.HelpScreen
 import it.manzolo.geojournal.ui.onboarding.OnboardingScreen
 import it.manzolo.geojournal.ui.detail.PointDetailScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
@@ -54,6 +55,9 @@ fun AppNavGraph(
                     }
                 }
             )
+        }
+        composable(Routes.Help.route) {
+            HelpScreen(onClose = { navController.popBackStack() })
         }
         composable(Routes.Map.route) {
             MapScreen(navController = navController)
