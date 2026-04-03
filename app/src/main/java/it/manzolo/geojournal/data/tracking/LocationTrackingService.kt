@@ -50,7 +50,7 @@ class LocationTrackingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val geoPointId = intent.getStringExtra(EXTRA_GEO_POINT_ID) ?: return START_NOT_STICKY
+                val geoPointId: String? = intent.getStringExtra(EXTRA_GEO_POINT_ID)
                 startForegroundNotification()
                 trackingManager.startTracking(geoPointId)
                 startLocationUpdates()
@@ -83,11 +83,23 @@ class LocationTrackingService : Service() {
 
         val (geoPointId, coords) = trackingManager.stopTrackingAndCollect()
         scope.launch {
-            if (geoPointId != null && coords.size >= 2) {
+            if (coords.size >= 2) {
                 val name = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault()).format(Date())
                 val content = KmlWriter.buildTrackKml(name, coords)
                 if (content != null) {
-                    runCatching { kmlRepository.saveKml(geoPointId, "$name.kml", content) }
+                    if (geoPointId != null) {
+                        runCatching { kmlRepository.saveKml(geoPointId, "$name.kml", content) }
+                    } else {
+                        trackingManager.setPendingTrackResult(
+                            PendingTrackResult(
+                                kmlContent = content,
+                                pointCount = coords.size,
+                                name = name,
+                                firstCoord = coords.firstOrNull(),
+                                lastCoord = coords.lastOrNull()
+                            )
+                        )
+                    }
                 }
             }
             stopSelf()

@@ -1,7 +1,9 @@
 package it.manzolo.geojournal.ui.map
 
+import android.app.Application
+import android.content.Intent
 import androidx.annotation.StringRes
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.manzolo.geojournal.R
@@ -10,6 +12,9 @@ import it.manzolo.geojournal.data.backup.ShareAvailability
 import it.manzolo.geojournal.data.backup.ShareOptions
 import it.manzolo.geojournal.data.kml.KmlParser
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
+import it.manzolo.geojournal.data.tracking.LocationTrackingService
+import it.manzolo.geojournal.data.tracking.PendingTrackResult
+import it.manzolo.geojournal.data.tracking.TrackingManager
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.model.ReminderType
@@ -31,6 +36,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Date
+import java.util.UUID
 import javax.inject.Inject
 
 /** KML visibile nella sessione corrente, con titolo del punto associato */
@@ -70,17 +76,33 @@ data class MapUiState(
     /** True = mostra bottom sheet con lista KML */
     val showKmlPanel: Boolean = false,
     /** ID dei punti con header espanso nel pannello KML */
-    val expandedKmlPointIds: Set<String> = emptySet()
+    val expandedKmlPointIds: Set<String> = emptySet(),
+    /** True se un tracking è attivo (qualsiasi tipo) */
+    val isTracking: Boolean = false,
+    /** True se il tracking attivo è libero (senza geoPointId) */
+    val isFreeTracking: Boolean = false,
+    val trackingPointCount: Int = 0,
+    /** Risultato di un tracking libero in attesa di essere salvato */
+    val pendingTrackResult: PendingTrackResult? = null,
+    /** True = mostra bottom sheet selezione punto esistente */
+    val showPointPickerSheet: Boolean = false,
+    /** Titolo del punto in cui è stata salvata l'ultima traccia (per snackbar) */
+    val pendingTrackSavedToTitle: String? = null
 )
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
+    application: Application,
     private val repository: GeoPointRepository,
     private val exporter: GeoPointExporter,
     private val userPrefs: UserPreferencesRepository,
     private val kmlRepository: PointKmlRepository,
-    private val reminderRepository: ReminderRepository
-) : ViewModel() {
+    private val reminderRepository: ReminderRepository,
+    private val trackingManager: TrackingManager
+) : AndroidViewModel(application) {
+
+    private val _navigateToPointEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val navigateToPointEvent: SharedFlow<String> = _navigateToPointEvent.asSharedFlow()
 
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
     val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
@@ -128,6 +150,7 @@ class MapViewModel @Inject constructor(
         observePoints()
         seedSampleDataIfEmpty()
         observeFocusRequests()
+        observeTrackingState()
     }
 
     private fun restoreMapPosition() {
@@ -343,6 +366,81 @@ class MapViewModel @Inject constructor(
         val item = _uiState.value.kmlItems.find { it.kml.id == kmlId } ?: return@withContext emptyList()
         KmlParser.parse(java.io.File(item.kml.filePath))
     }
+
+    // ─── Free tracking (senza GeoPoint pre-esistente) ──────────────────────────
+
+    private fun observeTrackingState() {
+        viewModelScope.launch {
+            trackingManager.state.collect { trackState ->
+                _uiState.update {
+                    it.copy(
+                        isTracking = trackState.isTracking,
+                        isFreeTracking = trackState.isTracking && trackState.geoPointId == null,
+                        trackingPointCount = trackState.pointCount
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            trackingManager.pendingTrackResult.collect { result ->
+                _uiState.update { it.copy(pendingTrackResult = result) }
+            }
+        }
+    }
+
+    fun startFreeTracking() {
+        val intent = Intent(getApplication(), LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_START
+        }
+        getApplication<Application>().startForegroundService(intent)
+    }
+
+    fun stopFreeTracking() {
+        val intent = Intent(getApplication(), LocationTrackingService::class.java).apply {
+            action = LocationTrackingService.ACTION_STOP
+        }
+        getApplication<Application>().startService(intent)
+    }
+
+    fun saveTrackToNewPoint() {
+        val result = _uiState.value.pendingTrackResult ?: return
+        val lat = result.lastCoord?.first ?: return
+        val lon = result.lastCoord?.second ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val prefs = userPrefs.preferences.first()
+            val geoPointId = UUID.randomUUID().toString()
+            val point = GeoPoint(
+                id = geoPointId,
+                title = result.name,
+                latitude = lat,
+                longitude = lon,
+                emoji = "🚶",
+                ownerId = prefs.userId
+            )
+            runCatching { repository.save(point) }
+            runCatching { kmlRepository.saveKml(geoPointId, "${result.name}.kml", result.kmlContent) }
+            trackingManager.clearPendingTrackResult()
+            _navigateToPointEvent.emit(geoPointId)
+        }
+    }
+
+    fun saveTrackToExistingPoint(geoPointId: String) {
+        val result = _uiState.value.pendingTrackResult ?: return
+        val pointTitle = _uiState.value.points.find { it.id == geoPointId }?.title
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { kmlRepository.saveKml(geoPointId, "${result.name}.kml", result.kmlContent) }
+            trackingManager.clearPendingTrackResult()
+            _uiState.update { it.copy(showPointPickerSheet = false, pendingTrackSavedToTitle = pointTitle) }
+        }
+    }
+
+    fun discardPendingTrack() = trackingManager.clearPendingTrackResult()
+
+    fun showPointPickerSheet() = _uiState.update { it.copy(showPointPickerSheet = true) }
+
+    fun hidePointPickerSheet() = _uiState.update { it.copy(showPointPickerSheet = false) }
+
+    fun clearTrackingSavedSnackbar() = _uiState.update { it.copy(pendingTrackSavedToTitle = null) }
 
     companion object {
         const val PARKING_TAG = "_parking"

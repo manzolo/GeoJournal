@@ -13,6 +13,14 @@ data class TrackingState(
     val pointCount: Int = 0
 )
 
+data class PendingTrackResult(
+    val kmlContent: String,
+    val pointCount: Int,
+    val name: String,
+    val firstCoord: Pair<Double, Double>?,
+    val lastCoord: Pair<Double, Double>?
+)
+
 @Singleton
 class TrackingManager @Inject constructor() {
 
@@ -21,7 +29,10 @@ class TrackingManager @Inject constructor() {
 
     private val _coordinates = mutableListOf<Pair<Double, Double>>()
 
-    fun startTracking(geoPointId: String) {
+    private val _pendingTrackResult = MutableStateFlow<PendingTrackResult?>(null)
+    val pendingTrackResult: StateFlow<PendingTrackResult?> = _pendingTrackResult.asStateFlow()
+
+    fun startTracking(geoPointId: String? = null) {
         _coordinates.clear()
         _state.update { TrackingState(isTracking = true, geoPointId = geoPointId, pointCount = 0) }
     }
@@ -42,4 +53,12 @@ class TrackingManager @Inject constructor() {
 
     fun isTrackingFor(geoPointId: String): Boolean =
         _state.value.isTracking && _state.value.geoPointId == geoPointId
+
+    fun setPendingTrackResult(result: PendingTrackResult) {
+        _pendingTrackResult.value = result
+    }
+
+    fun clearPendingTrackResult() {
+        _pendingTrackResult.value = null
+    }
 }

@@ -120,7 +120,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
-import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.runtime.mutableStateListOf
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.model.Reminder
@@ -972,7 +972,7 @@ private fun PhotoViewerDialog(
                                 }
                             }
                         }) {
-                            Icon(Icons.Filled.RotateRight, contentDescription = stringResource(R.string.detail_rotate_photo), tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.RotateRight, contentDescription = stringResource(R.string.detail_rotate_photo), tint = Color.White)
                         }
                     }
                 }

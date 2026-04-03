@@ -30,10 +30,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Polyline
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.foundation.layout.Row
@@ -205,6 +207,21 @@ fun MapScreen(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(intent, "Condividi punto"))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigateToPointEvent.collect { pointId ->
+            navController.navigate(Routes.PointDetail.createRoute(pointId))
+        }
+    }
+
+    val trackingSavedTitle = uiState.pendingTrackSavedToTitle
+    val trackingSavedText = trackingSavedTitle?.let { stringResource(R.string.tracking_saved_to, it) }
+    LaunchedEffect(trackingSavedTitle) {
+        trackingSavedText?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearTrackingSavedSnackbar()
         }
     }
 
@@ -453,7 +470,7 @@ fun MapScreen(
             },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 232.dp),
+                .padding(end = 16.dp, bottom = 280.dp),
             containerColor = when (currentLayer) {
                 MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
                 MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
@@ -473,7 +490,7 @@ fun MapScreen(
             exit = fadeOut() + scaleOut(targetScale = 0.85f),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 64.dp, bottom = 242.dp)
+                .padding(end = 64.dp, bottom = 290.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(50),
@@ -485,6 +502,38 @@ fun MapScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.inverseOnSurface,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                )
+            }
+        }
+
+        // FAB Registra percorso (tra Layers e KML)
+        if (!uiState.isTracking || uiState.isFreeTracking) {
+            SmallFloatingActionButton(
+                onClick = {
+                    if (locationPermission.status.isGranted) {
+                        if (uiState.isFreeTracking) viewModel.stopFreeTracking()
+                        else viewModel.startFreeTracking()
+                    } else {
+                        locationPermission.launchPermissionRequest()
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 232.dp),
+                containerColor = if (uiState.isFreeTracking)
+                    MaterialTheme.colorScheme.errorContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(
+                    imageVector = if (uiState.isFreeTracking) Icons.Filled.Stop else Icons.Filled.FiberManualRecord,
+                    contentDescription = stringResource(
+                        if (uiState.isFreeTracking) R.string.tracking_free_stop else R.string.tracking_free_start
+                    ),
+                    tint = if (uiState.isFreeTracking)
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }
@@ -683,6 +732,44 @@ fun MapScreen(
             )
         }
 
+        // Dialog traccia completata (tracking libero terminato)
+        val pendingTrackResult = uiState.pendingTrackResult
+        if (pendingTrackResult != null) {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.tracking_save_title)) },
+                text = {
+                    Text(stringResource(R.string.tracking_save_point_count, pendingTrackResult.pointCount))
+                },
+                confirmButton = {
+                    TextButton(onClick = viewModel::saveTrackToNewPoint) {
+                        Text(stringResource(R.string.tracking_save_create_point))
+                    }
+                },
+                dismissButton = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = viewModel::showPointPickerSheet) {
+                            Text(stringResource(R.string.tracking_save_attach_point))
+                        }
+                        TextButton(onClick = viewModel::discardPendingTrack) {
+                            Text(stringResource(R.string.tracking_save_discard))
+                        }
+                    }
+                }
+            )
+        }
+
+        // BottomSheet selezione punto esistente
+        if (uiState.showPointPickerSheet) {
+            PointPickerSheet(
+                points = uiState.points,
+                onDismiss = viewModel::hidePointPickerSheet,
+                onPointClick = { point ->
+                    viewModel.saveTrackToExistingPoint(point.id)
+                }
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -721,6 +808,51 @@ private fun ClusterPickerSheet(
                     supportingContent = point.description.takeIf { it.isNotBlank() }?.let {
                         { Text(it, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     },
+                    modifier = Modifier.clickable { onPointClick(point) }
+                )
+                HorizontalDivider()
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PointPickerSheet(
+    points: List<GeoPoint>,
+    onDismiss: () -> Unit,
+    onPointClick: (GeoPoint) -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, points) {
+        if (query.isBlank()) points
+        else points.filter { it.title.contains(query, ignoreCase = true) }
+    }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Text(
+            text = stringResource(R.string.tracking_save_pick_point),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text(stringResource(R.string.tracking_save_search_hint)) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.5f)
+        ) {
+            items(filtered) { point ->
+                ListItem(
+                    headlineContent = { Text(point.title) },
+                    leadingContent = { Text(point.emoji, style = MaterialTheme.typography.titleLarge) },
                     modifier = Modifier.clickable { onPointClick(point) }
                 )
                 HorizontalDivider()

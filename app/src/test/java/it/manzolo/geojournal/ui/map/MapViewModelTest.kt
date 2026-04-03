@@ -1,5 +1,6 @@
 package it.manzolo.geojournal.ui.map
 
+import android.app.Application
 import io.mockk.coJustRun
 import io.mockk.coVerify
 import io.mockk.every
@@ -7,6 +8,7 @@ import io.mockk.mockk
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferences
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
+import it.manzolo.geojournal.data.tracking.TrackingManager
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
@@ -35,6 +37,7 @@ class MapViewModelTest {
     private lateinit var fakeRepo: FakeGeoPointRepository
     private lateinit var viewModel: MapViewModel
 
+    private val application: Application = mockk(relaxed = true)
     private val exporter: GeoPointExporter = mockk(relaxed = true)
     private val userPrefs: UserPreferencesRepository = mockk {
         every { preferences } returns flowOf(UserPreferences())
@@ -46,11 +49,12 @@ class MapViewModelTest {
     private val reminderRepository: ReminderRepository = mockk(relaxed = true) {
         every { observeByGeoPointId(any()) } returns emptyFlow()
     }
+    private val trackingManager = TrackingManager()
 
     @Before
     fun setup() {
         fakeRepo = FakeGeoPointRepository()
-        viewModel = MapViewModel(fakeRepo, exporter, userPrefs, kmlRepository, reminderRepository)
+        viewModel = MapViewModel(application, fakeRepo, exporter, userPrefs, kmlRepository, reminderRepository, trackingManager)
     }
 
     private fun makePoint(
@@ -181,7 +185,7 @@ class MapViewModelTest {
             every { preferences } returns flowOf(UserPreferences(mapLat = 41.9, mapLon = 12.5, mapZoom = 14.0))
             coJustRun { setMapPosition(any(), any(), any()) }
         }
-        val vmWithSavedPosition = MapViewModel(FakeGeoPointRepository(), exporter, prefsWithPosition, kmlRepository, reminderRepository)
+        val vmWithSavedPosition = MapViewModel(application, FakeGeoPointRepository(), exporter, prefsWithPosition, kmlRepository, reminderRepository, trackingManager)
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             vmWithSavedPosition.uiState.collect {}

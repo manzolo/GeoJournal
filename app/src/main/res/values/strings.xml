@@ -143,6 +143,16 @@
     <string name="tracking_action_stop">Stop</string>
     <string name="tracking_too_few_points">Percorso troppo breve per essere salvato (min. 2 punti)</string>
     <string name="tracking_permission_denied">Permesso posizione negato, impossibile registrare</string>
+    <string name="tracking_free_start">Inizia tracciato</string>
+    <string name="tracking_free_stop">Ferma tracciato</string>
+    <string name="tracking_save_title">Traccia completata</string>
+    <string name="tracking_save_point_count">%d punti registrati</string>
+    <string name="tracking_save_create_point">Crea nuovo punto</string>
+    <string name="tracking_save_attach_point">Collega a esistente</string>
+    <string name="tracking_save_discard">Elimina traccia</string>
+    <string name="tracking_save_pick_point">Seleziona punto</string>
+    <string name="tracking_save_search_hint">Cerca punto…</string>
+    <string name="tracking_saved_to">Traccia salvata in %s</string>
 
     <!-- List Screen -->
     <string name="list_title">Il tuo diario</string>

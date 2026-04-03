@@ -143,6 +143,16 @@
     <string name="tracking_action_stop">Stop</string>
     <string name="tracking_too_few_points">Track too short to save (min. 2 points)</string>
     <string name="tracking_permission_denied">Location permission denied, cannot record</string>
+    <string name="tracking_free_start">Start track</string>
+    <string name="tracking_free_stop">Stop track</string>
+    <string name="tracking_save_title">Track completed</string>
+    <string name="tracking_save_point_count">%d points recorded</string>
+    <string name="tracking_save_create_point">Create new point</string>
+    <string name="tracking_save_attach_point">Attach to existing</string>
+    <string name="tracking_save_discard">Discard track</string>
+    <string name="tracking_save_pick_point">Select point</string>
+    <string name="tracking_save_search_hint">Search point…</string>
+    <string name="tracking_saved_to">Track saved to %s</string>
 
     <!-- List Screen -->
     <string name="list_title">My journal</string>
