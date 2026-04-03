@@ -508,11 +508,18 @@ fun MapScreen(
 
         // FAB Registra percorso (tra Layers e KML)
         if (!uiState.isTracking || uiState.isFreeTracking) {
+            val trackingStartedText = stringResource(R.string.tracking_started_toast)
+            val trackingStoppedText = stringResource(R.string.tracking_stopped_toast)
             SmallFloatingActionButton(
                 onClick = {
                     if (locationPermission.status.isGranted) {
-                        if (uiState.isFreeTracking) viewModel.stopFreeTracking()
-                        else viewModel.startFreeTracking()
+                        if (uiState.isFreeTracking) {
+                            viewModel.stopFreeTracking()
+                            coroutineScope.launch { snackbarHostState.showSnackbar(trackingStoppedText) }
+                        } else {
+                            viewModel.startFreeTracking()
+                            coroutineScope.launch { snackbarHostState.showSnackbar(trackingStartedText) }
+                        }
                     } else {
                         locationPermission.launchPermissionRequest()
                     }

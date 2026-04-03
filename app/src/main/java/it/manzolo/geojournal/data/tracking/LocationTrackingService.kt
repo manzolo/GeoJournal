@@ -16,6 +16,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import dagger.hilt.android.AndroidEntryPoint
+import it.manzolo.geojournal.MainActivity
 import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.kml.KmlWriter
 import it.manzolo.geojournal.domain.repository.PointKmlRepository
@@ -106,12 +107,19 @@ class LocationTrackingService : Service() {
         }
     }
 
+    /**
+     * Apre MainActivity con ACTION_STOP: l'activity torna in primo piano e,
+     * una volta ricevuto l'intent, invia ACTION_STOP al service per fermare la registrazione.
+     * Il dialog di salvataggio traccia viene mostrato automaticamente da MapScreen
+     * grazie all'osservazione del pendingTrackResult nel TrackingManager.
+     */
     private fun buildStopPendingIntent(): PendingIntent {
-        val stopIntent = Intent(this, LocationTrackingService::class.java).apply {
+        val openAppIntent = Intent(this, MainActivity::class.java).apply {
             action = ACTION_STOP
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        return PendingIntent.getService(
-            this, 0, stopIntent,
+        return PendingIntent.getActivity(
+            this, 0, openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }

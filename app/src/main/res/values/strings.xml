@@ -153,6 +153,8 @@
     <string name="tracking_save_pick_point">Seleziona punto</string>
     <string name="tracking_save_search_hint">Cerca punto…</string>
     <string name="tracking_saved_to">Traccia salvata in %s</string>
+    <string name="tracking_started_toast">Registrazione GPS avviata 🔴</string>
+    <string name="tracking_stopped_toast">Registrazione fermata</string>
 
     <!-- List Screen -->
     <string name="list_title">Il tuo diario</string>
@@ -353,8 +355,8 @@
     <string name="help_title">Come usare GeoJournal</string>
     <string name="help_subtitle">Una guida rapida alle funzionalità principali</string>
     <string name="help_add_point_title">Salvare un punto</string>
-    <string name="help_add_point_body">Tieni premuto sulla mappa per aggiungere un punto nella posizione scelta, oppure usa il pulsante + per salvare la tua posizione attuale. Puoi assegnare titolo, descrizione, un\'emoji personalizzata e aggiungere foto.</string>
-    <string name="help_add_point_badge">Tieni premuto sulla mappa · Pulsante +</string>
+    <string name="help_add_point_body">Usa il pulsante + per salvare la tua posizione attuale sulla mappa. Puoi assegnare titolo, descrizione, un\'emoji personalizzata e aggiungere foto.</string>
+    <string name="help_add_point_badge">Pulsante +</string>
     <string name="help_track_title">Registrare un tracciato GPS</string>
     <string name="help_track_body">Dalla schermata di dettaglio di un punto, avvia la registrazione GPS per tracciare il tuo percorso. Il servizio continua in background anche con lo schermo spento. Al termine viene generato un file KML visualizzabile come overlay sulla mappa.</string>
     <string name="help_track_badge">Dettaglio punto → Avvia tracciamento</string>

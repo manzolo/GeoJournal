@@ -153,6 +153,8 @@
     <string name="tracking_save_pick_point">Select point</string>
     <string name="tracking_save_search_hint">Search point…</string>
     <string name="tracking_saved_to">Track saved to %s</string>
+    <string name="tracking_started_toast">GPS recording started 🔴</string>
+    <string name="tracking_stopped_toast">Recording stopped</string>
 
     <!-- List Screen -->
     <string name="list_title">My journal</string>
@@ -350,8 +352,8 @@
     <string name="help_title">How to use GeoJournal</string>
     <string name="help_subtitle">A quick guide to the main features</string>
     <string name="help_add_point_title">Save a point</string>
-    <string name="help_add_point_body">Long-press on the map to add a point at a chosen location, or use the + button to save your current position. You can set a title, description, a custom emoji and attach photos.</string>
-    <string name="help_add_point_badge">Long press on map · + button</string>
+    <string name="help_add_point_body">Use the + button to save your current position on the map. You can set a title, description, a custom emoji and attach photos.</string>
+    <string name="help_add_point_badge">+ button</string>
     <string name="help_track_title">Record a GPS track</string>
     <string name="help_track_body">From the point detail screen, start GPS recording to trace your route. The service keeps running in the background even with the screen off. A KML file is generated at the end and can be shown as an overlay on the map.</string>
     <string name="help_track_badge">Point detail → Start tracking</string>
