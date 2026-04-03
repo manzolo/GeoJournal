@@ -61,6 +61,13 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z --generate-notes --title "vX.Y.Z"
 ```
 
+## Step 8 — Aggiorna memoria
+
+Aggiorna la versione nei file di memoria del progetto:
+
+- In `/home/manzolo/.claude/projects/-home-manzolo-AndroidStudioProjects-GeoJournal/memory/project_geojournal_overview.md`: aggiorna la riga `**Versione corrente:**` con il nuovo versionName e versionCode, e aggiungi le feature/fix rilevanti della release nella tabella roadmap.
+- In `/home/manzolo/.claude/projects/-home-manzolo-AndroidStudioProjects-GeoJournal/memory/MEMORY.md`: aggiorna la riga "Versione corrente" nelle Note rapide.
+
 ---
 
 Al termine, riporta il link alla GitHub Release creata.

@@ -206,6 +206,8 @@ fun AddEditScreen(
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var permissionLaunchedOnce by remember { mutableStateOf(false) }
     var kmlToRename by remember { mutableStateOf<PointKml?>(null) }
+    var kmlToDelete by remember { mutableStateOf<PointKml?>(null) }
+    var photoToRemove by remember { mutableStateOf<String?>(null) }
     var showDiscardDialog by remember { mutableStateOf(false) }
     var pendingDiscardAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
@@ -675,7 +677,7 @@ fun AddEditScreen(
                                             .size(24.dp)
                                             .clip(CircleShape)
                                             .background(Color.Black.copy(alpha = 0.6f))
-                                            .clickable { viewModel.removePhotoUri(uri) },
+                                            .clickable { photoToRemove = uri },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.addedit_remove_photo),
@@ -968,7 +970,7 @@ fun AddEditScreen(
                                             onClick = { kmlToRename = kml },
                                             label = { Text(kml.name) },
                                             trailingIcon = {
-                                                IconButton(onClick = { viewModel.deleteKml(kml) },
+                                                IconButton(onClick = { kmlToDelete = kml },
                                                     modifier = Modifier.size(18.dp)) {
                                                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
                                                         modifier = Modifier.size(14.dp))
@@ -1015,6 +1017,52 @@ fun AddEditScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // --- Remove Photo Confirmation Dialog ---
+    photoToRemove?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { photoToRemove = null },
+            title = { Text(stringResource(R.string.addedit_remove_photo_confirm_title)) },
+            text = { Text(stringResource(R.string.addedit_remove_photo_confirm_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.removePhotoUri(uri)
+                        photoToRemove = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.action_remove)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { photoToRemove = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // --- Remove KML Confirmation Dialog ---
+    kmlToDelete?.let { kml ->
+        AlertDialog(
+            onDismissRequest = { kmlToDelete = null },
+            title = { Text(stringResource(R.string.addedit_remove_kml_confirm_title)) },
+            text = { Text(stringResource(R.string.addedit_remove_kml_confirm_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteKml(kml)
+                        kmlToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.action_remove)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { kmlToDelete = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }

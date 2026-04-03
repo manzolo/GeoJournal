@@ -207,6 +207,10 @@
     <string name="addedit_import_kml">Import KML</string>
     <string name="addedit_kml_rename_title">Rename KML file</string>
     <string name="addedit_kml_rename_hint">Name</string>
+    <string name="addedit_remove_photo_confirm_title">Remove photo</string>
+    <string name="addedit_remove_photo_confirm_body">The photo will be removed. The change will only take effect after saving.</string>
+    <string name="addedit_remove_kml_confirm_title">Remove KML file</string>
+    <string name="addedit_remove_kml_confirm_body">The KML file will be removed. The change will only take effect after saving.</string>
     <string name="addedit_discard_title">Unsaved changes</string>
     <string name="addedit_discard_body">You have unsaved changes. Do you want to leave and lose them?</string>
     <string name="addedit_discard_confirm">Leave without saving</string>

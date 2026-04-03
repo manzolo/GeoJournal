@@ -207,6 +207,10 @@
     <string name="addedit_import_kml">Importa KML</string>
     <string name="addedit_kml_rename_title">Rinomina file KML</string>
     <string name="addedit_kml_rename_hint">Nome</string>
+    <string name="addedit_remove_photo_confirm_title">Rimuovi foto</string>
+    <string name="addedit_remove_photo_confirm_body">La foto verrà rimossa. La modifica sarà effettiva solo dopo aver salvato.</string>
+    <string name="addedit_remove_kml_confirm_title">Rimuovi file KML</string>
+    <string name="addedit_remove_kml_confirm_body">Il file KML verrà rimosso. La modifica sarà effettiva solo dopo aver salvato.</string>
     <string name="addedit_discard_title">Modifiche non salvate</string>
     <string name="addedit_discard_body">Hai modifiche non salvate. Vuoi uscire e perderle?</string>
     <string name="addedit_discard_confirm">Esci senza salvare</string>
