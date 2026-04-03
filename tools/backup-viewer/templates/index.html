@@ -32,7 +32,7 @@
       display: flex; align-items: center; gap: 12px;
       padding: 10px 18px; flex-shrink: 0;
       background: var(--surface); border-bottom: 1px solid var(--border);
-      z-index: 10;
+      z-index: 1000;
     }
     header h1 { font-size: 1.1rem; font-weight: 700; }
     header h1 span { color: var(--accent); }
@@ -52,14 +52,34 @@
     .kml-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
     .kml-toggle-btn.active .kml-indicator { background: var(--accent); }
 
-    .fit-btn {
-      margin-left: 12px; flex-shrink: 0;
+    /* ── Menu Utilità ────────────────────────────────────────────────────── */
+    .util-menu-wrap { position: relative; margin-left: 12px; flex-shrink: 0; }
+    .util-menu-btn {
+      display: inline-flex; align-items: center; gap: 6px;
       padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
       border: 1px solid var(--border); background: var(--surface2); color: var(--text);
-      cursor: pointer; transition: all .15s; white-space: nowrap;
+      cursor: pointer; transition: all .15s; white-space: nowrap; user-select: none;
     }
-    .fit-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .fit-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .util-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .util-menu-btn .util-chevron { font-size: 0.6rem; transition: transform .2s; }
+    .util-menu-btn.open .util-chevron { transform: rotate(180deg); }
+    .util-dropdown {
+      display: none; position: absolute; right: 0; top: calc(100% + 6px);
+      min-width: 200px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.5); z-index: 200;
+      overflow: hidden;
+    }
+    .util-dropdown.open { display: block; }
+    .util-item {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 9px 14px; background: none; border: none;
+      color: var(--text); font-size: 0.82rem; font-weight: 500;
+      cursor: pointer; text-align: left; transition: background .12s;
+    }
+    .util-item:hover { background: color-mix(in srgb, var(--accent) 14%, var(--surface2)); }
+    .util-item:disabled { opacity: .45; cursor: not-allowed; }
+    .util-item + .util-item { border-top: 1px solid var(--border); }
+    .util-item-icon { font-size: 1rem; flex-shrink: 0; }
 
     .body { display: flex; flex: 1; overflow: hidden; }
 
@@ -397,16 +417,24 @@
       <span class="sep">·</span>
       <div>v<strong>{{ meta.app_version }}</strong></div>
     </div>
-    <!-- FIT → KML converter -->
+    <!-- Hidden file inputs -->
     <input type="file" id="fitInput" accept=".fit" style="display:none" onchange="convertFit(this)">
-    <button class="fit-btn" onclick="document.getElementById('fitInput').click()" title="Converti file Garmin .fit in .kml">
-      <span id="fitBtnIcon">🏃</span> FIT → KML
-    </button>
-    <!-- Backup uploader -->
     <input type="file" id="backupInput" accept=".zip" style="display:none" onchange="uploadBackup(this)">
-    <button class="fit-btn" id="uploadBtn" onclick="document.getElementById('backupInput').click()" title="Carica un backup GeoJournal (.zip)">
-      <span id="uploadBtnIcon">📂</span> Carica backup
-    </button>
+
+    <!-- Menu Utilità -->
+    <div class="util-menu-wrap">
+      <button class="util-menu-btn" id="utilMenuBtn" onclick="toggleUtilMenu()">
+        ⚙️ Utilità <span class="util-chevron">▼</span>
+      </button>
+      <div class="util-dropdown" id="utilDropdown">
+        <button class="util-item" id="uploadBtn" onclick="utilAction(() => document.getElementById('backupInput').click())" title="Carica un backup GeoJournal (.zip)">
+          <span class="util-item-icon" id="uploadBtnIcon">📂</span> Carica backup
+        </button>
+        <button class="util-item" id="fitBtn" onclick="utilAction(() => document.getElementById('fitInput').click())" title="Converti file Garmin .fit in .kml">
+          <span class="util-item-icon" id="fitBtnIcon">🏃</span> FIT → KML
+        </button>
+      </div>
+    </div>
   </header>
 
   <!-- Meta info mobile (sotto header) -->
@@ -1046,7 +1074,7 @@ async function convertFit(input) {
   if (!file) return;
   input.value = '';  // reset so same file can be re-selected
 
-  const btn = document.querySelector('.fit-btn');
+  const btn = document.getElementById('fitBtn');
   const icon = document.getElementById('fitBtnIcon');
   btn.disabled = true;
   icon.textContent = '⏳';
@@ -1108,6 +1136,30 @@ async function uploadBackup(input) {
     btn.disabled = false;
   }
 }
+
+// ── Menu Utilità ──────────────────────────────────────────────────────────────
+function toggleUtilMenu() {
+  const btn = document.getElementById('utilMenuBtn');
+  const drop = document.getElementById('utilDropdown');
+  const open = drop.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+function utilAction(fn) {
+  // chiude il menu, poi esegue l'azione
+  document.getElementById('utilDropdown').classList.remove('open');
+  document.getElementById('utilMenuBtn').classList.remove('open');
+  fn();
+}
+
+// chiudi cliccando fuori
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('utilMenuBtn')?.closest('.util-menu-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('utilDropdown').classList.remove('open');
+    document.getElementById('utilMenuBtn').classList.remove('open');
+  }
+});
 </script>
 </body>
 </html>
