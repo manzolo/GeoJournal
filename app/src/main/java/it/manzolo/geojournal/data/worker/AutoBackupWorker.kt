@@ -33,6 +33,8 @@ class AutoBackupWorker @AssistedInject constructor(
                     val out = applicationContext.contentResolver.openOutputStream(uri, "wt")
                         ?: error("openOutputStream returned null for Drive URI")
                     out.use { localFile.inputStream().use { inp -> inp.copyTo(out) } }
+                    // Notifica il sistema per forzare la sincronizzazione su Drive
+                    applicationContext.contentResolver.notifyChange(uri, null)
                 }
                 userPrefsRepository.setLastDriveBackup(
                     timestamp = System.currentTimeMillis(),

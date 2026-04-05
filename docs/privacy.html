@@ -149,7 +149,12 @@
 
   <div class="card">
     <h2>📍 Posizione GPS</h2>
-    <p>L'app richiede il permesso di localizzazione <strong>solo quando l'utente aggiunge un punto</strong> e preme "Rileva GPS". La posizione non viene tracciata in background né trasmessa automaticamente.</p>
+    <p>L'app richiede il permesso di localizzazione in due casi, entrambi avviati esplicitamente dall'utente:</p>
+    <ul>
+      <li><strong>Rileva posizione</strong> — lettura singola della posizione corrente per aggiungere un punto geografico.</li>
+      <li><strong>Tracciamento percorso</strong> — servizio in foreground (icona nella barra di stato e notifica visibile) che registra il percorso GPS finché l'utente non lo ferma. Al termine genera un file KML salvato localmente, mai trasmesso automaticamente.</li>
+    </ul>
+    <p>La posizione non viene mai raccolta in background silenzioso né trasmessa automaticamente a server esterni.</p>
   </div>
 
   <div class="card">
@@ -159,7 +164,7 @@
       <li><strong>Firebase Firestore</strong> (Google LLC) — sincronizzazione metadati cloud opt-in (punti, promemoria, visite); <strong>Firebase Storage</strong> — foto opt-in</li>
       <li><strong>Firebase Crashlytics</strong> (Google LLC) — segnalazioni di crash anonime</li>
       <li><strong>OpenStreetMap / OSMDroid</strong> — tiles cartografiche, nessun dato personale trasmesso</li>
-      <li><strong>Google Drive</strong> — usato solo se l'utente configura esplicitamente il backup su Drive tramite la selezione file di Android</li>
+      <li><strong>Google Drive</strong> — usato solo se l'utente configura esplicitamente un URI di destinazione tramite la selezione file di Android. Una volta configurato, il backup avviene automaticamente ogni notte (tra le 02:00 e le 06:00), solo in presenza di connessione di rete e batteria non scarica. L'app non accede a nessun altro file Drive oltre alla destinazione scelta dall'utente.</li>
     </ul>
     <p>Policy di Google: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
   </div>
@@ -170,7 +175,7 @@
       <li><span class="badge">Locale</span> — Database Room sul dispositivo (modalità ospite o loggata)</li>
       <li><span class="badge">Cloud opt-in</span> — Firebase Firestore per punti, promemoria e visite; Firebase Storage per foto; tutto solo se loggato <em>e</em> toggle attivo (OFF per default); server Google nell'UE/USA</li>
       <li><span class="badge">Locale</span> — Foto salvate sul dispositivo; vengono caricate solo se il toggle "Foto" è esplicitamente attivato</li>
-      <li><span class="badge">Backup</span> — File ZIP su storage locale o Google Drive (include le foto), solo se l'utente lo configura</li>
+      <li><span class="badge">Backup</span> — File ZIP sullo storage privato dell'app (massimo 5 file conservati). Se l'utente ha configurato una destinazione Drive, una copia viene scritta automaticamente ogni notte nello stesso file scelto, senza creare altri file né accedere ad altri dati Drive.</li>
     </ul>
     <p>I dati su Firebase sono associati al tuo account Google e vengono conservati finché non li elimini. Puoi eliminare l'account e tutti i dati in autonomia dall'app: <strong>Profilo → "Elimina account e tutti i dati"</strong>. Questa operazione cancella tutti i documenti Firestore associati al tuo account. Le foto, essendo solo locali, vengono eliminate insieme all'app.</p>
   </div>
@@ -197,7 +202,7 @@
     <p>Eventuali aggiornamenti verranno pubblicati su questa pagina. L'uso continuato dell'app dopo le modifiche costituisce accettazione della nuova policy.</p>
   </div>
 
-  <p class="updated">Ultimo aggiornamento: 24 marzo 2026</p>
+  <p class="updated">Ultimo aggiornamento: 5 aprile 2026</p>
 </div>
 
 <!-- ═══════════════════════════════ ENGLISH ════════════════════════════════ -->
@@ -238,7 +243,12 @@
 
   <div class="card">
     <h2>📍 GPS Location</h2>
-    <p>The app requests location permission <strong>only when the user adds a point</strong> and taps "Detect GPS". Location is never tracked in the background or transmitted automatically.</p>
+    <p>The app requests location permission in two cases, both triggered explicitly by the user:</p>
+    <ul>
+      <li><strong>Detect location</strong> — a one-time position reading used to add a new geo point.</li>
+      <li><strong>Route tracking</strong> — a foreground service (with a persistent status-bar icon and visible notification) that records a GPS route until the user stops it. When stopped, it generates a KML file saved locally, never transmitted automatically.</li>
+    </ul>
+    <p>Location is never collected silently in the background or automatically transmitted to external servers.</p>
   </div>
 
   <div class="card">
@@ -248,7 +258,7 @@
       <li><strong>Firebase Firestore</strong> (Google LLC) — opt-in cloud metadata sync (points, reminders, visits); <strong>Firebase Storage</strong> — opt-in photo backup</li>
       <li><strong>Firebase Crashlytics</strong> (Google LLC) — anonymous crash reporting</li>
       <li><strong>OpenStreetMap / OSMDroid</strong> — map tiles, no personal data transmitted</li>
-      <li><strong>Google Drive</strong> — used only if the user explicitly configures Drive backup via Android's file picker</li>
+      <li><strong>Google Drive</strong> — used only if the user explicitly configures a destination URI via Android's file picker. Once configured, backup runs automatically every night (between 02:00 and 06:00), only when a network connection is available and the battery is not low. The app does not access any Drive files other than the destination chosen by the user.</li>
     </ul>
     <p>Google Privacy Policy: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
   </div>
@@ -259,7 +269,7 @@
       <li><span class="badge">Local</span> — Room database on the device (guest or signed-in mode)</li>
       <li><span class="badge">Cloud opt-in</span> — Firebase Firestore for points, reminders and visits; Firebase Storage for photos; all signed-in only <em>and</em> toggle enabled (OFF by default); Google servers in EU/USA</li>
       <li><span class="badge">Local</span> — Photos stored on device; uploaded only if the "Photos" toggle is explicitly enabled</li>
-      <li><span class="badge">Backup</span> — ZIP file on local storage or Google Drive (includes photos), only if configured by the user</li>
+      <li><span class="badge">Backup</span> — ZIP file in the app's private storage (up to 5 files retained). If the user has configured a Drive destination, a copy is written automatically every night to the same chosen file, without creating additional files or accessing any other Drive data.</li>
     </ul>
     <p>Firebase data is linked to your Google account and retained until you delete it. You can delete your account and all data directly from the app: <strong>Profile → "Delete account and all data"</strong>. This permanently deletes all Firestore documents linked to your account. Photos, being local only, are removed when the app is uninstalled.</p>
   </div>
@@ -286,7 +296,7 @@
     <p>Any updates will be published on this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
   </div>
 
-  <p class="updated">Last updated: March 24, 2026</p>
+  <p class="updated">Last updated: April 5, 2026</p>
 </div>
 
 <script>

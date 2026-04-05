@@ -30,15 +30,21 @@ class AutoBackupScheduler @Inject constructor(
         }
         val initialDelayMs = next2am.timeInMillis - now.timeInMillis
 
+        val constraints = androidx.work.Constraints.Builder()
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .setRequiresBatteryNotLow(true)
+            .build()
+
         val request = PeriodicWorkRequestBuilder<AutoBackupWorker>(
             1, TimeUnit.DAYS,
             4, TimeUnit.HOURS   // flex: esegue tra le 02:00 e le 06:00
         )
             .setInitialDelay(initialDelayMs, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request
         )
     }
