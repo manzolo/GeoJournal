@@ -93,7 +93,9 @@ data class MapUiState(
     /** Barra di ricerca sulla mappa */
     val searchQuery: String = "",
     val isSearchOpen: Boolean = false,
-    val searchResults: List<GeoPoint> = emptyList()
+    val searchResults: List<GeoPoint> = emptyList(),
+    /** True appena arriva la prima posizione reale (GPS o salvata) */
+    val hasUserLocation: Boolean = false
 )
 
 @HiltViewModel
@@ -168,7 +170,8 @@ class MapViewModel @Inject constructor(
                         userLatitude = prefs.mapLat,
                         userLongitude = prefs.mapLon,
                         zoomLevel = prefs.mapZoom,
-                        hasAppliedInitialZoom = true  // salta il fit automatico sui punti
+                        hasAppliedInitialZoom = true,  // salta il fit automatico sui punti
+                        hasUserLocation = true
                     )
                 }
             }
@@ -246,7 +249,7 @@ class MapViewModel @Inject constructor(
     }
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Double) {
-        _uiState.update { it.copy(userLatitude = lat, userLongitude = lon, zoomLevel = zoom) }
+        _uiState.update { it.copy(userLatitude = lat, userLongitude = lon, zoomLevel = zoom, hasUserLocation = true) }
         savePositionJob?.cancel()
         savePositionJob = viewModelScope.launch {
             delay(1000)
