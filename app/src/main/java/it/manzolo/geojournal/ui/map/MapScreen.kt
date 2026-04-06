@@ -992,6 +992,9 @@ private fun KmlLayerSheet(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 },
+                                supportingContent = item.trackLengthMeters?.let { len ->
+                                    { Text(formatDistance(len), modifier = Modifier.padding(start = 16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                },
                                 trailingContent = {
                                     Switch(
                                         checked = item.isActive,

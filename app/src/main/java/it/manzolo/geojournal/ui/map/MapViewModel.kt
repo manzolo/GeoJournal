@@ -10,6 +10,7 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.backup.ShareAvailability
 import it.manzolo.geojournal.data.backup.ShareOptions
+import it.manzolo.geojournal.data.kml.KmlGeometryType
 import it.manzolo.geojournal.data.kml.KmlParser
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.tracking.LocationTrackingService
@@ -45,7 +46,8 @@ data class KmlSessionItem(
     val pointTitle: String,
     val isActive: Boolean,
     val pointLat: Double = 0.0,
-    val pointLon: Double = 0.0
+    val pointLon: Double = 0.0,
+    val trackLengthMeters: Float? = null
 )
 
 data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null, val zoom: Double = 17.0)
@@ -344,7 +346,8 @@ class MapViewModel @Inject constructor(
                         pointTitle = point.title,
                         isActive = kml.id in currentActiveIds,
                         pointLat = point.latitude,
-                        pointLon = point.longitude
+                        pointLon = point.longitude,
+                        trackLengthMeters = calcKmlLength(kml.filePath)
                     )
                 }
             }
@@ -376,6 +379,21 @@ class MapViewModel @Inject constructor(
     suspend fun parseKml(kmlId: String) = kotlinx.coroutines.withContext(Dispatchers.IO) {
         val item = _uiState.value.kmlItems.find { it.kml.id == kmlId } ?: return@withContext emptyList()
         KmlParser.parse(java.io.File(item.kml.filePath))
+    }
+
+    /** Calcola la lunghezza totale (metri) di tutte le LineString in un file KML. Null se il file non esiste o non ha percorsi. */
+    private fun calcKmlLength(filePath: String): Float? {
+        val geometries = KmlParser.parse(java.io.File(filePath))
+        val lines = geometries.filter { it.type == KmlGeometryType.LINE_STRING }
+        if (lines.isEmpty()) return null
+        val total = lines.sumOf { geom ->
+            geom.coordinates.zipWithNext { a, b ->
+                val res = FloatArray(1)
+                android.location.Location.distanceBetween(a.second, a.first, b.second, b.first, res)
+                res[0].toDouble()
+            }.sum()
+        }
+        return if (total > 0) total.toFloat() else null
     }
 
     // ─── Free tracking (senza GeoPoint pre-esistente) ──────────────────────────
