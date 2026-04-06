@@ -39,7 +39,21 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -377,10 +391,11 @@ fun MapScreen(
         onDispose { sm.unregisterListener(listener) }
     }
 
-    LaunchedEffect(uiState.points) {
-        pointsRef.value = uiState.points
+    LaunchedEffect(uiState.points, uiState.searchQuery) {
+        val displayPoints = if (uiState.searchQuery.isBlank()) uiState.points else uiState.searchResults
+        pointsRef.value = displayPoints
         updateClusteredMarkers(
-            mapView, uiState.points, context,
+            mapView, displayPoints, context,
             onMarkerClick = { viewModel.onPointSelected(it) },
             onClusterTooClose = { clusterPickerRef.value = it }
         )
@@ -424,10 +439,35 @@ fun MapScreen(
         }
     }
 
+    if (uiState.isSearchOpen) {
+        BackHandler { viewModel.closeSearch() }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { mapView },
             modifier = Modifier.fillMaxSize()
+        )
+
+        // Search Bar stile Google Maps — pill collassabile in cima
+        MapSearchBar(
+            isOpen = uiState.isSearchOpen,
+            query = uiState.searchQuery,
+            results = uiState.searchResults,
+            userLat = uiState.userLatitude,
+            userLon = uiState.userLongitude,
+            onOpen = viewModel::openSearch,
+            onClose = viewModel::closeSearch,
+            onQueryChange = viewModel::updateSearchQuery,
+            onResultClick = { point ->
+                viewModel.closeSearch()
+                viewModel.onPointSelected(point)
+                mapView.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), 17.0, 800L)
+            },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth()
         )
 
         // Controlli zoom + inquadra tutto (lato sinistro)
@@ -459,31 +499,143 @@ fun MapScreen(
             }
         }
 
-        // Pulsante Layer (in alto a destra)
-        SmallFloatingActionButton(
-            onClick = {
-                currentLayer = when (currentLayer) {
-                    MapLayer.ROAD -> MapLayer.TOPO
-                    MapLayer.TOPO -> MapLayer.SATELLITE
-                    MapLayer.SATELLITE -> MapLayer.ROAD
-                }
-            },
+        // FAB destra — Column con spacing uniforme (Layer → Traccia → KML → Parcheggio → MyLocation)
+        var isParkingActive by remember { mutableStateOf(false) }
+        var isCenteringActive by remember { mutableStateOf(false) }
+        val trackingStartedText = stringResource(R.string.tracking_started_toast)
+        val trackingStoppedText = stringResource(R.string.tracking_stopped_toast)
+
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 280.dp),
-            containerColor = when (currentLayer) {
-                MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
-                MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
-                MapLayer.SATELLITE -> MaterialTheme.colorScheme.primaryContainer
-            }
+                .padding(end = 16.dp, bottom = 88.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.End
         ) {
-            Icon(
-                imageVector = Icons.Filled.Layers,
-                contentDescription = stringResource(R.string.map_layer_button)
-            )
+            // Pulsante Layer
+            SmallFloatingActionButton(
+                onClick = {
+                    currentLayer = when (currentLayer) {
+                        MapLayer.ROAD -> MapLayer.TOPO
+                        MapLayer.TOPO -> MapLayer.SATELLITE
+                        MapLayer.SATELLITE -> MapLayer.ROAD
+                    }
+                },
+                containerColor = when (currentLayer) {
+                    MapLayer.ROAD -> MaterialTheme.colorScheme.secondaryContainer
+                    MapLayer.TOPO -> MaterialTheme.colorScheme.tertiaryContainer
+                    MapLayer.SATELLITE -> MaterialTheme.colorScheme.primaryContainer
+                }
+            ) {
+                Icon(Icons.Filled.Layers, contentDescription = stringResource(R.string.map_layer_button))
+            }
+
+            // FAB Registra percorso (visibile solo se non c'è un tracking di punto in corso)
+            AnimatedVisibility(
+                visible = !uiState.isTracking || uiState.isFreeTracking,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                SmallFloatingActionButton(
+                    onClick = {
+                        if (locationPermission.status.isGranted) {
+                            if (uiState.isFreeTracking) {
+                                viewModel.stopFreeTracking()
+                                coroutineScope.launch { snackbarHostState.showSnackbar(trackingStoppedText) }
+                            } else {
+                                viewModel.startFreeTracking()
+                                coroutineScope.launch { snackbarHostState.showSnackbar(trackingStartedText) }
+                            }
+                        } else {
+                            locationPermission.launchPermissionRequest()
+                        }
+                    },
+                    containerColor = if (uiState.isFreeTracking)
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Icon(
+                        imageVector = if (uiState.isFreeTracking) Icons.Filled.Stop else Icons.Filled.FiberManualRecord,
+                        contentDescription = stringResource(
+                            if (uiState.isFreeTracking) R.string.tracking_free_stop else R.string.tracking_free_start
+                        ),
+                        tint = if (uiState.isFreeTracking)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
+            // Pulsante KML
+            SmallFloatingActionButton(
+                onClick = { viewModel.toggleKmlPanel() },
+                containerColor = if (uiState.kmlItems.any { it.isActive })
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.Polyline, contentDescription = stringResource(R.string.map_kml_toggle_button))
+            }
+
+            // FAB Parcheggio
+            SmallFloatingActionButton(
+                onClick = {
+                    if (locationPermission.status.isGranted) {
+                        coroutineScope.launch {
+                            isParkingActive = true
+                            getFreshLocation(context)?.let { (lat, lon) ->
+                                viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
+                            }
+                            isParkingActive = false
+                        }
+                    } else {
+                        locationPermission.launchPermissionRequest()
+                    }
+                },
+                containerColor = if (isParkingActive)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.DirectionsCar, contentDescription = stringResource(R.string.map_parking_fab))
+            }
+
+            // FAB posizione utente / centra
+            SmallFloatingActionButton(
+                onClick = {
+                    if (locationPermission.status.isGranted) {
+                        coroutineScope.launch {
+                            isCenteringActive = true
+                            val result = getFreshLocation(context)
+                            if (result != null) {
+                                val (lat, lon) = result
+                                myLocationOverlayRef.value?.let { mapView.overlays.remove(it) }
+                                val overlay = MyLocationOverlay(lat, lon)
+                                mapView.overlays.add(overlay)
+                                myLocationOverlayRef.value = overlay
+                                mapView.invalidate()
+                                mapView.controller.animateTo(OsmGeoPoint(lat, lon))
+                            } else {
+                                snackbarHostState.showSnackbar(locationUnavailableText)
+                            }
+                            isCenteringActive = false
+                        }
+                    } else {
+                        locationPermission.launchPermissionRequest()
+                    }
+                },
+                containerColor = if (isCenteringActive)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.map_my_location))
+            }
         }
 
-        // Chip nome layer — compare vicino al pulsante, scompare dopo 1.5s
+        // Chip nome layer — compare a sinistra del FAB Layer, scompare dopo 1.5s
         AnimatedVisibility(
             visible = showLayerLabel,
             enter = fadeIn() + scaleIn(initialScale = 0.85f),
@@ -504,131 +656,6 @@ fun MapScreen(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
-        }
-
-        // FAB Registra percorso (tra Layers e KML)
-        if (!uiState.isTracking || uiState.isFreeTracking) {
-            val trackingStartedText = stringResource(R.string.tracking_started_toast)
-            val trackingStoppedText = stringResource(R.string.tracking_stopped_toast)
-            SmallFloatingActionButton(
-                onClick = {
-                    if (locationPermission.status.isGranted) {
-                        if (uiState.isFreeTracking) {
-                            viewModel.stopFreeTracking()
-                            coroutineScope.launch { snackbarHostState.showSnackbar(trackingStoppedText) }
-                        } else {
-                            viewModel.startFreeTracking()
-                            coroutineScope.launch { snackbarHostState.showSnackbar(trackingStartedText) }
-                        }
-                    } else {
-                        locationPermission.launchPermissionRequest()
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 232.dp),
-                containerColor = if (uiState.isFreeTracking)
-                    MaterialTheme.colorScheme.errorContainer
-                else
-                    MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Icon(
-                    imageVector = if (uiState.isFreeTracking) Icons.Filled.Stop else Icons.Filled.FiberManualRecord,
-                    contentDescription = stringResource(
-                        if (uiState.isFreeTracking) R.string.tracking_free_stop else R.string.tracking_free_start
-                    ),
-                    tint = if (uiState.isFreeTracking)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-        }
-
-        // Pulsante KML (sotto Layers)
-        SmallFloatingActionButton(
-            onClick = { viewModel.toggleKmlPanel() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 184.dp),
-            containerColor = if (uiState.kmlItems.any { it.isActive })
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Polyline,
-                contentDescription = stringResource(R.string.map_kml_toggle_button)
-            )
-        }
-
-        // FAB parcheggio (sotto KML)
-        var isParkingActive by remember { mutableStateOf(false) }
-        SmallFloatingActionButton(
-            onClick = {
-                if (locationPermission.status.isGranted) {
-                    coroutineScope.launch {
-                        isParkingActive = true
-                        getFreshLocation(context)?.let { (lat, lon) ->
-                            viewModel.saveParkingPoint(lat, lon, parkingPointTitle)
-                        }
-                        isParkingActive = false
-                    }
-                } else {
-                    locationPermission.launchPermissionRequest()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 136.dp),
-            containerColor = if (isParkingActive)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Filled.DirectionsCar,
-                contentDescription = stringResource(R.string.map_parking_fab)
-            )
-        }
-
-        // FAB posizione utente / centra (sotto parcheggio)
-        var isCenteringActive by remember { mutableStateOf(false) }
-        SmallFloatingActionButton(
-            onClick = {
-                if (locationPermission.status.isGranted) {
-                    coroutineScope.launch {
-                        isCenteringActive = true
-                        val result = getFreshLocation(context)
-                        if (result != null) {
-                            val (lat, lon) = result
-                            myLocationOverlayRef.value?.let { mapView.overlays.remove(it) }
-                            val overlay = MyLocationOverlay(lat, lon)
-                            mapView.overlays.add(overlay)
-                            myLocationOverlayRef.value = overlay
-                            mapView.invalidate()
-                            mapView.controller.animateTo(OsmGeoPoint(lat, lon))
-                        } else {
-                            snackbarHostState.showSnackbar(locationUnavailableText)
-                        }
-                        isCenteringActive = false
-                    }
-                } else {
-                    locationPermission.launchPermissionRequest()
-                }
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 88.dp),
-            containerColor = if (isCenteringActive)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Icon(
-                imageVector = Icons.Filled.MyLocation,
-                contentDescription = stringResource(R.string.map_my_location)
-            )
         }
 
         // Prima concessione del permesso GPS a runtime: centra sulla posizione utente
@@ -733,6 +760,8 @@ fun MapScreen(
             KmlLayerSheet(
                 kmlItems = uiState.kmlItems,
                 expandedPointIds = uiState.expandedKmlPointIds,
+                userLat = uiState.userLatitude,
+                userLon = uiState.userLongitude,
                 onDismiss = viewModel::dismissKmlPanel,
                 onToggle = viewModel::toggleKml,
                 onToggleGroup = viewModel::toggleKmlPointGroup
@@ -874,6 +903,8 @@ private fun PointPickerSheet(
 private fun KmlLayerSheet(
     kmlItems: List<KmlSessionItem>,
     expandedPointIds: Set<String>,
+    userLat: Double,
+    userLon: Double,
     onDismiss: () -> Unit,
     onToggle: (String) -> Unit,
     onToggleGroup: (String) -> Unit
@@ -919,8 +950,11 @@ private fun KmlLayerSheet(
                                 )
                             },
                             supportingContent = {
+                                val dist = distanceBetween(userLat, userLon, items.first().pointLat, items.first().pointLon)
                                 Text(
-                                    "${items.size} KML" + if (activeCount > 0) " · $activeCount attivi" else "",
+                                    "${items.size} KML" +
+                                        (if (activeCount > 0) " · $activeCount attivi" else "") +
+                                        " · ${formatDistance(dist)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -964,6 +998,128 @@ private fun KmlLayerSheet(
         }
         Spacer(Modifier.height(16.dp))
     }
+}
+
+@Composable
+private fun MapSearchBar(
+    isOpen: Boolean,
+    query: String,
+    results: List<GeoPoint>,
+    userLat: Double,
+    userLon: Double,
+    onOpen: () -> Unit,
+    onClose: () -> Unit,
+    onQueryChange: (String) -> Unit,
+    onResultClick: (GeoPoint) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(50.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (!isOpen) Modifier.clickable { onOpen() } else Modifier)
+                    .padding(horizontal = 16.dp, vertical = if (isOpen) 4.dp else 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(8.dp))
+                if (isOpen) {
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (query.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.map_search_placeholder),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                    if (query.isNotEmpty()) {
+                        androidx.compose.material3.IconButton(onClick = { onQueryChange("") }) {
+                            Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.map_search_clear))
+                        }
+                    }
+                    androidx.compose.material3.IconButton(onClick = onClose) {
+                        Icon(Icons.Filled.Close, contentDescription = null)
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.map_search_placeholder),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            AnimatedVisibility(
+                visible = isOpen && results.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    HorizontalDivider()
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                        items(results, key = { it.id }) { point ->
+                            val dist = distanceBetween(userLat, userLon, point.latitude, point.longitude)
+                            ListItem(
+                                headlineContent = {
+                                    Text(point.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                },
+                                leadingContent = {
+                                    Text(point.emoji, style = MaterialTheme.typography.titleLarge)
+                                },
+                                trailingContent = {
+                                    Text(
+                                        formatDistance(dist),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                modifier = Modifier.clickable { onResultClick(point) }
+                            )
+                            HorizontalDivider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(isOpen) {
+        if (isOpen) focusRequester.requestFocus()
+    }
+}
+
+private fun distanceBetween(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+    val result = FloatArray(1)
+    android.location.Location.distanceBetween(lat1, lon1, lat2, lon2, result)
+    return result[0]
+}
+
+private fun formatDistance(meters: Float): String = when {
+    meters < 1000f -> "${meters.toInt()}m"
+    else -> "${"%.1f".format(meters / 1000f)}km"
 }
 
 private fun getLastKnownLocation(context: Context): android.location.Location? {

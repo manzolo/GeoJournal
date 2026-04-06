@@ -22,6 +22,8 @@
     <string name="map_parking_navigate">Portami lì</string>
     <string name="map_layer_button">Cambia layer mappa</string>
     <string name="map_kml_toggle_button">Layer KML</string>
+    <string name="map_search_placeholder">Cerca un luogo…</string>
+    <string name="map_search_clear">Cancella ricerca</string>
     <string name="map_kml_panel_title">Layer KML</string>
     <string name="map_kml_no_layers">Nessun file KML per i punti visibili</string>
     <string name="map_layer_road">Stradale</string>

@@ -43,7 +43,9 @@ import javax.inject.Inject
 data class KmlSessionItem(
     val kml: PointKml,
     val pointTitle: String,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val pointLat: Double = 0.0,
+    val pointLon: Double = 0.0
 )
 
 data class FocusTarget(val lat: Double, val lon: Double, val pointId: String? = null, val zoom: Double = 17.0)
@@ -87,7 +89,11 @@ data class MapUiState(
     /** True = mostra bottom sheet selezione punto esistente */
     val showPointPickerSheet: Boolean = false,
     /** Titolo del punto in cui è stata salvata l'ultima traccia (per snackbar) */
-    val pendingTrackSavedToTitle: String? = null
+    val pendingTrackSavedToTitle: String? = null,
+    /** Barra di ricerca sulla mappa */
+    val searchQuery: String = "",
+    val isSearchOpen: Boolean = false,
+    val searchResults: List<GeoPoint> = emptyList()
 )
 
 @HiltViewModel
@@ -333,7 +339,9 @@ class MapViewModel @Inject constructor(
                     KmlSessionItem(
                         kml = kml,
                         pointTitle = point.title,
-                        isActive = kml.id in currentActiveIds
+                        isActive = kml.id in currentActiveIds,
+                        pointLat = point.latitude,
+                        pointLon = point.longitude
                     )
                 }
             }
@@ -441,6 +449,22 @@ class MapViewModel @Inject constructor(
     fun hidePointPickerSheet() = _uiState.update { it.copy(showPointPickerSheet = false) }
 
     fun clearTrackingSavedSnackbar() = _uiState.update { it.copy(pendingTrackSavedToTitle = null) }
+
+    // ─── Map search ─────────────────────────────────────────────────────────────
+
+    fun openSearch() = _uiState.update { it.copy(isSearchOpen = true) }
+
+    fun closeSearch() = _uiState.update { it.copy(isSearchOpen = false, searchQuery = "", searchResults = emptyList()) }
+
+    fun updateSearchQuery(q: String) {
+        val results = if (q.isBlank()) emptyList() else _uiState.value.points.filter { point ->
+            point.title.contains(q, ignoreCase = true) ||
+            point.description.contains(q, ignoreCase = true) ||
+            point.tags.any { it.contains(q, ignoreCase = true) } ||
+            point.emoji.contains(q, ignoreCase = true)
+        }
+        _uiState.update { it.copy(searchQuery = q, searchResults = results) }
+    }
 
     companion object {
         const val PARKING_TAG = "_parking"
