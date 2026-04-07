@@ -164,6 +164,8 @@
     <string name="list_unarchive_point">Ripristina</string>
     <string name="list_archive_confirm_title">Archivia punto</string>
     <string name="list_archive_confirm_message">Archivia \"%s\"? Sarà nascosto dalla mappa e dalla lista.</string>
+    <string name="list_unarchive_confirm_title">Ripristina punto</string>
+    <string name="list_unarchive_confirm_message">Ripristina \"%s\"? Tornerà visibile nella mappa e nella lista.</string>
     <string name="list_show_archived">Archivio</string>
     <string name="list_archived_empty">L\'archivio è vuoto</string>
     <string name="list_archived_empty_hint">I punti archiviati appariranno qui</string>

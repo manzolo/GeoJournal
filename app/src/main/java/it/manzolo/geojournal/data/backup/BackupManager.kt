@@ -113,39 +113,52 @@ class BackupManager @Inject constructor(
         val allKmls   = kmlRepository.getAll()
         val kmlsByPoint = allKmls.groupBy { it.geoPointId }
 
-        context.contentResolver.openOutputStream(uri)?.use { out ->
-            ZipOutputStream(BufferedOutputStream(out)).use { zip ->
+        context.contentResolver.openFileDescriptor(uri, "wt")?.use { pfd ->
+            java.io.FileOutputStream(pfd.fileDescriptor).use { out ->
+                ZipOutputStream(BufferedOutputStream(out)).use { zip ->
 
-                // 1. backup.json
-                val json = buildJson(points, reminders, visits, kmlsByPoint)
-                zip.putNextEntry(ZipEntry("backup.json"))
-                zip.write(json.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
+                    // 1. backup.json
+                    val json = buildJson(points, reminders, visits, kmlsByPoint)
+                    zip.putNextEntry(ZipEntry("backup.json"))
+                    zip.write(json.toByteArray(Charsets.UTF_8))
+                    zip.closeEntry()
 
-                // 2. Foto locali (le URL Firebase vengono saltate — sono già nel cloud)
-                points.forEach { point ->
-                    point.photoUrls.forEach { url ->
-                        if (!url.startsWith("https://") && !url.startsWith("content://")) {
-                            val file = File(url)
-                            if (file.exists()) {
-                                zip.putNextEntry(ZipEntry("photos/${point.id}/${file.name}"))
-                                file.inputStream().use { it.copyTo(zip) }
+                    // 2. Foto locali (le URL Firebase vengono saltate — sono già nel cloud)
+                    points.forEach { point ->
+                        point.photoUrls.forEach { url ->
+                            if (!url.startsWith("https://") && !url.startsWith("content://")) {
+                                val file = File(url)
+                                if (file.exists()) {
+                                    zip.putNextEntry(ZipEntry("photos/${point.id}/${file.name}"))
+                                    file.inputStream().use { it.copyTo(zip) }
+                                    zip.closeEntry()
+                                }
+                            }
+                        }
+                        // 3. File KML associati al punto
+                        kmlsByPoint[point.id]?.forEach { kml ->
+                            val kmlFile = File(kml.filePath)
+                            if (kmlFile.exists()) {
+                                zip.putNextEntry(ZipEntry("kmls/${point.id}/${kmlFile.name}"))
+                                kmlFile.inputStream().use { it.copyTo(zip) }
                                 zip.closeEntry()
                             }
                         }
                     }
-                    // 3. File KML associati al punto
-                    kmlsByPoint[point.id]?.forEach { kml ->
-                        val kmlFile = File(kml.filePath)
-                        if (kmlFile.exists()) {
-                            zip.putNextEntry(ZipEntry("kmls/${point.id}/${kmlFile.name}"))
-                            kmlFile.inputStream().use { it.copyTo(zip) }
-                            zip.closeEntry()
-                        }
-                    }
+                    zip.flush()
                 }
+                pfd.fileDescriptor.sync()
             }
         }
+        
+        // Forza l'upload di rete se il provider (Google Drive SAF) lo supporta
+        runCatching {
+            context.contentResolver.notifyChange(uri, null, android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK)
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                cursor.moveToFirst()
+            }
+        }
+        
         return points.size
     }
 

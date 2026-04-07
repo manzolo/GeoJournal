@@ -30,11 +30,25 @@ class AutoBackupWorker @AssistedInject constructor(
             if (prefs.driveBackupUri.isNotEmpty()) {
                 val driveResult = runCatching {
                     val uri = Uri.parse(prefs.driveBackupUri)
-                    val out = applicationContext.contentResolver.openOutputStream(uri, "wt")
-                        ?: error("openOutputStream returned null for Drive URI")
-                    out.use { localFile.inputStream().use { inp -> inp.copyTo(out) } }
-                    // Notifica il sistema per forzare la sincronizzazione su Drive
-                    applicationContext.contentResolver.notifyChange(uri, null)
+                    val pfd = applicationContext.contentResolver.openFileDescriptor(uri, "wt")
+                        ?: error("openFileDescriptor returned null for Drive URI")
+                    pfd.use { descriptor ->
+                        java.io.FileOutputStream(descriptor.fileDescriptor).use { out ->
+                            localFile.inputStream().use { inp -> inp.copyTo(out) }
+                            out.flush()
+                            // Forza a livello di file system il provider (Drive) a consolidare su disco
+                            descriptor.fileDescriptor.sync()
+                        }
+                    }
+                    // Notifica il sistema per forzare la sincronizzazione su Drive, usando il flag NOTIFY_SYNC_TO_NETWORK (API 24+)
+                    applicationContext.contentResolver.notifyChange(uri, null, android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK)
+                    
+                    // Forza Drive a rinfrescare lo stato del file interrogandolo e richiedendo l'aggiornamento
+                    runCatching {
+                        applicationContext.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            cursor.moveToFirst()
+                        }
+                    }
                 }
                 userPrefsRepository.setLastDriveBackup(
                     timestamp = System.currentTimeMillis(),

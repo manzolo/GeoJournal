@@ -43,8 +43,6 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontStyle
 import androidx.core.content.FileProvider
 import androidx.compose.ui.platform.LocalContext
@@ -118,7 +116,6 @@ fun ListScreen(navController: NavController) {
     var deleteTagConfirm by remember { mutableStateOf<String?>(null) }
     var tagsExpanded by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     // Emette il file .geoj da condividere via share sheet
     LaunchedEffect(Unit) {
@@ -221,20 +218,21 @@ fun ListScreen(navController: NavController) {
         )
     }
 
-    // Dialog conferma archivio
+    // Dialog conferma archivio / ripristino
     archiveConfirmPoint?.let { point ->
+        val isArchived = point.isArchived
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { archiveConfirmPoint = null },
-            title = { Text(stringResource(R.string.list_archive_confirm_title)) },
-            text = { Text(stringResource(R.string.list_archive_confirm_message, point.title)) },
+            title = { Text(stringResource(if (isArchived) R.string.list_unarchive_confirm_title else R.string.list_archive_confirm_title)) },
+            text = { Text(stringResource(if (isArchived) R.string.list_unarchive_confirm_message else R.string.list_archive_confirm_message, point.title)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = {
-                        viewModel.archivePoint(point)
+                        if (isArchived) viewModel.unarchivePoint(point) else viewModel.archivePoint(point)
                         archiveConfirmPoint = null
                     }
                 ) {
-                    Text(stringResource(R.string.list_archive_point))
+                    Text(stringResource(if (isArchived) R.string.list_unarchive_point else R.string.list_archive_point))
                 }
             },
             dismissButton = {
@@ -446,8 +444,6 @@ fun ListScreen(navController: NavController) {
                             BuyMeCoffeeBanner(context = context)
                         }
                         items(state.points, key = { it.id }) { point ->
-                            val archivedMsg = stringResource(R.string.list_swipe_archived)
-                            val unarchivedMsg = stringResource(R.string.list_swipe_unarchived)
                             val swipeState = rememberSwipeToDismissBoxState(
                                 positionalThreshold = { it * 0.35f }
                             )
@@ -455,13 +451,7 @@ fun ListScreen(navController: NavController) {
                             LaunchedEffect(swipeState.currentValue) {
                                 when (swipeState.currentValue) {
                                     SwipeToDismissBoxValue.StartToEnd -> {
-                                        if (point.isArchived) {
-                                            viewModel.unarchivePoint(point)
-                                            scope.launch { snackbarHostState.showSnackbar(unarchivedMsg) }
-                                        } else {
-                                            viewModel.archivePoint(point)
-                                            scope.launch { snackbarHostState.showSnackbar(archivedMsg) }
-                                        }
+                                        archiveConfirmPoint = point
                                         swipeState.snapTo(SwipeToDismissBoxValue.Settled)
                                     }
                                     SwipeToDismissBoxValue.EndToStart -> {

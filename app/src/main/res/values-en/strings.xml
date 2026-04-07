@@ -164,6 +164,8 @@
     <string name="list_unarchive_point">Restore</string>
     <string name="list_archive_confirm_title">Archive point</string>
     <string name="list_archive_confirm_message">Archive \"%s\"? It will be hidden from the map and list.</string>
+    <string name="list_unarchive_confirm_title">Restore point</string>
+    <string name="list_unarchive_confirm_message">Restore \"%s\"? It will be visible again on the map and list.</string>
     <string name="list_show_archived">Archive</string>
     <string name="list_archived_empty">The archive is empty</string>
     <string name="list_archived_empty_hint">Archived points will appear here</string>
