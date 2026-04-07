@@ -677,18 +677,24 @@ fun MapScreen(
             }
         }
 
-        FloatingActionButton(
-            onClick = { navController.navigate(Routes.AddEditPoint.createRoute()) },
+        // Pulsante Aggiungi Punto (uniformato agli altri controlli)
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+            shadowElevation = 2.dp,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primary
+                .padding(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = stringResource(R.string.map_add_point),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
+            IconButton(
+                onClick = { navController.navigate(Routes.AddEditPoint.createRoute()) }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.map_add_point),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
 
         if (uiState.isBottomSheetVisible && uiState.selectedPoint != null) {
