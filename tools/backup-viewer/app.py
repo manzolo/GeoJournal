@@ -85,8 +85,8 @@ def _prepare_points(raw: list, reminders: list, visits: list) -> list:
         p_reminders = [
             {
                 "title":     r["title"],
-                "startDate": _fmt_ts(r["startDate"]),
-                "endDate":   _fmt_ts(r["endDate"]) if r.get("endDate") else None,
+                "startDate": _fmt_ts(r["startDate"], "%d/%m/%Y %H:%M"),
+                "endDate":   _fmt_ts(r["endDate"], "%d/%m/%Y %H:%M") if r.get("endDate") else None,
                 "type":      r["type"],
                 "isActive":  r["isActive"],
             }
