@@ -31,7 +31,8 @@ class AutoBackupScheduler @Inject constructor(
         val initialDelayMs = next2am.timeInMillis - now.timeInMillis
 
         val constraints = androidx.work.Constraints.Builder()
-            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .setRequiredNetworkType(androidx.work.NetworkType.UNMETERED) // Wi-Fi
+            .setRequiresCharging(true) // In carica
             .setRequiresBatteryNotLow(true)
             .build()
 

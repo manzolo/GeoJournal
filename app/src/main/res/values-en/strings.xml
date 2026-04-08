@@ -134,6 +134,13 @@
     <string name="notif_channel_reminders_desc">Notifications for your special places</string>
     <string name="notif_channel_tracking_name">Track recording</string>
     <string name="notif_channel_tracking_desc">Active notification during GPS recording</string>
+    <string name="notif_channel_backup_name">Automatic Backup</string>
+    <string name="notif_channel_backup_desc">Backup status and Drive synchronization</string>
+    <string name="backup_notif_title">Backup in progress</string>
+    <string name="backup_notif_text">Saving and synchronizing data…</string>
+    <string name="backup_notif_error_title">Auto Drive Backup failed</string>
+    <string name="backup_notif_error_body_generic">Could not save backup to Drive. Please try again later.</string>
+    <string name="backup_notif_error_body">Could not save backup to Drive (%s)</string>
 
     <!-- GPS Track Recording -->
     <string name="tracking_start_button">Record session</string>

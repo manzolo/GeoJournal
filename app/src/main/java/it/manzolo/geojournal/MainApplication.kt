@@ -17,6 +17,7 @@ import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.data.notification.ReminderBroadcastReceiver
 import it.manzolo.geojournal.data.tracking.LocationTrackingService
+import it.manzolo.geojournal.data.worker.AutoBackupWorker
 import it.manzolo.geojournal.data.worker.RescheduleWorker
 import it.manzolo.geojournal.data.worker.SyncUnsyncedPointsWorker
 import kotlinx.coroutines.CoroutineScope
@@ -64,6 +65,15 @@ class MainApplication : Application(), Configuration.Provider {
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
                     description = getString(R.string.notif_channel_tracking_desc)
+                }
+            )
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    AutoBackupWorker.CHANNEL_ID,
+                    getString(R.string.notif_channel_backup_name),
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = getString(R.string.notif_channel_backup_desc)
                 }
             )
         }

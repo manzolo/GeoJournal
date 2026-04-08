@@ -134,6 +134,13 @@
     <string name="notif_channel_reminders_desc">Notifiche per i tuoi luoghi speciali</string>
     <string name="notif_channel_tracking_name">Registrazione percorso</string>
     <string name="notif_channel_tracking_desc">Notifica attiva durante la registrazione GPS</string>
+    <string name="notif_channel_backup_name">Backup automatico</string>
+    <string name="notif_channel_backup_desc">Stato del backup e sincronizzazione con Drive</string>
+    <string name="backup_notif_title">Backup in corso</string>
+    <string name="backup_notif_text">Salvataggio e sincronizzazione dati…</string>
+    <string name="backup_notif_error_title">Backup autom. Drive fallito</string>
+    <string name="backup_notif_error_body_generic">Non è stato possibile salvare il backup su Drive. Riprova più tardi.</string>
+    <string name="backup_notif_error_body">Non è stato possibile salvare il backup su Drive (%s)</string>
 
     <!-- GPS Track Recording -->
     <string name="tracking_start_button">Registra sessione</string>
