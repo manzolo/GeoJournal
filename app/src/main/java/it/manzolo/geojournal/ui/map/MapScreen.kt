@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ExpandLess
@@ -44,7 +45,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -1045,15 +1045,25 @@ private fun MapSearchBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (!isOpen) Modifier.clickable { onOpen() } else Modifier)
-                    .padding(horizontal = 16.dp, vertical = if (isOpen) 4.dp else 12.dp),
+                    .padding(horizontal = if (isOpen) 4.dp else 16.dp, vertical = if (isOpen) 4.dp else 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.width(8.dp))
+                if (isOpen) {
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null
+                        )
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                
                 if (isOpen) {
                     BasicTextField(
                         value = query,
@@ -1080,9 +1090,6 @@ private fun MapSearchBar(
                         IconButton(onClick = { onQueryChange("") }) {
                             Icon(Icons.Filled.Clear, contentDescription = stringResource(R.string.map_search_clear))
                         }
-                    }
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.Close, contentDescription = null)
                     }
                 } else {
                     Text(
