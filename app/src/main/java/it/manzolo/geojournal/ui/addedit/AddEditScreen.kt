@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material.icons.filled.Polyline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -652,13 +654,33 @@ fun AddEditScreen(
                             color = MaterialTheme.colorScheme.primary)
                     }
                     if (uiState.photoUris.isNotEmpty()) {
+                        var selectedPhotoUri by remember { mutableStateOf<String?>(null) }
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             maxItemsInEachRow = 3
                         ) {
                             uiState.photoUris.forEachIndexed { index, uri ->
-                                Box(modifier = Modifier.size(90.dp)) {
+                                val isSelected = uri == selectedPhotoUri
+                                Box(
+                                    modifier = Modifier
+                                        .size(90.dp)
+                                        .then(
+                                            if (isSelected)
+                                                Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                                            else Modifier
+                                        )
+                                        .clickable {
+                                            when {
+                                                selectedPhotoUri == null -> selectedPhotoUri = uri
+                                                selectedPhotoUri == uri  -> selectedPhotoUri = null
+                                                else -> {
+                                                    viewModel.swapPhotos(selectedPhotoUri!!, uri)
+                                                    selectedPhotoUri = null
+                                                }
+                                            }
+                                        }
+                                ) {
                                     AsyncImage(
                                         model = when {
                                             uri.startsWith("/") -> File(uri)
@@ -697,20 +719,19 @@ fun AddEditScreen(
                                             Icon(Icons.Filled.Star, contentDescription = null,
                                                 tint = Color.White, modifier = Modifier.size(12.dp))
                                         }
-                                    } else {
-                                        // "←" sposta a sinistra — bottom-left
+                                    }
+                                    // Overlay selezione — bottom-left (visibile quando la foto è selezionata)
+                                    if (isSelected) {
                                         Box(
                                             modifier = Modifier
                                                 .align(Alignment.BottomStart)
                                                 .padding(4.dp)
                                                 .size(24.dp)
                                                 .clip(CircleShape)
-                                                .background(Color.Black.copy(alpha = 0.6f))
-                                                .clickable { viewModel.movePhotoLeft(uri) },
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                                                contentDescription = null,
+                                            Icon(Icons.Filled.OpenWith, contentDescription = null,
                                                 tint = Color.White, modifier = Modifier.size(14.dp))
                                         }
                                     }
@@ -758,8 +779,18 @@ fun AddEditScreen(
                         )
                         // Badge riassuntivi quando collassata
                         if (!uiState.isAdditionalDetailsExpanded) {
+                            if (uiState.notes.isNotBlank()) {
+                                Text("📝", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(6.dp))
+                            }
                             if (uiState.reminders.isNotEmpty()) {
                                 Text("⏰${uiState.reminders.size}", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            if (uiState.kmls.isNotEmpty()) {
+                                Text("🗺${uiState.kmls.size}", style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(6.dp))
                             }
@@ -778,6 +809,33 @@ fun AddEditScreen(
                     AnimatedVisibility(visible = uiState.isAdditionalDetailsExpanded) {
                         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                             Spacer(Modifier.height(12.dp))
+
+                            // ── Note personali ────────────────────────────
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null,
+                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_section_notes),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = uiState.notes,
+                                onValueChange = { v ->
+                                    viewModel.updateNotes(if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v)
+                                },
+                                placeholder = { Text(stringResource(R.string.addedit_notes_hint),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                minLines = 2,
+                                maxLines = 6,
+                                shape = RoundedCornerShape(12.dp),
+                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                            )
+
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                             // ── Promemoria ────────────────────────────────
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -830,30 +888,44 @@ fun AddEditScreen(
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
-                            // ── Note personali ────────────────────────────
+                            // ── File KML ──────────────────────────────────
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null,
+                                Icon(Icons.Filled.Polyline, contentDescription = null,
                                     modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.addedit_section_notes),
+                                Text(stringResource(R.string.addedit_section_kml),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary)
                             }
                             Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = uiState.notes,
-                                onValueChange = { v ->
-                                    viewModel.updateNotes(if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v)
-                                },
-                                placeholder = { Text(stringResource(R.string.addedit_notes_hint),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
-                                modifier = Modifier.fillMaxWidth(),
-                                minLines = 2,
-                                maxLines = 6,
-                                shape = RoundedCornerShape(12.dp),
-                                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-                            )
+                            if (uiState.kmls.isNotEmpty()) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    uiState.kmls.forEach { kml ->
+                                        InputChip(
+                                            selected = false,
+                                            onClick = { kmlToRename = kml },
+                                            label = { Text(kml.name) },
+                                            trailingIcon = {
+                                                IconButton(onClick = { kmlToDelete = kml },
+                                                    modifier = Modifier.size(18.dp)) {
+                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
+                                                        modifier = Modifier.size(14.dp))
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            OutlinedButton(
+                                onClick = { kmlLauncher.launch("*/*") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Polyline, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.addedit_import_kml))
+                            }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
@@ -947,47 +1019,6 @@ fun AddEditScreen(
                                     Text("${uiState.rating}/5", style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                            // ── File KML ──────────────────────────────────
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Polyline, contentDescription = null,
-                                    modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(6.dp))
-                                Text(stringResource(R.string.addedit_section_kml),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            if (uiState.kmls.isNotEmpty()) {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    uiState.kmls.forEach { kml ->
-                                        InputChip(
-                                            selected = false,
-                                            onClick = { kmlToRename = kml },
-                                            label = { Text(kml.name) },
-                                            trailingIcon = {
-                                                IconButton(onClick = { kmlToDelete = kml },
-                                                    modifier = Modifier.size(18.dp)) {
-                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                                        modifier = Modifier.size(14.dp))
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(8.dp))
-                            }
-                            OutlinedButton(
-                                onClick = { kmlLauncher.launch("*/*") },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Polyline, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.addedit_import_kml))
                             }
 
                             Spacer(Modifier.height(4.dp))

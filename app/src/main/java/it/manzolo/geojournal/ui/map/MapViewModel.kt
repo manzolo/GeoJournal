@@ -97,7 +97,9 @@ data class MapUiState(
     val isSearchOpen: Boolean = false,
     val searchResults: List<GeoPoint> = emptyList(),
     /** True appena arriva la prima posizione reale (GPS o salvata) */
-    val hasUserLocation: Boolean = false
+    val hasUserLocation: Boolean = false,
+    /** Snackbar per conferma azione (archivia / elimina, @StringRes) */
+    @StringRes val actionSnackbarRes: Int? = null
 )
 
 @HiltViewModel
@@ -249,6 +251,34 @@ class MapViewModel @Inject constructor(
     fun onBottomSheetDismiss() {
         _uiState.update { it.copy(isBottomSheetVisible = false, selectedPoint = null) }
     }
+
+    fun archivePoint(point: GeoPoint) {
+        viewModelScope.launch {
+            repository.archivePoint(point.id)
+            _uiState.update {
+                it.copy(
+                    isBottomSheetVisible = false,
+                    selectedPoint = null,
+                    actionSnackbarRes = R.string.point_archived_snackbar
+                )
+            }
+        }
+    }
+
+    fun deletePoint(point: GeoPoint) {
+        viewModelScope.launch {
+            repository.delete(point)
+            _uiState.update {
+                it.copy(
+                    isBottomSheetVisible = false,
+                    selectedPoint = null,
+                    actionSnackbarRes = R.string.point_deleted_snackbar
+                )
+            }
+        }
+    }
+
+    fun clearActionSnackbar() = _uiState.update { it.copy(actionSnackbarRes = null) }
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Double) {
         _uiState.update { it.copy(userLatitude = lat, userLongitude = lon, zoomLevel = zoom, hasUserLocation = true) }

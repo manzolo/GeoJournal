@@ -155,23 +155,13 @@ class AddEditViewModel @Inject constructor(
         viewModelScope.launch {
             reminderRepository.observeByGeoPointId(pointId)
                 .collect { list ->
-                    _uiState.update { state ->
-                        val shouldExpand = state.isAdditionalDetailsExpanded ||
-                            list.isNotEmpty() || state.tags.isNotEmpty() ||
-                            state.rating > 0 || state.notes.isNotBlank() || state.kmls.isNotEmpty()
-                        state.copy(reminders = list, isAdditionalDetailsExpanded = shouldExpand)
-                    }
+                    _uiState.update { state -> state.copy(reminders = list) }
                 }
         }
         viewModelScope.launch {
             kmlRepository.observeByGeoPointId(pointId)
                 .collect { list ->
-                    _uiState.update { state ->
-                        val shouldExpand = state.isAdditionalDetailsExpanded ||
-                            list.isNotEmpty() || state.tags.isNotEmpty() ||
-                            state.rating > 0 || state.notes.isNotBlank() || state.reminders.isNotEmpty()
-                        state.copy(kmls = list, isAdditionalDetailsExpanded = shouldExpand)
-                    }
+                    _uiState.update { state -> state.copy(kmls = list) }
                 }
         }
     }
@@ -270,6 +260,15 @@ class AddEditViewModel @Inject constructor(
         val list = it.photoUris.toMutableList()
         val idx = list.indexOf(uri)
         if (idx > 0) { list.add(idx - 1, list.removeAt(idx)) }
+        it.copy(photoUris = list, isDirty = true)
+    }
+    fun swapPhotos(fromUri: String, toUri: String) = _uiState.update {
+        val list = it.photoUris.toMutableList()
+        val fromIdx = list.indexOf(fromUri)
+        val toIdx = list.indexOf(toUri)
+        if (fromIdx < 0 || toIdx < 0 || fromIdx == toIdx) return@update it
+        list[fromIdx] = toUri
+        list[toIdx] = fromUri
         it.copy(photoUris = list, isDirty = true)
     }
 

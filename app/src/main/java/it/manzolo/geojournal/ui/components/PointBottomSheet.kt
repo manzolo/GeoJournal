@@ -1,5 +1,11 @@
 package it.manzolo.geojournal.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Map
@@ -20,7 +28,9 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +38,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,17 +64,23 @@ fun PointBottomSheet(
     onDetailClick: (GeoPoint) -> Unit,
     onShareClick: ((GeoPoint) -> Unit)? = null,
     onOpenGoogleMaps: ((GeoPoint) -> Unit)? = null,
-    onShareGoogleMaps: ((GeoPoint) -> Unit)? = null
+    onShareGoogleMaps: ((GeoPoint) -> Unit)? = null,
+    onArchiveClick: ((GeoPoint) -> Unit)? = null,
+    onDeleteClick: ((GeoPoint) -> Unit)? = null
 ) {
+    // skipPartiallyExpanded = false → il bottom sheet inizia in peek (parziale)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
     var showDatesDialog by remember { mutableStateOf(false) }
+    var showArchiveDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
+    // Dialog info date creazione/modifica
     if (showDatesDialog) {
         AlertDialog(
             onDismissRequest = { showDatesDialog = false },
             text = {
-                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         stringResource(R.string.point_info_created, dateFormat.format(point.createdAt)),
                         style = MaterialTheme.typography.bodySmall,
@@ -84,6 +101,55 @@ fun PointBottomSheet(
         )
     }
 
+    // Dialog conferma archiviazione
+    if (showArchiveDialog) {
+        AlertDialog(
+            onDismissRequest = { showArchiveDialog = false },
+            icon = { Icon(Icons.Filled.Archive, contentDescription = null) },
+            title = { Text(stringResource(R.string.point_archive_confirm_title)) },
+            text = { Text(stringResource(R.string.point_archive_confirm_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showArchiveDialog = false
+                    onArchiveClick?.invoke(point)
+                }) {
+                    Text(stringResource(R.string.point_archive))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showArchiveDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    // Dialog conferma eliminazione
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text(stringResource(R.string.point_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.point_delete_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeleteClick?.invoke(point)
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.point_delete_confirm_button))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -95,6 +161,10 @@ fun PointBottomSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp)
         ) {
+            // ═══════════════════════════════════════════════════════════
+            // SEZIONE PEEK — visibile immediatamente
+            // ═══════════════════════════════════════════════════════════
+
             // Header: emoji + titolo
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -112,31 +182,6 @@ fun PointBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-            }
-
-            // Descrizione
-            if (point.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = point.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3
-                )
-            }
-
-            // Tag (spostati dopo la descrizione)
-            if (point.tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyRow(modifier = Modifier.fillMaxWidth()) {
-                    items(point.tags) { tag ->
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
-                            modifier = Modifier.padding(end = 6.dp)
-                        )
-                    }
-                }
             }
 
             // Coordinate + (i) per creato/modificato
@@ -164,9 +209,9 @@ fun PointBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Pulsanti azione
+            // Pulsanti principali: Modifica + Dettaglio
             Row(modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = { onEditClick(point) },
@@ -186,8 +231,55 @@ fun PointBottomSheet(
                     Text(stringResource(R.string.point_detail))
                 }
             }
+
+            // ═══════════════════════════════════════════════════════════
+            // SEZIONE ESPANSA — visibile dopo swipe up
+            // ═══════════════════════════════════════════════════════════
+
+            // Descrizione — visibile solo quando il sheet è espanso
+            AnimatedVisibility(
+                visible = sheetState.currentValue == SheetValue.Expanded && point.description.isNotBlank(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = point.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 4
+                    )
+                }
+            }
+
+            // Tag — visibili solo quando il sheet è completamente espanso
+            AnimatedVisibility(
+                visible = sheetState.currentValue == SheetValue.Expanded && point.tags.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LazyRow(modifier = Modifier.fillMaxWidth()) {
+                        items(point.tags) { tag ->
+                            AssistChip(
+                                onClick = {},
+                                label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Divider tra azioni primarie e secondarie
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Azioni secondarie: Condividi, Google Maps, Condividi Maps
             if (onShareClick != null) {
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { onShareClick(point) },
                     modifier = Modifier.fillMaxWidth()
@@ -196,9 +288,9 @@ fun PointBottomSheet(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.point_share))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
             if (onOpenGoogleMaps != null) {
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { onOpenGoogleMaps(point) },
                     modifier = Modifier.fillMaxWidth()
@@ -207,9 +299,9 @@ fun PointBottomSheet(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.point_open_google_maps))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
             if (onShareGoogleMaps != null) {
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = { onShareGoogleMaps(point) },
                     modifier = Modifier.fillMaxWidth()
@@ -217,6 +309,44 @@ fun PointBottomSheet(
                     Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(stringResource(R.string.point_share_google_maps))
+                }
+            }
+
+            // Divider prima delle azioni distruttive
+            if (onArchiveClick != null || onDeleteClick != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // Archivia
+            if (onArchiveClick != null) {
+                OutlinedButton(
+                    onClick = { showArchiveDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.tertiary
+                    )
+                ) {
+                    Icon(Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_archive))
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            // Elimina
+            if (onDeleteClick != null) {
+                OutlinedButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(stringResource(R.string.point_delete))
                 }
             }
         }

@@ -53,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
@@ -100,6 +101,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.core.content.FileProvider
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,6 +174,7 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
     // COARSE + FINE insieme: su Android 12+ il sistema mostra un unico dialog
     // con la scelta "Precisa / Approssimativa". Su Android <12 equivale a chiedere solo FINE.
     val locationPermissions = rememberMultiplePermissionsState(
@@ -237,6 +240,15 @@ fun MapScreen(
         trackingSavedText?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearTrackingSavedSnackbar()
+        }
+    }
+
+    // Snackbar per azioni archivia/elimina
+    val actionSnackbarText = uiState.actionSnackbarRes?.let { stringResource(it) }
+    LaunchedEffect(uiState.actionSnackbarRes) {
+        actionSnackbarText?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionSnackbar()
         }
     }
 
@@ -460,9 +472,13 @@ fun MapScreen(
             onClose = viewModel::closeSearch,
             onQueryChange = viewModel::updateSearchQuery,
             onResultClick = { point ->
+                keyboardController?.hide()
                 viewModel.closeSearch()
-                viewModel.onPointSelected(point)
                 mapView.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), 17.0, 800L)
+                coroutineScope.launch {
+                    delay(200) // attende che la tastiera si chiuda prima di aprire il sheet
+                    viewModel.onPointSelected(point)
+                }
             },
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -726,6 +742,12 @@ fun MapScreen(
                         putExtra(Intent.EXTRA_TEXT, url)
                     }
                     context.startActivity(Intent.createChooser(shareIntent, null))
+                },
+                onArchiveClick = { point ->
+                    viewModel.archivePoint(point)
+                },
+                onDeleteClick = { point ->
+                    viewModel.deletePoint(point)
                 }
             )
         }
@@ -1103,7 +1125,7 @@ private fun MapSearchBar(
             AnimatedVisibility(
                 visible = isOpen && results.isNotEmpty(),
                 enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+                exit = ExitTransition.None
             ) {
                 Column {
                     HorizontalDivider()

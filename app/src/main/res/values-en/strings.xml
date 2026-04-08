@@ -199,6 +199,9 @@
     <string name="point_unarchive">Restore point</string>
     <string name="point_archive_confirm_title">Archive point</string>
     <string name="point_archive_confirm_message">The point will be hidden from the map and list. You can restore it from the Archive section.</string>
+    <string name="point_delete_confirm_message">Are you sure you want to delete this point? This action cannot be undone.</string>
+    <string name="point_archived_snackbar">Point archived</string>
+    <string name="point_deleted_snackbar">Point deleted</string>
 
     <!-- Add/Edit Screen -->
     <string name="addedit_error_no_location">Set a location before saving the point.</string>
@@ -225,7 +228,7 @@
     <string name="addedit_stars">%d stars</string>
     <string name="addedit_section_additional_details">Additional details</string>
     <string name="addedit_section_notes">Personal notes</string>
-    <string name="addedit_notes_hint">Private notes (not exported in .geoj)</string>
+    <string name="addedit_notes_hint">Private notes…</string>
     <string name="addedit_section_kml">KML files</string>
     <string name="addedit_import_kml">Import KML</string>
     <string name="addedit_kml_rename_title">Rename KML file</string>

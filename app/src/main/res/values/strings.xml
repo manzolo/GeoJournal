@@ -199,6 +199,9 @@
     <string name="point_unarchive">Ripristina punto</string>
     <string name="point_archive_confirm_title">Archivia punto</string>
     <string name="point_archive_confirm_message">Il punto sarà nascosto dalla mappa e dalla lista. Potrai ripristinarlo dalla sezione Archivio.</string>
+    <string name="point_delete_confirm_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>
+    <string name="point_archived_snackbar">Punto archiviato</string>
+    <string name="point_deleted_snackbar">Punto eliminato</string>
 
     <!-- Add/Edit Screen -->
     <string name="addedit_error_no_location">Imposta una posizione prima di salvare il punto.</string>
@@ -225,7 +228,7 @@
     <string name="addedit_stars">%d stelle</string>
     <string name="addedit_section_additional_details">Dettagli aggiuntivi</string>
     <string name="addedit_section_notes">Note personali</string>
-    <string name="addedit_notes_hint">Note private (non esportate nel .geoj)</string>
+    <string name="addedit_notes_hint">Note private…</string>
     <string name="addedit_section_kml">File KML</string>
     <string name="addedit_import_kml">Importa KML</string>
     <string name="addedit_kml_rename_title">Rinomina file KML</string>
