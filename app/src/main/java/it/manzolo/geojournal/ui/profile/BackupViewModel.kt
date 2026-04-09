@@ -88,7 +88,7 @@ class BackupViewModel @Inject constructor(
     fun setAutoBackup(enabled: Boolean) {
         viewModelScope.launch {
             userPrefsRepository.setAutoBackupEnabled(enabled)
-            if (enabled) autoBackupScheduler.schedule() else autoBackupScheduler.cancel()
+            if (enabled) autoBackupScheduler.reschedule() else autoBackupScheduler.cancel()
         }
     }
 

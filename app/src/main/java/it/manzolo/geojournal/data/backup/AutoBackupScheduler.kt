@@ -31,9 +31,8 @@ class AutoBackupScheduler @Inject constructor(
         val initialDelayMs = next2am.timeInMillis - now.timeInMillis
 
         val constraints = androidx.work.Constraints.Builder()
-            .setRequiredNetworkType(androidx.work.NetworkType.UNMETERED) // Wi-Fi
-            .setRequiresCharging(true) // In carica
-            .setRequiresBatteryNotLow(true)
+            .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+            .setRequiresCharging(true)
             .build()
 
         val request = PeriodicWorkRequestBuilder<AutoBackupWorker>(
@@ -45,9 +44,15 @@ class AutoBackupScheduler @Inject constructor(
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.KEEP,
             request
         )
+    }
+
+    /** Forza la ri-schedulazione (es. dopo cambio impostazioni) */
+    fun reschedule() {
+        cancel()
+        schedule()
     }
 
     fun cancel() {
