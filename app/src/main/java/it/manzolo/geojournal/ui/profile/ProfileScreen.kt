@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import android.app.Activity
 import android.app.AlarmManager
@@ -543,32 +544,42 @@ private fun BackupCard(
 
             // ── Drive REST API (primario) ─────────────────────────────────
             val workingOp0 = (backupState as? BackupViewModel.State.Working)?.op
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Cloud,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = if (driveAccountEmail.isNotEmpty()) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.size(6.dp))
                     Text(
                         stringResource(R.string.profile_drive_api_section),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
-                        if (driveAccountEmail.isNotEmpty())
-                            stringResource(R.string.profile_drive_api_connected_as, driveAccountEmail)
-                        else
-                            stringResource(R.string.profile_drive_api_connect_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (driveAccountEmail.isNotEmpty()) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
+                Spacer(Modifier.height(2.dp))
                 if (driveAccountEmail.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(R.string.profile_drive_api_connected_as, driveAccountEmail),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         OutlinedButton(
                             onClick = onDriveApiBackupNow,
-                            enabled = workingOp0 == null
+                            enabled = workingOp0 == null,
+                            modifier = Modifier.weight(1f)
                         ) {
                             if (workingOp0 == BackupViewModel.Op.DRIVE_UPLOAD) {
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -585,7 +596,16 @@ private fun BackupCard(
                         }
                     }
                 } else {
-                    OutlinedButton(onClick = onDriveApiConnect) {
+                    Text(
+                        stringResource(R.string.profile_drive_api_connect_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onDriveApiConnect,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Icon(Icons.Filled.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.size(4.dp))
                         Text(stringResource(R.string.profile_drive_api_connect))
