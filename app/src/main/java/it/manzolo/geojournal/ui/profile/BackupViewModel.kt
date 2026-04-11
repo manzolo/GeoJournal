@@ -8,18 +8,27 @@ import android.net.Uri
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.Scope
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import it.manzolo.geojournal.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.backup.BackupManager
+import it.manzolo.geojournal.data.backup.DriveApiClient
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -39,10 +48,11 @@ class BackupViewModel @Inject constructor(
     private val geojExporter: GeoPointExporter,
     private val geoPointRepository: GeoPointRepository,
     private val reminderRepository: ReminderRepository,
-    private val kmlRepository: PointKmlRepository
+    private val kmlRepository: PointKmlRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : ViewModel() {
 
-    enum class Op { EXPORT, IMPORT, IMPORT_POINT, COMPRESS }
+    enum class Op { EXPORT, IMPORT, IMPORT_POINT, COMPRESS, DRIVE_UPLOAD }
 
     sealed class State {
         object Idle : State()
@@ -52,10 +62,15 @@ class BackupViewModel @Inject constructor(
         data class ImportPointOk(val title: String) : State()
         data class CompressOk(val savedKb: Long) : State()
         data class Error(val message: String) : State()
+        object DriveUploadOk : State()
     }
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
+
+    /** Emits a PendingIntent when Drive authorization needs user consent (Activity resolution required). */
+    private val _driveAuthEvent = MutableSharedFlow<android.app.PendingIntent>(extraBufferCapacity = 1)
+    val driveAuthEvent: SharedFlow<android.app.PendingIntent> = _driveAuthEvent.asSharedFlow()
 
     val autoBackupEnabled: StateFlow<Boolean> = userPrefsRepository.preferences
         .map { it.autoBackupEnabled }
@@ -63,6 +78,10 @@ class BackupViewModel @Inject constructor(
 
     val driveBackupUri: StateFlow<String> = userPrefsRepository.preferences
         .map { it.driveBackupUri }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
+    val driveAccountEmail: StateFlow<String> = userPrefsRepository.preferences
+        .map { it.driveAccountEmail }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     val lastLocalBackupTimestamp: StateFlow<Long> = userPrefsRepository.preferences
@@ -106,6 +125,92 @@ class BackupViewModel @Inject constructor(
     fun clearDriveBackupUri() {
         viewModelScope.launch {
             userPrefsRepository.setDriveBackupUri("")
+        }
+    }
+
+    // ── Drive REST API ────────────────────────────────────────────────────────
+
+    /**
+     * Requests authorization for the Drive `drive.file` scope.
+     * If user consent is required an Activity launch is needed — the PendingIntent is emitted
+     * via [driveAuthEvent] and the caller must handle it via [onDriveAuthResultOk].
+     */
+    fun connectDriveApi(context: Context) {
+        viewModelScope.launch {
+            val email = firebaseAuth.currentUser?.email
+            if (email.isNullOrBlank()) {
+                _state.value = State.Error(context.getString(R.string.backup_drive_requires_google))
+                return@launch
+            }
+            try {
+                val authRequest = AuthorizationRequest.builder()
+                    .setRequestedScopes(listOf(Scope("https://www.googleapis.com/auth/drive.file")))
+                    .build()
+                Identity.getAuthorizationClient(context)
+                    .authorize(authRequest)
+                    .addOnSuccessListener { result ->
+                        if (result.hasResolution()) {
+                            result.pendingIntent?.let { pi ->
+                                viewModelScope.launch { _driveAuthEvent.emit(pi) }
+                            }
+                        } else {
+                            viewModelScope.launch { userPrefsRepository.setDriveAccountEmail(email) }
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        _state.value = State.Error(
+                            context.getString(R.string.backup_drive_connect_error, e.localizedMessage ?: "")
+                        )
+                    }
+            } catch (e: Exception) {
+                _state.value = State.Error(
+                    context.getString(R.string.backup_drive_connect_error, e.localizedMessage ?: "")
+                )
+            }
+        }
+    }
+
+    /** Called after a successful Drive auth resolution (Activity result OK). */
+    fun onDriveAuthResultOk() {
+        viewModelScope.launch {
+            val email = firebaseAuth.currentUser?.email ?: return@launch
+            userPrefsRepository.setDriveAccountEmail(email)
+        }
+    }
+
+    fun disconnectDriveApi() {
+        viewModelScope.launch {
+            userPrefsRepository.setDriveAccountEmail("")
+        }
+    }
+
+    /** Immediately uploads a fresh backup to Drive via the REST API. */
+    fun backupNowViaDriveApi() {
+        viewModelScope.launch {
+            val email = userPrefsRepository.preferences.first().driveAccountEmail
+            if (email.isBlank()) {
+                _state.value = State.Error(context.getString(R.string.backup_drive_not_configured))
+                return@launch
+            }
+            _state.value = State.Working(Op.DRIVE_UPLOAD)
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val localFile = backupManager.exportToFile()
+                    backupManager.pruneOldBackups()
+                    DriveApiClient(context, email).uploadOrReplaceBackup(localFile)
+                }
+            }
+            if (result.isSuccess) {
+                userPrefsRepository.setLastDriveBackup(System.currentTimeMillis(), true)
+                userPrefsRepository.setLastLocalBackup(System.currentTimeMillis())
+                _state.value = State.DriveUploadOk
+            } else {
+                userPrefsRepository.setLastDriveBackup(System.currentTimeMillis(), false)
+                _state.value = State.Error(
+                    result.exceptionOrNull()?.message
+                        ?: context.getString(R.string.backup_notif_error_body_generic)
+                )
+            }
         }
     }
 

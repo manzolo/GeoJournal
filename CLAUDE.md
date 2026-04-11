@@ -72,7 +72,7 @@ app/
 `id, geoPointId, name, filePath (filesDir/kmls/{geoPointId}/{uuid}.kml), importedAt`
 
 **UserPreferences (DataStore):**
-`isDarkTheme, isPro, userId, isGuest, lastSyncTimestamp, autoBackupEnabled, driveBackupUri`
+`isDarkTheme, isPro, userId, isGuest, lastSyncTimestamp, autoBackupEnabled, driveBackupUri, driveAccountEmail`
 
 ---
 
@@ -147,6 +147,8 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 ## Feature principali
 
 - **Sezione "Dettagli aggiuntivi" (AddEditScreen):** collassata di default, auto-espansa se il punto ha già tag/reminders/rating/notes/kml. Badge riassuntivi quando collassata.
+- **Sezione "Sincronizzazione & Privacy" (ProfileScreen):** collassata di default, auto-espansa se almeno un toggle è attivo. Badge riassuntivo (nomi dei toggle attivi) quando collassata.
+- **Backup su Google Drive (Drive REST API):** `DriveApiClient` usa `GoogleAuthUtil.getToken()` + scope `drive.file` + `HttpURLConnection` multipart upload. Upload immediato senza dipendere dall'app Drive. SAF mantenuto come fallback. `driveAccountEmail` in DataStore identifica l'account connesso. `Identity.getAuthorizationClient().authorize()` gestisce il consent OAuth.
 - **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser` (no osmdroid-bonuspack). Storage in `filesDir/kmls/{geoPointId}/`. Marker custom Canvas (verde ▶ Partenza, rosso ■ Arrivo). `KmlMarker` subclass esclusa dal `removeAll` clustering.
 - **Tracciamento GPS (tracking):** `LocationTrackingService` foreground service (tipo `location`), avviato da `PointDetailScreen`. Ogni 5s o 5m registra coordinate in `TrackingManager` (singleton Hilt). Allo stop genera KML via `KmlWriter` e lo salva via `PointKmlRepository.saveKml()`. Permessi: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`.
 - **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.

@@ -164,7 +164,13 @@
       <li><strong>Firebase Firestore</strong> (Google LLC) — sincronizzazione metadati cloud opt-in (punti, promemoria, visite); <strong>Firebase Storage</strong> — foto opt-in</li>
       <li><strong>Firebase Crashlytics</strong> (Google LLC) — segnalazioni di crash anonime</li>
       <li><strong>OpenStreetMap / OSMDroid</strong> — tiles cartografiche, nessun dato personale trasmesso</li>
-      <li><strong>Google Drive</strong> — usato solo se l'utente configura esplicitamente un URI di destinazione tramite la selezione file di Android. Una volta configurato, il backup avviene automaticamente ogni notte (tra le 02:00 e le 06:00), solo in presenza di connessione di rete e batteria non scarica. L'app non accede a nessun altro file Drive oltre alla destinazione scelta dall'utente.</li>
+      <li><strong>Google Drive</strong> — GeoJournal supporta due modalità di backup su Drive, entrambe opzionali e attivabili solo dall'utente:
+        <ul>
+          <li><strong>Drive API (connessione account):</strong> se l'utente connette il proprio account Google da <em>Profilo → Backup</em>, l'app richiede il permesso OAuth2 <code>drive.file</code> e trasmette il file di backup direttamente ai server Google (googleapis.com), senza passare per l'app Drive installata sul dispositivo. Lo scope <code>drive.file</code> limita l'accesso esclusivamente ai file creati dall'app stessa; il token OAuth2 è gestito interamente da Google Play Services e non viene mai trasmesso a server dello sviluppatore.</li>
+          <li><strong>Selezione file Android (SAF):</strong> in alternativa, l'utente può selezionare manualmente una cartella o file di destinazione tramite il selettore file di Android. L'accesso è mediato dall'OS e non richiede permessi OAuth2 aggiuntivi da parte dell'app.</li>
+        </ul>
+        In entrambe le modalità il backup avviene automaticamente ogni notte (tra le 02:00 e le 06:00), solo in presenza di connessione di rete e batteria non scarica. L'app non legge né modifica altri file Drive.
+      </li>
     </ul>
     <p>Policy di Google: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
   </div>
@@ -175,7 +181,7 @@
       <li><span class="badge">Locale</span> — Database Room sul dispositivo (modalità ospite o loggata)</li>
       <li><span class="badge">Cloud opt-in</span> — Firebase Firestore per punti, promemoria e visite; Firebase Storage per foto; tutto solo se loggato <em>e</em> toggle attivo (OFF per default); server Google nell'UE/USA</li>
       <li><span class="badge">Locale</span> — Foto salvate sul dispositivo; vengono caricate solo se il toggle "Foto" è esplicitamente attivato</li>
-      <li><span class="badge">Backup</span> — File ZIP sullo storage privato dell'app (massimo 5 file conservati). Se l'utente ha configurato una destinazione Drive, una copia viene scritta automaticamente ogni notte nello stesso file scelto, senza creare altri file né accedere ad altri dati Drive.</li>
+      <li><span class="badge">Backup</span> — File ZIP nello storage privato dell'app (massimo 5 file conservati). Se l'utente ha configurato il backup su Google Drive, una copia viene caricata automaticamente ogni notte: tramite Drive API il file è archiviato nel Drive dell'account connesso (googleapis.com); tramite selezione file Android (SAF) è scritto nel percorso scelto. In nessun caso l'app accede ad altri file Drive.</li>
     </ul>
     <p>I dati su Firebase sono associati al tuo account Google e vengono conservati finché non li elimini. Puoi eliminare l'account e tutti i dati in autonomia dall'app: <strong>Profilo → "Elimina account e tutti i dati"</strong>. Questa operazione cancella tutti i documenti Firestore associati al tuo account. Le foto, essendo solo locali, vengono eliminate insieme all'app.</p>
   </div>
@@ -202,7 +208,7 @@
     <p>Eventuali aggiornamenti verranno pubblicati su questa pagina. L'uso continuato dell'app dopo le modifiche costituisce accettazione della nuova policy.</p>
   </div>
 
-  <p class="updated">Ultimo aggiornamento: 5 aprile 2026</p>
+  <p class="updated">Ultimo aggiornamento: 11 aprile 2026</p>
 </div>
 
 <!-- ═══════════════════════════════ ENGLISH ════════════════════════════════ -->
@@ -258,7 +264,13 @@
       <li><strong>Firebase Firestore</strong> (Google LLC) — opt-in cloud metadata sync (points, reminders, visits); <strong>Firebase Storage</strong> — opt-in photo backup</li>
       <li><strong>Firebase Crashlytics</strong> (Google LLC) — anonymous crash reporting</li>
       <li><strong>OpenStreetMap / OSMDroid</strong> — map tiles, no personal data transmitted</li>
-      <li><strong>Google Drive</strong> — used only if the user explicitly configures a destination URI via Android's file picker. Once configured, backup runs automatically every night (between 02:00 and 06:00), only when a network connection is available and the battery is not low. The app does not access any Drive files other than the destination chosen by the user.</li>
+      <li><strong>Google Drive</strong> — GeoJournal supports two optional Drive backup modes, both activated exclusively by the user:
+        <ul>
+          <li><strong>Drive API (account connection):</strong> if the user connects their Google account from <em>Profile → Backup</em>, the app requests the OAuth2 <code>drive.file</code> permission and transmits the backup file directly to Google's servers (googleapis.com), without going through the Drive app installed on the device. The <code>drive.file</code> scope restricts access to files created by the app only; the OAuth2 token is managed entirely by Google Play Services and is never transmitted to the developer's servers.</li>
+          <li><strong>Android file picker (SAF):</strong> alternatively, the user can manually select a destination folder or file via Android's file picker. Access is mediated by the OS and requires no additional OAuth2 permissions from the app.</li>
+        </ul>
+        In both modes, backup runs automatically every night (between 02:00 and 06:00), only when a network connection is active and the battery is not low. The app does not read or modify any other Drive files.
+      </li>
     </ul>
     <p>Google Privacy Policy: <a href="https://policies.google.com/privacy">policies.google.com/privacy</a></p>
   </div>
@@ -269,7 +281,7 @@
       <li><span class="badge">Local</span> — Room database on the device (guest or signed-in mode)</li>
       <li><span class="badge">Cloud opt-in</span> — Firebase Firestore for points, reminders and visits; Firebase Storage for photos; all signed-in only <em>and</em> toggle enabled (OFF by default); Google servers in EU/USA</li>
       <li><span class="badge">Local</span> — Photos stored on device; uploaded only if the "Photos" toggle is explicitly enabled</li>
-      <li><span class="badge">Backup</span> — ZIP file in the app's private storage (up to 5 files retained). If the user has configured a Drive destination, a copy is written automatically every night to the same chosen file, without creating additional files or accessing any other Drive data.</li>
+      <li><span class="badge">Backup</span> — ZIP file in the app's private storage (up to 5 files retained). If the user has configured Drive backup, a copy is uploaded automatically every night: via Drive API the file is stored in the connected account's Drive (googleapis.com); via Android file picker (SAF) it is written to the chosen path. The app does not access any other Drive files in either case.</li>
     </ul>
     <p>Firebase data is linked to your Google account and retained until you delete it. You can delete your account and all data directly from the app: <strong>Profile → "Delete account and all data"</strong>. This permanently deletes all Firestore documents linked to your account. Photos, being local only, are removed when the app is uninstalled.</p>
   </div>
@@ -296,7 +308,7 @@
     <p>Any updates will be published on this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
   </div>
 
-  <p class="updated">Last updated: April 5, 2026</p>
+  <p class="updated">Last updated: April 11, 2026</p>
 </div>
 
 <script>

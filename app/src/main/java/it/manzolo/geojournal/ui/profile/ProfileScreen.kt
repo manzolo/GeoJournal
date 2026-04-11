@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,12 +62,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import android.app.Activity
 import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.activity.result.IntentSenderRequest
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import it.manzolo.geojournal.BuildConfig
@@ -86,6 +89,7 @@ fun ProfileScreen(
     val backupState by backupViewModel.state.collectAsState()
     val autoBackupEnabled by backupViewModel.autoBackupEnabled.collectAsState()
     val driveBackupUri by backupViewModel.driveBackupUri.collectAsState()
+    val driveAccountEmail by backupViewModel.driveAccountEmail.collectAsState()
     val lastLocalBackupTimestamp by backupViewModel.lastLocalBackupTimestamp.collectAsState()
     val lastDriveBackupTimestamp by backupViewModel.lastDriveBackupTimestamp.collectAsState()
     val lastDriveBackupSuccess by backupViewModel.lastDriveBackupSuccess.collectAsState()
@@ -117,6 +121,22 @@ fun ProfileScreen(
         ActivityResultContracts.CreateDocument("application/zip")
     ) { uri -> uri?.let { backupViewModel.setDriveBackupUri(it, context) } }
 
+    val driveAuthLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            backupViewModel.onDriveAuthResultOk()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        backupViewModel.driveAuthEvent.collect { pendingIntent ->
+            driveAuthLauncher.launch(
+                IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+            )
+        }
+    }
+
     LaunchedEffect(uiState.navigateToLogin) {
         if (uiState.navigateToLogin) {
             viewModel.onNavigated()
@@ -131,6 +151,7 @@ fun ProfileScreen(
             backupState is BackupViewModel.State.ImportOk ||
             backupState is BackupViewModel.State.ImportPointOk ||
             backupState is BackupViewModel.State.CompressOk ||
+            backupState is BackupViewModel.State.DriveUploadOk ||
             backupState is BackupViewModel.State.Error
         ) {
             kotlinx.coroutines.delay(5_000)
@@ -165,6 +186,7 @@ fun ProfileScreen(
 
         BackupCard(
             autoBackupEnabled = autoBackupEnabled,
+            driveAccountEmail = driveAccountEmail,
             driveBackupUri = driveBackupUri,
             lastLocalBackupTimestamp = lastLocalBackupTimestamp,
             lastDriveBackupTimestamp = lastDriveBackupTimestamp,
@@ -172,6 +194,9 @@ fun ProfileScreen(
             backupState = backupState,
             dateTag = dateTag,
             onAutoBackupChange = backupViewModel::setAutoBackup,
+            onDriveApiConnect = { backupViewModel.connectDriveApi(context) },
+            onDriveApiDisconnect = backupViewModel::disconnectDriveApi,
+            onDriveApiBackupNow = backupViewModel::backupNowViaDriveApi,
             onDriveConfigure = { driveLauncher.launch("geojournal_backup_cloud.zip") },
             onDriveRemove = backupViewModel::clearDriveBackupUri,
             onExport = { exportLauncher.launch("GeoJournal_backup_$dateTag.zip") },
@@ -443,6 +468,7 @@ private fun PreferencesCard(isDarkTheme: Boolean, onDarkThemeChange: (Boolean) -
 @Composable
 private fun BackupCard(
     autoBackupEnabled: Boolean,
+    driveAccountEmail: String,
     driveBackupUri: String,
     lastLocalBackupTimestamp: Long,
     lastDriveBackupTimestamp: Long,
@@ -450,6 +476,9 @@ private fun BackupCard(
     backupState: BackupViewModel.State,
     dateTag: String,
     onAutoBackupChange: (Boolean) -> Unit,
+    onDriveApiConnect: () -> Unit,
+    onDriveApiDisconnect: () -> Unit,
+    onDriveApiBackupNow: () -> Unit,
     onDriveConfigure: () -> Unit,
     onDriveRemove: () -> Unit,
     onExport: () -> Unit,
@@ -459,10 +488,14 @@ private fun BackupCard(
 ) {
     var showBackupInfoDialog by remember { mutableStateOf(false) }
     if (showBackupInfoDialog) {
+        val infoBody = if (driveAccountEmail.isNotEmpty())
+            stringResource(R.string.profile_backup_info_body_api)
+        else
+            stringResource(R.string.profile_backup_info_body_saf)
         AlertDialog(
             onDismissRequest = { showBackupInfoDialog = false },
             title = { Text(stringResource(R.string.profile_backup_info_title)) },
-            text = { Text(stringResource(R.string.profile_backup_info_body)) },
+            text = { Text(infoBody) },
             confirmButton = {
                 TextButton(onClick = { showBackupInfoDialog = false }) {
                     Text(stringResource(R.string.action_close))
@@ -508,7 +541,8 @@ private fun BackupCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Drive config row
+            // ── Drive REST API (primario) ─────────────────────────────────
+            val workingOp0 = (backupState as? BackupViewModel.State.Working)?.op
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -516,37 +550,107 @@ private fun BackupCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.profile_drive_backup),
+                        stringResource(R.string.profile_drive_api_section),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        stringResource(
-                            if (driveBackupUri.isNotEmpty()) R.string.profile_drive_configured
-                            else R.string.profile_drive_not_configured
-                        ),
+                        if (driveAccountEmail.isNotEmpty())
+                            stringResource(R.string.profile_drive_api_connected_as, driveAccountEmail)
+                        else
+                            stringResource(R.string.profile_drive_api_connect_desc),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (driveBackupUri.isNotEmpty()) MaterialTheme.colorScheme.primary
+                        color = if (driveAccountEmail.isNotEmpty()) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                if (driveBackupUri.isNotEmpty()) {
-                    TextButton(onClick = onDriveRemove) {
-                        Icon(Icons.Filled.CloudOff, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.size(4.dp))
-                        Text(stringResource(R.string.profile_drive_remove))
+                if (driveAccountEmail.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(
+                            onClick = onDriveApiBackupNow,
+                            enabled = workingOp0 == null
+                        ) {
+                            if (workingOp0 == BackupViewModel.Op.DRIVE_UPLOAD) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Filled.Cloud, contentDescription = null, modifier = Modifier.size(14.dp))
+                            }
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.profile_drive_api_backup_now))
+                        }
+                        TextButton(onClick = onDriveApiDisconnect) {
+                            Icon(Icons.Filled.CloudOff, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.profile_drive_api_disconnect))
+                        }
                     }
                 } else {
-                    OutlinedButton(onClick = onDriveConfigure) {
+                    OutlinedButton(onClick = onDriveApiConnect) {
                         Icon(Icons.Filled.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.size(4.dp))
-                        Text(stringResource(R.string.profile_drive_configure))
+                        Text(stringResource(R.string.profile_drive_api_connect))
                     }
                 }
             }
 
-            // Banner: auto backup attivo ma Drive non configurato
-            if (autoBackupEnabled && driveBackupUri.isEmpty()) {
+            // ── File locale alternativo (SAF) — collassabile ──────────────
+            Spacer(Modifier.height(4.dp))
+            var showSafSection by remember(driveBackupUri) { mutableStateOf(driveBackupUri.isNotEmpty()) }
+            TextButton(
+                onClick = { showSafSection = !showSafSection },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    stringResource(R.string.profile_drive_saf_section),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (showSafSection) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(visible = showSafSection) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.profile_drive_saf_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (driveBackupUri.isNotEmpty()) {
+                            Text(
+                                stringResource(R.string.profile_drive_configured),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    if (driveBackupUri.isNotEmpty()) {
+                        TextButton(onClick = onDriveRemove) {
+                            Icon(Icons.Filled.CloudOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.profile_drive_remove))
+                        }
+                    } else {
+                        OutlinedButton(onClick = onDriveConfigure) {
+                            Icon(Icons.Filled.Cloud, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.size(4.dp))
+                            Text(stringResource(R.string.profile_drive_configure))
+                        }
+                    }
+                }
+            }
+
+            // Banner: auto backup attivo ma nessun cloud configurato
+            if (autoBackupEnabled && driveAccountEmail.isEmpty() && driveBackupUri.isEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Card(
                     colors = CardDefaults.cardColors(
@@ -567,7 +671,7 @@ private fun BackupCard(
                         )
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(
-                            onClick = onDriveConfigure,
+                            onClick = onDriveApiConnect,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                             )
@@ -581,7 +685,8 @@ private fun BackupCard(
             }
 
             // ── Stato backup ──────────────────────────────────────────────
-            if (lastLocalBackupTimestamp > 0L || driveBackupUri.isNotEmpty()) {
+            val hasCloudTarget = driveAccountEmail.isNotEmpty() || driveBackupUri.isNotEmpty()
+            if (lastLocalBackupTimestamp > 0L || hasCloudTarget) {
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(Modifier.height(8.dp))
@@ -589,7 +694,7 @@ private fun BackupCard(
                     lastLocalBackupTimestamp = lastLocalBackupTimestamp,
                     lastDriveBackupTimestamp = lastDriveBackupTimestamp,
                     lastDriveBackupSuccess = lastDriveBackupSuccess,
-                    driveBackupUri = driveBackupUri,
+                    hasCloudTarget = hasCloudTarget,
                     onInfoClick = { showBackupInfoDialog = true }
                 )
             }
@@ -703,6 +808,14 @@ private fun BackupCard(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                is BackupViewModel.State.DriveUploadOk -> {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.profile_backup_drive_api_ok),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 is BackupViewModel.State.Error -> {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -722,7 +835,7 @@ private fun BackupStatusSection(
     lastLocalBackupTimestamp: Long,
     lastDriveBackupTimestamp: Long,
     lastDriveBackupSuccess: Boolean,
-    driveBackupUri: String,
+    hasCloudTarget: Boolean,
     onInfoClick: () -> Unit
 ) {
     val fmt = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
@@ -747,7 +860,7 @@ private fun BackupStatusSection(
         }
     }
 
-    if (driveBackupUri.isNotEmpty()) {
+    if (hasCloudTarget) {
         Spacer(Modifier.height(2.dp))
         if (lastDriveBackupTimestamp > 0L) {
             val driveDateStr = remember(lastDriveBackupTimestamp) { fmt.format(Date(lastDriveBackupTimestamp)) }
@@ -787,6 +900,19 @@ private fun BackupStatusSection(
 
 @Composable
 private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel) {
+    val anyActive = uiState.syncGeoPointsEnabled || uiState.syncPhotosEnabled ||
+                    uiState.syncRemindersEnabled || uiState.syncVisitLogsEnabled
+    // Espansa se almeno un toggle è attivo, collassata di default altrimenti
+    var expanded by remember(anyActive) { mutableStateOf(anyActive) }
+
+    // Testo riassuntivo dei toggle attivi per il badge collassato
+    val activeLabels = buildList {
+        if (uiState.syncGeoPointsEnabled) add(stringResource(R.string.profile_sync_badge_geo))
+        if (uiState.syncPhotosEnabled)    add(stringResource(R.string.profile_sync_badge_photos))
+        if (uiState.syncRemindersEnabled) add(stringResource(R.string.profile_sync_badge_reminders))
+        if (uiState.syncVisitLogsEnabled) add(stringResource(R.string.profile_sync_badge_visits))
+    }
+
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
@@ -794,64 +920,97 @@ private fun SyncPrivacyCard(uiState: ProfileUiState, viewModel: ProfileViewModel
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.profile_section_sync_privacy),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                stringResource(R.string.profile_sync_privacy_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(8.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Text(
-                    stringResource(R.string.profile_sync_local_default_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(10.dp)
+            // Header sempre visibile — click espande/collassa
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.profile_section_sync_privacy),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (!expanded) {
+                        Text(
+                            if (anyActive) activeLabels.joinToString(" · ")
+                            else stringResource(R.string.profile_sync_all_local),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (anyActive) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowDown
+                                  else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
 
-            SyncToggleRow(
-                title = stringResource(R.string.profile_sync_geo_points_title),
-                desc = stringResource(R.string.profile_sync_geo_points_desc),
-                checked = uiState.syncGeoPointsEnabled,
-                onCheckedChange = viewModel::setSyncGeoPointsEnabled
-            )
-            Spacer(Modifier.height(4.dp))
-            SyncToggleRow(
-                title = stringResource(R.string.profile_sync_photos_title),
-                desc = stringResource(R.string.profile_sync_photos_desc),
-                checked = uiState.syncPhotosEnabled,
-                onCheckedChange = viewModel::setSyncPhotosEnabled
-            )
-            Spacer(Modifier.height(4.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(4.dp))
-            SyncToggleRow(
-                title = stringResource(R.string.profile_sync_reminders_title),
-                desc = stringResource(R.string.profile_sync_reminders_desc),
-                checked = uiState.syncRemindersEnabled,
-                onCheckedChange = viewModel::setSyncRemindersEnabled
-            )
-            Spacer(Modifier.height(4.dp))
-            SyncToggleRow(
-                title = stringResource(R.string.profile_sync_visit_logs_title),
-                desc = stringResource(R.string.profile_sync_visit_logs_desc),
-                checked = uiState.syncVisitLogsEnabled,
-                onCheckedChange = viewModel::setSyncVisitLogsEnabled
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.profile_sync_existing_data_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Contenuto collassabile
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.profile_sync_privacy_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                        Text(
+                            stringResource(R.string.profile_sync_local_default_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(8.dp))
+
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_geo_points_title),
+                        desc = stringResource(R.string.profile_sync_geo_points_desc),
+                        checked = uiState.syncGeoPointsEnabled,
+                        onCheckedChange = viewModel::setSyncGeoPointsEnabled
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_photos_title),
+                        desc = stringResource(R.string.profile_sync_photos_desc),
+                        checked = uiState.syncPhotosEnabled,
+                        onCheckedChange = viewModel::setSyncPhotosEnabled
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(4.dp))
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_reminders_title),
+                        desc = stringResource(R.string.profile_sync_reminders_desc),
+                        checked = uiState.syncRemindersEnabled,
+                        onCheckedChange = viewModel::setSyncRemindersEnabled
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    SyncToggleRow(
+                        title = stringResource(R.string.profile_sync_visit_logs_title),
+                        desc = stringResource(R.string.profile_sync_visit_logs_desc),
+                        checked = uiState.syncVisitLogsEnabled,
+                        onCheckedChange = viewModel::setSyncVisitLogsEnabled
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.profile_sync_existing_data_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

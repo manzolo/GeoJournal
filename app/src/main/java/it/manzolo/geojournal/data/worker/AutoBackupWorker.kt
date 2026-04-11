@@ -8,6 +8,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import it.manzolo.geojournal.data.backup.BackupManager
+import it.manzolo.geojournal.data.backup.DriveApiClient
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
 import android.app.NotificationManager
@@ -26,6 +27,26 @@ class AutoBackupWorker @AssistedInject constructor(
         const val CHANNEL_ID = "backup_channel"
         private const val NOTIF_ID_PROGRESS = 1001
         private const val NOTIF_ID_ERROR = 1002
+    }
+
+    private fun safUpload(uriString: String, localFile: java.io.File): kotlin.Result<Unit> = runCatching {
+        val uri = Uri.parse(uriString)
+        val pfd = applicationContext.contentResolver.openFileDescriptor(uri, "wt")
+            ?: error("openFileDescriptor returned null for SAF URI")
+        pfd.use { descriptor ->
+            java.io.FileOutputStream(descriptor.fileDescriptor).use { out ->
+                localFile.inputStream().use { inp -> inp.copyTo(out) }
+                out.flush()
+                descriptor.fileDescriptor.sync()
+            }
+        }
+        applicationContext.contentResolver.notifyChange(
+            uri, null, android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK
+        )
+        runCatching {
+            applicationContext.contentResolver.query(uri, null, null, null, null)?.use { it.moveToFirst() }
+        }
+        Unit
     }
 
     override suspend fun doWork(): Result {
@@ -48,36 +69,37 @@ class AutoBackupWorker @AssistedInject constructor(
                 val localFile = backupManager.exportToFile()
                 backupManager.pruneOldBackups()
 
-                // 2. Backup su Drive (SAF) se l'URI è impostato e valido
+                // 2. Backup su cloud: Drive REST API (primario) oppure SAF (fallback)
                 val prefs = userPrefsRepository.preferences.first()
-                if (prefs.driveBackupUri.isNotEmpty()) {
-                    val driveResult = runCatching {
-                        val uri = Uri.parse(prefs.driveBackupUri)
-                        val pfd = applicationContext.contentResolver.openFileDescriptor(uri, "wt")
-                            ?: error("openFileDescriptor returned null for Drive URI")
-                        pfd.use { descriptor ->
-                            java.io.FileOutputStream(descriptor.fileDescriptor).use { out ->
-                                localFile.inputStream().use { inp -> inp.copyTo(out) }
-                                out.flush()
-                                // Forza a livello di file system il provider (Drive) a consolidare su disco
-                                descriptor.fileDescriptor.sync()
-                            }
+                val driveEmail = prefs.driveAccountEmail
+                val driveResult: kotlin.Result<Unit> = when {
+                    driveEmail.isNotBlank() -> {
+                        // Percorso Drive REST API — upload immediato
+                        val apiResult = runCatching {
+                            DriveApiClient(applicationContext, driveEmail)
+                                .uploadOrReplaceBackup(localFile)
+                            Unit
                         }
-                        // Notifica il sistema per forzare la sincronizzazione su Drive, usando il flag NOTIFY_SYNC_TO_NETWORK (API 24+)
-                        applicationContext.contentResolver.notifyChange(uri, null, android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK)
-                        
-                        // Forza Drive a rinfrescare lo stato del file interrogandolo e richiedendo l'aggiornamento
-                        runCatching {
-                            applicationContext.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                                cursor.moveToFirst()
-                            }
+                        // Fallback SAF se Drive API fallisce e SAF è configurato
+                        if (apiResult.isFailure && prefs.driveBackupUri.isNotEmpty()) {
+                            safUpload(prefs.driveBackupUri, localFile)
+                        } else {
+                            apiResult
                         }
                     }
+                    prefs.driveBackupUri.isNotEmpty() -> {
+                        // Nessuna Drive API configurata: solo SAF
+                        safUpload(prefs.driveBackupUri, localFile)
+                    }
+                    else -> kotlin.Result.success(Unit) // nessun cloud configurato, solo backup locale
+                }
+
+                val hasCloudTarget = driveEmail.isNotBlank() || prefs.driveBackupUri.isNotEmpty()
+                if (hasCloudTarget) {
                     userPrefsRepository.setLastDriveBackup(
                         timestamp = System.currentTimeMillis(),
                         success = driveResult.isSuccess
                     )
-
                     if (driveResult.isFailure) {
                         val ex = driveResult.exceptionOrNull()
                         val detail = ex?.localizedMessage ?: ex?.message
@@ -86,7 +108,6 @@ class AutoBackupWorker @AssistedInject constructor(
                         } else {
                             applicationContext.getString(R.string.backup_notif_error_body_generic)
                         }
-
                         val errorNotif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
                             .setContentTitle(applicationContext.getString(R.string.backup_notif_error_title))
                             .setContentText(applicationContext.getString(R.string.backup_notif_error_body_generic))

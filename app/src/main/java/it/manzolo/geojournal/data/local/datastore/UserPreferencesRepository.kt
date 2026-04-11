@@ -21,7 +21,8 @@ data class UserPreferences(
     val isGuest: Boolean = false,
     val lastSyncTimestamp: Long = 0L,
     val autoBackupEnabled: Boolean = false,
-    val driveBackupUri: String = "",   // URI SAF persistito per il backup su Drive/cloud
+    val driveBackupUri: String = "",       // URI SAF persistito per il backup su Drive/cloud (fallback)
+    val driveAccountEmail: String = "",    // email Google per Drive REST API (vuoto = non connesso)
     val lastLocalBackupTimestamp: Long = 0L,
     val lastDriveBackupTimestamp: Long = 0L,
     val lastDriveBackupSuccess: Boolean = false,
@@ -47,6 +48,7 @@ class UserPreferencesRepository @Inject constructor(
         val LAST_SYNC = longPreferencesKey("last_sync_timestamp")
         val AUTO_BACKUP_ENABLED = booleanPreferencesKey("auto_backup_enabled")
         val DRIVE_BACKUP_URI = stringPreferencesKey("drive_backup_uri")
+        val DRIVE_ACCOUNT_EMAIL = stringPreferencesKey("drive_account_email")
         val LAST_LOCAL_BACKUP = longPreferencesKey("last_local_backup_timestamp")
         val LAST_DRIVE_BACKUP = longPreferencesKey("last_drive_backup_timestamp")
         val LAST_DRIVE_BACKUP_SUCCESS = booleanPreferencesKey("last_drive_backup_success")
@@ -74,6 +76,7 @@ class UserPreferencesRepository @Inject constructor(
                 lastSyncTimestamp = prefs[Keys.LAST_SYNC] ?: 0L,
                 autoBackupEnabled = prefs[Keys.AUTO_BACKUP_ENABLED] ?: false,
                 driveBackupUri = prefs[Keys.DRIVE_BACKUP_URI] ?: "",
+                driveAccountEmail = prefs[Keys.DRIVE_ACCOUNT_EMAIL] ?: "",
                 lastLocalBackupTimestamp = prefs[Keys.LAST_LOCAL_BACKUP] ?: 0L,
                 lastDriveBackupTimestamp = prefs[Keys.LAST_DRIVE_BACKUP] ?: 0L,
                 lastDriveBackupSuccess = prefs[Keys.LAST_DRIVE_BACKUP_SUCCESS] ?: false,
@@ -110,6 +113,10 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setDriveBackupUri(uri: String) {
         dataStore.edit { it[Keys.DRIVE_BACKUP_URI] = uri }
+    }
+
+    suspend fun setDriveAccountEmail(email: String) {
+        dataStore.edit { it[Keys.DRIVE_ACCOUNT_EMAIL] = email }
     }
 
     suspend fun setLastLocalBackup(timestamp: Long) {
