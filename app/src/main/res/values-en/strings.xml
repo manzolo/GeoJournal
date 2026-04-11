@@ -21,11 +21,11 @@
     <string name="map_parking_update_action">Update location</string>
     <string name="map_parking_navigate">Take me there</string>
     <string name="map_layer_button">Change map layer</string>
-    <string name="map_kml_toggle_button">KML Layers</string>
+    <string name="map_kml_toggle_button">GPS Tracks</string>
     <string name="map_search_placeholder">Search a place…</string>
     <string name="map_search_clear">Clear search</string>
-    <string name="map_kml_panel_title">KML Layers</string>
-    <string name="map_kml_no_layers">No KML files for visible points</string>
+    <string name="map_kml_panel_title">GPS Tracks</string>
+    <string name="map_kml_no_layers">No GPS tracks for visible points</string>
     <string name="map_layer_road">Road</string>
     <string name="map_layer_topo">Topographic</string>
     <string name="map_layer_satellite">Satellite</string>
@@ -88,7 +88,7 @@
     <string name="profile_dark_theme">Dark theme</string>
     <string name="profile_dark_theme_on">Active</string>
     <string name="profile_dark_theme_off">Inactive</string>
-    <string name="profile_backup_desc">Export all your points, photos, reminders and visits into a ZIP file. Photos are stored locally only — backup is the only way to keep them safe. You can import it on another device or to restore your data.</string>
+    <string name="profile_backup_desc">Save all your places, photos, reminders and visits into a backup file. Photos exist only on your device — backup is the only way to keep them safe. You can restore it on another device at any time.</string>
     <string name="profile_auto_backup">Automatic backup</string>
     <string name="profile_auto_backup_desc">Saves automatically every day</string>
     <string name="profile_drive_backup">Cloud backup (Drive)</string>
@@ -103,13 +103,13 @@
     <!-- Drive REST API -->
     <string name="profile_drive_api_section">Google Drive Backup</string>
     <string name="profile_drive_api_connect">Connect Google Drive</string>
-    <string name="profile_drive_api_connect_desc">Syncs directly with Google Drive</string>
+    <string name="profile_drive_api_connect_desc">Saves the backup directly to your Google Drive</string>
     <string name="profile_drive_api_connected_as">Connected as %s</string>
     <string name="profile_drive_api_disconnect">Disconnect</string>
     <string name="profile_drive_api_backup_now">Backup now</string>
     <string name="profile_backup_drive_api_ok">✓ Drive backup completed</string>
-    <string name="profile_drive_saf_section">Alternative file (local / other provider)</string>
-    <string name="profile_drive_saf_desc">Save to local storage or a provider other than Google Drive</string>
+    <string name="profile_drive_saf_section">Save to another location</string>
+    <string name="profile_drive_saf_desc">Choose a folder on your device or another cloud service as the backup destination</string>
     <string name="profile_export">Export</string>
     <string name="profile_import">Import</string>
     <string name="profile_import_geoj">Open shared point</string>
@@ -120,7 +120,7 @@
     <string name="profile_delete_account_confirm">This will permanently delete your account and all your data (points, photos, cloud backup). This action cannot be undone.\n\nAre you sure you want to proceed?</string>
     <string name="profile_delete_account_action">Delete everything</string>
     <string name="profile_import_backup_title">Import backup</string>
-    <string name="profile_import_backup_confirm">Points and data from the file will be added or updated. Existing data with the same ID will be overwritten. Continue?</string>
+    <string name="profile_import_backup_confirm">Places and data from the file will be added to yours. If a place already exists, it will be updated with the backup data. Continue?</string>
     <string name="action_cancel_label">Cancel</string>
     <string name="profile_backup_local_only_title">⚠️ Local backup only</string>
     <string name="profile_backup_local_only_body">Automatic backup saves data only in the app\'s private storage. If you uninstall the app you will also lose your backups. Configure a Drive file to truly protect them.</string>
@@ -152,13 +152,13 @@
     <string name="notif_channel_backup_desc">Backup status and Drive synchronization</string>
     <string name="backup_notif_title">Backup in progress</string>
     <string name="backup_notif_text">Saving and synchronizing data…</string>
-    <string name="backup_notif_error_title">Auto Drive Backup failed</string>
+    <string name="backup_notif_error_title">Drive backup failed</string>
     <string name="backup_notif_error_body_generic">Could not save backup to Drive. Please try again later.</string>
     <string name="backup_notif_error_body">Could not save backup to Drive (%s)</string>
 
     <!-- GPS Track Recording -->
     <string name="tracking_start_button">Record session</string>
-    <string name="tracking_info_hint">Records the GPS route while you move. The track is saved as a KML file linked to this point.</string>
+    <string name="tracking_info_hint">Records your route while you move. The track is saved and can be shown on the map as a coloured line.</string>
     <string name="tracking_stop_button">Stop recording</string>
     <string name="tracking_point_count">%d GPS points recorded</string>
     <string name="tracking_notif_title">Track recording in progress</string>
@@ -243,21 +243,21 @@
     <string name="addedit_section_additional_details">Additional details</string>
     <string name="addedit_section_notes">Personal notes</string>
     <string name="addedit_notes_hint">Private notes…</string>
-    <string name="addedit_section_kml">KML files</string>
-    <string name="addedit_import_kml">Import KML</string>
-    <string name="addedit_kml_rename_title">Rename KML file</string>
+    <string name="addedit_section_kml">GPS Tracks</string>
+    <string name="addedit_import_kml">Import track</string>
+    <string name="addedit_kml_rename_title">Rename track</string>
     <string name="addedit_kml_rename_hint">Name</string>
     <string name="addedit_remove_photo_confirm_title">Remove photo</string>
     <string name="addedit_remove_photo_confirm_body">The photo will be removed. The change will only take effect after saving.</string>
-    <string name="addedit_remove_kml_confirm_title">Remove KML file</string>
-    <string name="addedit_remove_kml_confirm_body">The KML file will be removed. The change will only take effect after saving.</string>
+    <string name="addedit_remove_kml_confirm_title">Remove track</string>
+    <string name="addedit_remove_kml_confirm_body">The track will be removed. The change will only take effect after saving.</string>
     <string name="addedit_discard_title">Unsaved changes</string>
     <string name="addedit_discard_body">You have unsaved changes. Do you want to leave and lose them?</string>
     <string name="addedit_discard_confirm">Leave without saving</string>
     <string name="addedit_map_tap_hint">Tap the map to move the point</string>
     <string name="addedit_location_selected">Location selected on map</string>
     <string name="addedit_gps_accuracy">Accuracy: ±%d m</string>
-    <string name="addedit_gps_acquiring">Acquiring GPS…</string>
+    <string name="addedit_gps_acquiring">Finding GPS signal…</string>
     <string name="addedit_gps_tap_to_select">Tap the map to select a location</string>
     <string name="addedit_gps_permission_settings">GPS permission disabled. Enable it in app settings to use GPS.</string>
     <string name="addedit_use_gps">Resume GPS</string>
@@ -316,8 +316,8 @@
     <string name="profile_last_drive_backup_error">Drive: last sync failed (%s)</string>
     <string name="profile_drive_never_synced">Drive: never synced by auto-backup</string>
     <string name="profile_backup_info_title">How backup works</string>
-    <string name="profile_backup_info_body_api">The backup is uploaded to Google\'s servers via Drive REST API, bypassing the Drive app\'s local buffer.\n\nThe file appears on drive.google.com once the upload is complete.</string>
-    <string name="profile_backup_info_body_saf">This timestamp indicates when GeoJournal wrote the file to Google Drive\'s local buffer.\n\nThe actual sync to Google\'s servers happens automatically and may take a few minutes, usually when the device is connected to Wi-Fi.\n\nIf the file doesn\'t appear on Drive right away, opening the Drive app will trigger the sync.</string>
+    <string name="profile_backup_info_body_api">The backup is sent directly to your Google Drive, without needing to open the Drive app.\n\nThe file will be visible on drive.google.com as soon as it\'s done.\n\n(For the curious: direct upload via Drive REST API, no local buffer)</string>
+    <string name="profile_backup_info_body_saf">This date and time shows when GeoJournal saved the file to your chosen destination.\n\nIf you chose Google Drive, the Drive app will upload it online in the next few minutes — usually when connected to Wi-Fi.\n\nIf the file doesn\'t appear on Drive right away, open the Drive app to start the upload.</string>
     <!-- Sync badges (used in the collapsed summary of the Sync section) -->
     <string name="profile_sync_badge_geo">Geo points</string>
     <string name="profile_sync_badge_photos">Photos</string>
@@ -361,7 +361,7 @@
     <string name="share_options_include_section">Include in sharing</string>
     <string name="share_options_photos">Photos</string>
     <string name="share_options_tags">Tags</string>
-    <string name="share_options_kml">KML files</string>
+    <string name="share_options_kml">GPS tracks</string>
     <string name="share_options_notes">Personal notes</string>
     <string name="share_options_reminders">Reminders</string>
 
@@ -375,10 +375,10 @@
     <string name="onboarding_guest_body">The most private option. Your places, photos, reminders and visits stay only on this device — no server, no cloud, not even I as the developer can see them. To avoid losing your data, export a periodic backup from Profile → Export backup.</string>
     <string name="onboarding_guest_badge">⭐ Recommended for privacy · No registration</string>
     <string name="onboarding_cloud_title">Synced to the cloud</string>
-    <string name="onboarding_cloud_body">With a Google account you can sync your data to Firebase — but nothing is sent automatically. You decide what to share: enable or disable points, photos, reminders and visits individually from Profile → Sync &amp; Privacy. Everything is OFF by default. Other users can never access your data. However, as the developer I have technical admin access to the Firebase console. If maximum privacy matters to you, use guest mode.</string>
+    <string name="onboarding_cloud_body">With a Google account you can save your data online — but nothing is sent automatically. You decide what to share: enable or disable points, photos, reminders and visits individually from Profile → Sync &amp; Privacy. Everything is off by default. Other users can never access your data. However, as the developer I have technical access to stored data. If maximum privacy matters to you, use guest mode.</string>
     <string name="onboarding_cloud_badge">Opt-in backup · Everything OFF by default</string>
     <string name="onboarding_open_source_note">🔓 GeoJournal is open source (AGPL-3.0): the code is public on GitHub and anyone can verify what it does with your data. You don\'t have to take my word for it.</string>
-    <string name="onboarding_crashlytics_note">Anonymous crash reports are sent to Firebase Crashlytics even in guest mode. They contain no personal data.</string>
+    <string name="onboarding_crashlytics_note">Even in guest mode, if the app crashes unexpectedly, anonymous data is automatically sent to help me fix the issue. No personal information is included. (via Firebase Crashlytics)</string>
     <string name="onboarding_cta">Got it</string>
     <string name="profile_data_info_button">How we handle your data</string>
     <string name="profile_help_button">Feature guide</string>
@@ -390,32 +390,32 @@
     <string name="help_add_point_body">Use the + button to save your current position on the map. You can set a title, description, a custom emoji and attach photos.</string>
     <string name="help_add_point_badge">+ button</string>
     <string name="help_track_title">Record a GPS track</string>
-    <string name="help_track_body">From the point detail screen, start GPS recording to trace your route. The service keeps running in the background even with the screen off. A KML file is generated at the end and can be shown as an overlay on the map.</string>
+    <string name="help_track_body">From the point detail screen, start recording to trace your route. The service keeps running even with the screen off. At the end, the route is saved and can be shown as a coloured line on the map.</string>
     <string name="help_track_badge">Point detail → Start tracking</string>
     <string name="help_details_title">Point information</string>
     <string name="help_details_body">Each point can hold: tags for categorisation, a star rating, personal notes (local only, never shared), reminders with notifications, and one or more KML tracks. You\'ll find these fields under \"Additional details\" in the edit screen.</string>
-    <string name="help_details_badge">Tags · Rating · Notes · Reminders · KML</string>
+    <string name="help_details_badge">Tags · Rating · Notes · Reminders · GPS Tracks</string>
     <string name="help_backup_title">Backup and restore</string>
     <string name="help_backup_body">From Profile you can export all your points to a ZIP file and re-import them at any time. Automatic backup periodically saves your data securely, and to Google Drive if configured.</string>
     <string name="help_backup_badge">Profile → Backup</string>
     <string name="help_share_title">Share a point</string>
-    <string name="help_share_body">Any point can be shared as a .geoj file, which includes the main information and attached photos. The recipient can import it directly into GeoJournal. Personal notes and KML tracks are excluded for privacy.</string>
+    <string name="help_share_body">Any point can be shared with whoever you like. The file includes the main information and attached photos. The recipient can import it directly into GeoJournal. Personal notes and GPS tracks are excluded for privacy.</string>
     <string name="help_share_badge">Point detail → Share</string>
     <string name="help_cta">Got it!</string>
 
     <!-- Sync & Privacy -->
     <string name="profile_section_sync_privacy">Sync &amp; Privacy</string>
     <string name="profile_sync_privacy_subtitle">Choose what to save online</string>
-    <string name="profile_sync_local_default_note">By default your data stays only on this device. Enable only what you want to save online. Photos always stay local. Changes take effect on the next save.</string>
+    <string name="profile_sync_local_default_note">By default your data stays only on this device. Enable only what you want to save online. Photos stay local unless you enable photo sync. Changes take effect on the next save.</string>
     <string name="profile_sync_geo_points_title">Geographic data</string>
-    <string name="profile_sync_geo_points_desc">Title, coordinates, tags and notes saved to the cloud</string>
+    <string name="profile_sync_geo_points_desc">Title, description, coordinates, emoji, tags and rating saved online</string>
     <string name="profile_sync_photos_title">Photos</string>
     <string name="profile_sync_photos_desc">Photos are uploaded online as a backup</string>
     <string name="profile_sync_reminders_title">Reminders</string>
     <string name="profile_sync_reminders_desc">Reminders are saved online</string>
     <string name="profile_sync_visit_logs_title">Visit log</string>
     <string name="profile_sync_visit_logs_desc">Recorded visits are saved online</string>
-    <string name="profile_sync_existing_data_note">ℹ Data already sent to the cloud is not automatically deleted when you turn off a toggle.</string>
+    <string name="profile_sync_existing_data_note">ℹ Data already saved online is not automatically deleted when you turn off syncing.</string>
     <string name="profile_sync_requires_geo_points">Requires geographic data to be enabled</string>
     <!-- Updated onboarding -->
     <string name="onboarding_cloud_privacy_note">You choose what to sync: enable or disable each data type (points, photos, reminders, visits) individually from Profile → Sync &amp; Privacy. Everything is OFF by default.</string>
