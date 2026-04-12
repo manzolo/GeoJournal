@@ -4,7 +4,9 @@ import android.accounts.Account
 import android.content.Context
 import com.google.android.gms.auth.GoogleAuthUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -35,8 +37,13 @@ class DriveApiClient(
 
     /** Returns an access token from cache or network. May throw [TokenExpiredException] indirectly via callers. */
     private suspend fun getAccessToken(): String = withContext(Dispatchers.IO) {
-        val account = Account(accountEmail, "com.google")
-        GoogleAuthUtil.getToken(context, account, SCOPE)
+        // GoogleAuthUtil.getToken è bloccante e senza timeout nativo: può restare appeso
+        // per ore se rete o Play Services non rispondono (es. notte con connettività intermittente).
+        withTimeout(30_000L) {
+            runInterruptible {
+                GoogleAuthUtil.getToken(context, Account(accountEmail, "com.google"), SCOPE)
+            }
+        }
     }
 
     /**
