@@ -133,6 +133,7 @@ def _prepare_points(raw: list, reminders: list, visits: list) -> list:
             "visits":        p_visits,
             "notes":         p.get("notes", ""),
             "webKmls":       web_kmls,
+            "isFavorite":    p.get("isFavorite", False),
         })
     return points
 

@@ -20,6 +20,7 @@
       --muted:    #94a3b8;
       --border:   #2d3148;
       --archived: #4b5563;
+      --favorite: #f59e0b;
       --radius:   10px;
     }
 
@@ -155,6 +156,13 @@
       font-size: 0.72rem; line-height: 1;
       width: 18px; height: 18px; border-radius: 50%;
       background: var(--surface); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .fav-dot {
+      position: absolute; top: -4px; right: -4px;
+      font-size: 0.65rem; line-height: 1;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--favorite);
       display: flex; align-items: center; justify-content: center;
     }
     .card-body { flex: 1; min-width: 0; }
@@ -300,6 +308,11 @@
     .bubble-marker.archived.selected { background: var(--accent); opacity: 1; }
     .bubble-marker.archived.selected .bubble-label { color: white; }
     .bubble-marker.archived.selected::after { border-top-color: var(--accent); }
+    .bubble-marker.favorite { border: 2px solid var(--favorite); }
+    .bubble-marker.favorite::before {
+      content: '⭐'; position: absolute; top: -8px; right: -6px;
+      font-size: 10px; line-height: 1;
+    }
 
     /* Layer switcher custom */
     .layer-ctrl { display: flex; flex-direction: column; gap: 5px; }
@@ -454,9 +467,10 @@
           <button class="sidebar-close-btn" onclick="closeMobileSidebar()">✕</button>
           <input class="search-box" type="search" id="searchInput" data-i18n-placeholder="search_ph" placeholder="" />
           <div class="filter-bar">
-            <button class="filter-btn"        data-filter="all"      onclick="setFilter('all')"      data-i18n="all">Tutti</button>
-            <button class="filter-btn active" data-filter="active"   onclick="setFilter('active')"   data-i18n="active_f">Attivi</button>
-            <button class="filter-btn"        data-filter="archived" onclick="setFilter('archived')" data-i18n="archived_f">Archiviati</button>
+            <button class="filter-btn"        data-filter="all"       onclick="setFilter('all')"       data-i18n="all">Tutti</button>
+            <button class="filter-btn active" data-filter="active"    onclick="setFilter('active')"    data-i18n="active_f">Attivi</button>
+            <button class="filter-btn"        data-filter="archived"  onclick="setFilter('archived')"  data-i18n="archived_f">Archiviati</button>
+            <button class="filter-btn"        data-filter="favorites" onclick="setFilter('favorites')" data-i18n="favorites_f">⭐</button>
           </div>
         </div>
         <div class="sidebar-list" id="pointList">
@@ -464,6 +478,7 @@
           <div class="point-card {% if p.isArchived %}archived-card{% endif %}"
                data-id="{{ p.id }}"
                data-archived="{{ 'true' if p.isArchived else 'false' }}"
+               data-favorite="{{ 'true' if p.isFavorite else 'false' }}"
                onclick="selectPoint('{{ p.id }}')">
             <div class="thumb-wrap">
               <div class="card-thumb">
@@ -473,6 +488,7 @@
                 {% else %}{{ p.emoji or '📍' }}{% endif %}
               </div>
               {% if p.isArchived %}<span class="arch-dot" data-i18n-title="archived_dot">🗄️</span>{% endif %}
+              {% if p.isFavorite %}<span class="fav-dot" title="Preferito">⭐</span>{% endif %}
             </div>
             <div class="card-body">
               <div class="card-title">{{ p.emoji or '📍' }} {{ p.title }}</div>
@@ -552,32 +568,32 @@ function toggleMobileSidebar() {
 const LANG = navigator.language.toLowerCase().startsWith('it') ? 'it' : 'en';
 const T = {
   it: {
-    all:          'Tutti',       active_f:     'Attivi',      archived_f:   'Archiviati',
-    search_ph:    'Cerca titolo, tag, descrizione…',
-    back:         '← Lista',
-    view_carousel:'Carosello',   view_journal: 'Vista completa',
-    archived_dot: 'Archiviato',
-    meta_active:  'attivi',      meta_archived:'archiviati',
-    copy_coord:   'Copia coordinate',
-    visits:       'Visite',      reminders:    'Reminder',
-    single:       'Singolo',     recurring:    'Ricorrente',
-    active:       'Attivo',      expired:      'Scaduto',
-    archived_lbl: 'archiviato',
-    layer_map:    'Mappa standard', layer_dark: 'Dark', layer_sat: 'Satellite',
+    all:           'Tutti',       active_f:      'Attivi',       archived_f:   'Archiviati',  favorites_f:  '⭐ Preferiti',
+    search_ph:     'Cerca titolo, tag, descrizione…',
+    back:          '← Lista',
+    view_carousel: 'Carosello',   view_journal:  'Vista completa',
+    archived_dot:  'Archiviato',
+    meta_active:   'attivi',      meta_archived: 'archiviati',   meta_favorites: 'preferiti',
+    copy_coord:    'Copia coordinate',
+    visits:        'Visite',      reminders:     'Reminder',
+    single:        'Singolo',     recurring:     'Ricorrente',
+    active:        'Attivo',      expired:       'Scaduto',
+    archived_lbl:  'archiviato',  favorite_lbl:  'preferito',
+    layer_map:     'Mappa standard', layer_dark:  'Dark',        layer_sat:    'Satellite',
   },
   en: {
-    all:          'All',         active_f:     'Active',      archived_f:   'Archived',
-    search_ph:    'Search title, tag, description…',
-    back:         '← List',
-    view_carousel:'Carousel',    view_journal: 'Full view',
-    archived_dot: 'Archived',
-    meta_active:  'active',      meta_archived:'archived',
-    copy_coord:   'Copy coordinates',
-    visits:       'Visits',      reminders:    'Reminders',
-    single:       'Single',      recurring:    'Recurring',
-    active:       'Active',      expired:      'Expired',
-    archived_lbl: 'archived',
-    layer_map:    'Standard map', layer_dark: 'Dark', layer_sat: 'Satellite',
+    all:           'All',         active_f:      'Active',       archived_f:   'Archived',    favorites_f:  '⭐ Favorites',
+    search_ph:     'Search title, tag, description…',
+    back:          '← List',
+    view_carousel: 'Carousel',    view_journal:  'Full view',
+    archived_dot:  'Archived',
+    meta_active:   'active',      meta_archived: 'archived',     meta_favorites: 'favorites',
+    copy_coord:    'Copy coordinates',
+    visits:        'Visits',      reminders:     'Reminders',
+    single:        'Single',      recurring:     'Recurring',
+    active:        'Active',      expired:       'Expired',
+    archived_lbl:  'archived',    favorite_lbl:  'favorite',
+    layer_map:     'Standard map', layer_dark:   'Dark',         layer_sat:    'Satellite',
   },
 };
 const t = k => (T[LANG] || T.en)[k] ?? k;
@@ -591,11 +607,13 @@ function applyI18n() {
 const POINTS = {{ points | tojson }};
 
 // ── Meta ─────────────────────────────────────────────────────────────────────
-const nActive   = POINTS.filter(p => !p.isArchived).length;
-const nArchived = POINTS.filter(p =>  p.isArchived).length;
+const nActive    = POINTS.filter(p => !p.isArchived).length;
+const nArchived  = POINTS.filter(p =>  p.isArchived).length;
+const nFavorites = POINTS.filter(p =>  p.isFavorite && !p.isArchived).length;
 const metaCountHtml =
   `<strong>${nActive}</strong> ${t('meta_active')}` +
-  (nArchived ? ` · <strong>${nArchived}</strong> ${t('meta_archived')}` : '');
+  (nArchived   ? ` · <strong>${nArchived}</strong> ${t('meta_archived')}`   : '') +
+  (nFavorites  ? ` · <strong>${nFavorites}</strong> ${t('meta_favorites')}` : '');
 document.getElementById('metaCount').innerHTML = metaCountHtml;
 document.getElementById('metaMobile').innerHTML =
   metaCountHtml +
@@ -644,8 +662,9 @@ new LayerCtrl({ position: 'topright' }).addTo(map);
 // ── Bubble icons ──────────────────────────────────────────────────────────────
 function makeIcon(p, selected) {
   let cls = 'bubble-marker';
-  if (p.isArchived) cls += ' archived';
-  if (selected)     cls += ' selected';
+  if (p.isArchived)  cls += ' archived';
+  if (p.isFavorite)  cls += ' favorite';
+  if (selected)      cls += ' selected';
   const label = p.title.length > 24 ? p.title.slice(0, 22) + '…' : p.title;
   return L.divIcon({
     html: `<div class="${cls}">
@@ -746,7 +765,8 @@ function _infoHtml(p) {
   h += `<div class="detail-title-row">
     <span class="detail-emoji">${p.emoji || '📍'}</span>
     <span class="detail-title">${p.title}</span>
-    ${p.isArchived ? `<span class="badge-archived-big">🗄️ ${t('archived_lbl')}</span>` : ''}
+    ${p.isFavorite  ? `<span title="${t('favorite_lbl')}" style="color:var(--favorite);font-size:1rem">⭐</span>` : ''}
+    ${p.isArchived  ? `<span class="badge-archived-big">🗄️ ${t('archived_lbl')}</span>` : ''}
   </div>`;
   if (stars) h += `<div class="detail-stars">${stars}</div>`;
   h += `<div class="detail-chips">
@@ -949,8 +969,9 @@ function applyFilters() {
     const passFilter = currentSearch
       ? true
       : (currentFilter === 'all' ||
-         (currentFilter === 'active'   && !arc) ||
-         (currentFilter === 'archived' &&  arc));
+         (currentFilter === 'active'    && !arc) ||
+         (currentFilter === 'archived'  &&  arc) ||
+         (currentFilter === 'favorites' && p.isFavorite && !arc));
 
     const show = passFilter && passSearch;
     card.style.display = show ? '' : 'none';
