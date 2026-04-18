@@ -14,7 +14,7 @@ App Android per diario geo-personale con GPS, foto, reminders e backup.
 | KSP | 2.2.10-2.0.2 |
 | Compose BOM | 2026.03.00 (UI 1.10.5, M3 1.4.0) |
 | Hilt | 2.59 |
-| Room | 2.7.0 (schema v6) |
+| Room | 2.7.0 (schema v7) |
 | Firebase BOM | 33.7.0 |
 | minSdk / targetSdk | 26 / 36 |
 
@@ -41,7 +41,7 @@ app/
 ├── data/
 │   ├── local/
 │   │   ├── dao/          # Room DAOs (GeoPoint, Reminder, Visit, PointKml)
-│   │   ├── database/     # GeoJournalDatabase (schema v6)
+│   │   ├── database/     # GeoJournalDatabase (schema v7)
 │   │   └── datastore/    # UserPreferencesRepository
 │   ├── remote/           # FirebaseAuthRepositoryImpl, FirestoreRepository
 │   ├── backup/           # BackupManager, GeoPointExporter, AutoBackupWorker
@@ -66,9 +66,9 @@ app/
 ```
 
 **Entità principale — GeoPoint:**
-`id, title, description, lat, lon, emoji, tags, photoUrls, ownerId, isShared, rating (0=nessun rating), notes, createdAt, updatedAt`
+`id, title, description, lat, lon, emoji, tags, photoUrls, ownerId, isShared, rating (0=nessun rating), notes, isArchived, isFavorite, createdAt, updatedAt`
 
-**PointKml (DB v6 — tabella `point_kmls`):**
+**PointKml (DB v7 — tabella `point_kmls`):**
 `id, geoPointId, name, filePath (filesDir/kmls/{geoPointId}/{uuid}.kml), importedAt`
 
 **UserPreferences (DataStore):**
@@ -126,11 +126,12 @@ ksp { arg("hilt.enableAggregatingTask", "true") }
 | photoUrls | ✅ (foto copiate) | ✅ | opt-in (`syncPhotos`) |
 | rating | ❌ escluso (v3) | ✅ | opt-in |
 | **notes** | ❌ escluso | ✅ | ❌ **mai** (locale-only by design) |
+| **isFavorite** | ❌ escluso | ✅ | ❌ **mai** (locale-only by design) |
 | KML files | ❌ escluso | ✅ (file fisici) | ❌ **mai** (locale-only) |
 | reminders | ❌ | ✅ | opt-in (`syncReminders`) |
 
 I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `syncVisitLogs`) coprono tutti i casi.
-`notes` e KML non hanno flag separati perché non hanno percorso verso Firestore.
+`notes`, `isFavorite` e KML non hanno flag separati perché non hanno percorso verso Firestore.
 
 ---
 
@@ -153,6 +154,7 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 - **Tracciamento GPS (tracking):** `LocationTrackingService` foreground service (tipo `location`), avviato da `PointDetailScreen`. Ogni 5s o 5m registra coordinate in `TrackingManager` (singleton Hilt). Allo stop genera KML via `KmlWriter` e lo salva via `PointKmlRepository.saveKml()`. Permessi: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`.
 - **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.
 - **EXIF foto:** `ExifReader` legge `dateTaken` + `cameraModel` da file locali (off-thread via IO dispatcher). Null silenzioso per URL HTTPS. Mostrato come strip semitrasparente nel PhotoViewerDialog.
+- **Preferiti (`isFavorite`):** stella toggle in FAB mappa, PointBottomSheet, PointDetailScreen (TopAppBar), ListScreen (FilterChip + menu contestuale). Smart default: mappa apre in modalità preferiti se `countFavorites() > 0`. Ricerca sempre su tutti i punti attivi. `_showFavoritesOnly` dichiarato prima di `init` (evita NPE con UnconfinedTestDispatcher). Locale-only: in backup.zip ✅, in .geoj ❌, in Firestore ❌.
 
 ---
 
