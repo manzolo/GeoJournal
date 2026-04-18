@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import it.manzolo.geojournal.data.backup.AutoBackupScheduler
 import it.manzolo.geojournal.data.backup.BackupManager
 import it.manzolo.geojournal.data.backup.DriveApiClient
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
@@ -21,7 +22,8 @@ class AutoBackupWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted params: WorkerParameters,
     private val backupManager: BackupManager,
-    private val userPrefsRepository: UserPreferencesRepository
+    private val userPrefsRepository: UserPreferencesRepository,
+    private val autoBackupScheduler: AutoBackupScheduler
 ) : CoroutineWorker(appContext, params) {
 
     companion object {
@@ -130,6 +132,13 @@ class AutoBackupWorker @AssistedInject constructor(
             if (result.isSuccess) Result.success() else Result.failure()
         } finally {
             nm.cancel(NOTIF_ID_PROGRESS)
+            // Ri-schedula il prossimo alarm giornaliero (chain pattern),
+            // indipendentemente da successo o fallimento.
+            runCatching {
+                if (userPrefsRepository.preferences.first().autoBackupEnabled) {
+                    autoBackupScheduler.schedule()
+                }
+            }
         }
     }
 }

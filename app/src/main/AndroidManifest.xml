@@ -140,6 +140,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- AutoBackupBroadcastReceiver: daily backup alarm fire -->
+        <receiver
+            android:name=".data.backup.AutoBackupBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="it.manzolo.geojournal.AUTO_BACKUP_FIRE" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
