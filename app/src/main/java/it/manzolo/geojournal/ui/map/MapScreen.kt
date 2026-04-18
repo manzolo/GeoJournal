@@ -46,6 +46,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
@@ -104,6 +107,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.core.content.FileProvider
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -249,6 +253,15 @@ fun MapScreen(
         actionSnackbarText?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearActionSnackbar()
+        }
+    }
+
+    // Snackbar preferiti
+    val favoriteSnackbarText = uiState.favoriteSnackbarRes?.let { stringResource(it) }
+    LaunchedEffect(uiState.favoriteSnackbarRes) {
+        favoriteSnackbarText?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearFavoriteSnackbar()
         }
     }
 
@@ -474,9 +487,13 @@ fun MapScreen(
             onResultClick = { point ->
                 keyboardController?.hide()
                 viewModel.closeSearch()
+                // Se il punto non è preferito e il filtro è attivo, mostra tutti i punti
+                if (uiState.showFavoritesOnly && !point.isFavorite) {
+                    viewModel.toggleFavoritesFilter()
+                }
                 mapView.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), 17.0, 800L)
                 coroutineScope.launch {
-                    delay(200) // attende che la tastiera si chiuda prima di aprire il sheet
+                    delay(200)
                     viewModel.onPointSelected(point)
                 }
             },
@@ -485,6 +502,22 @@ fun MapScreen(
                 .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth()
         )
+
+        // Empty state quando filtro preferiti attivo ma lista vuota
+        if (uiState.showFavoritesOnly && uiState.points.isEmpty() && !uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.map_no_favorites_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(32.dp)
+                )
+            }
+        }
 
         // Controlli zoom + inquadra tutto (lato sinistro)
         Surface(
@@ -550,6 +583,17 @@ fun MapScreen(
                             MapLayer.SATELLITE -> MaterialTheme.colorScheme.primary
                         }
                         Icon(Icons.Filled.Layers, contentDescription = stringResource(R.string.map_layer_button), tint = tint)
+                    }
+
+                    HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    // Pulsante Preferiti
+                    IconButton(onClick = viewModel::toggleFavoritesFilter) {
+                        Icon(
+                            imageVector = if (uiState.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = stringResource(R.string.map_filter_favorites),
+                            tint = if (uiState.showFavoritesOnly) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
+                        )
                     }
 
                     HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -748,6 +792,9 @@ fun MapScreen(
                 },
                 onDeleteClick = { point ->
                     viewModel.deletePoint(point)
+                },
+                onFavoriteClick = { point ->
+                    viewModel.toggleFavorite(point)
                 }
             )
         }
@@ -1322,7 +1369,7 @@ private fun updateClusteredMarkers(
             position = OsmGeoPoint(cluster.centerLat, cluster.centerLon)
             if (cluster.points.size == 1) {
                 val point = cluster.points[0]
-                icon = createCloudBubbleDrawable(context, point.emoji, point.title)
+                icon = createCloudBubbleDrawable(context, point.emoji, point.title, point.isFavorite)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                 setOnMarkerClickListener { _, mv ->
                     val targetZoom = if (mv.zoomLevelDouble < 17.0) 17.0 else mv.zoomLevelDouble
@@ -1363,12 +1410,13 @@ private fun updateClusteredMarkers(
 
 /**
  * Pin Material per marker singolo: badge arrotondato (emoji + titolo) con codina triangolare.
- * Design pulito senza bumps — bordo verde, ombra morbida.
+ * Bordo dorato + stella per preferiti, bordo verde per normali.
  */
 private fun createCloudBubbleDrawable(
     context: Context,
     emoji: String,
-    title: String
+    title: String,
+    isFavorite: Boolean = false
 ): BitmapDrawable {
     val d = context.resources.displayMetrics.density
     val paddingH = 10f * d
@@ -1434,12 +1482,21 @@ private fun createCloudBubbleDrawable(
         style = Paint.Style.FILL
     })
 
-    // Bordo verde
+    // Bordo: dorato per preferiti, verde per normali
+    val borderColor = if (isFavorite) AndroidColor.argb(255, 210, 160, 0) else AndroidColor.argb(255, 56, 102, 65)
     canvas.drawPath(pinPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = AndroidColor.argb(255, 56, 102, 65)
+        color = borderColor
         style = Paint.Style.STROKE
         strokeWidth = 2f * d
     })
+
+    // Stella preferito in alto a destra
+    if (isFavorite) {
+        canvas.drawText("⭐", bodyW - paddingH - 8f * d, paddingV + 6f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 10f * d
+            textAlign = Paint.Align.RIGHT
+        })
+    }
 
     // Emoji
     val textY = bodyH / 2f + emojiSize * 0.35f

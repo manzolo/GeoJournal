@@ -216,6 +216,12 @@
     <string name="point_delete_confirm_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>
     <string name="point_archived_snackbar">Punto archiviato</string>
     <string name="point_deleted_snackbar">Punto eliminato</string>
+    <string name="favorite_added_snackbar">Aggiunto ai preferiti ⭐</string>
+    <string name="favorite_removed_snackbar">Rimosso dai preferiti</string>
+    <string name="map_filter_favorites">Preferiti</string>
+    <string name="map_filter_all">Tutti</string>
+    <string name="map_no_favorites_hint">Nessun preferito ancora.\nTocca ☆ su un punto per aggiungerlo.</string>
+    <string name="list_filter_favorites">Preferiti</string>
 
     <!-- Add/Edit Screen -->
     <string name="addedit_error_no_location">Imposta una posizione prima di salvare il punto.</string>

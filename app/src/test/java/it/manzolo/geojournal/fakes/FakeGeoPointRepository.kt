@@ -57,6 +57,16 @@ class FakeGeoPointRepository : GeoPointRepository {
         }
     }
 
+    override fun observeFavorites(): Flow<List<GeoPoint>> =
+        _points.map { list -> list.filter { it.isFavorite && !it.isArchived } }
+
+    override fun countFavorites(): Flow<Int> =
+        _points.map { list -> list.count { it.isFavorite && !it.isArchived } }
+
+    override suspend fun toggleFavorite(id: String, isFavorite: Boolean) {
+        _points.update { list -> list.map { if (it.id == id) it.copy(isFavorite = isFavorite) else it } }
+    }
+
     override suspend fun migrateGuestPointsToUser(userId: String): Int = 0
     override suspend fun pullFromFirestore(): Int = 0
     override suspend fun syncUnsyncedPoints(): Int = 0

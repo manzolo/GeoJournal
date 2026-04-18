@@ -99,7 +99,15 @@ data class MapUiState(
     /** True appena arriva la prima posizione reale (GPS o salvata) */
     val hasUserLocation: Boolean = false,
     /** Snackbar per conferma azione (archivia / elimina, @StringRes) */
-    @StringRes val actionSnackbarRes: Int? = null
+    @StringRes val actionSnackbarRes: Int? = null,
+    /** Mostra solo i preferiti sulla mappa */
+    val showFavoritesOnly: Boolean = false,
+    /** Conteggio preferiti attivi (per il chip) */
+    val favoritesCount: Int = 0,
+    /** Tutti i punti attivi: usato per la ricerca anche in modalità preferiti */
+    val allActivePoints: List<GeoPoint> = emptyList(),
+    /** Snackbar preferito (@StringRes) */
+    @StringRes val favoriteSnackbarRes: Int? = null
 )
 
 @HiltViewModel
@@ -156,6 +164,9 @@ class MapViewModel @Inject constructor(
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
 
     private var savePositionJob: Job? = null
+
+    // Dichiarato prima di init perché observePoints() lo legge in un coroutine lanciato eagerly
+    private val _showFavoritesOnly = MutableStateFlow(false)
 
     init {
         restoreMapPosition()
@@ -226,15 +237,68 @@ class MapViewModel @Inject constructor(
     }
 
     private fun observePoints() {
+        // Osservazione punti mappa: struttura identica all'originale, aggiorna anche allActivePoints
         viewModelScope.launch {
             repository.observeActive()
                 .catch { e -> _uiState.update { it.copy(error = e.message, isLoading = false) } }
-                .collect { points ->
-                    _uiState.update { it.copy(points = points, isLoading = false) }
+                .collect { all ->
+                    _uiState.update { it.copy(
+                        allActivePoints = all,
+                        points = if (_showFavoritesOnly.value) all.filter { p -> p.isFavorite } else all,
+                        isLoading = false
+                    ) }
                     trySelectPendingPoint()
                 }
         }
+        // Smart default: all'avvio, se ci sono preferiti attiva il filtro
+        viewModelScope.launch {
+            val initialCount = repository.countFavorites().first()
+            if (initialCount > 0) {
+                _showFavoritesOnly.value = true
+                _uiState.update { state ->
+                    state.copy(
+                        showFavoritesOnly = true,
+                        points = state.allActivePoints.filter { it.isFavorite }
+                    )
+                }
+            }
+        }
+        // Conteggio live preferiti per badge
+        viewModelScope.launch {
+            repository.countFavorites()
+                .collect { count -> _uiState.update { it.copy(favoritesCount = count) } }
+        }
     }
+
+    fun toggleFavoritesFilter() {
+        val newVal = !_showFavoritesOnly.value
+        _showFavoritesOnly.value = newVal
+        // Re-applica il filtro immediatamente su allActivePoints già caricati
+        _uiState.update { state ->
+            state.copy(
+                showFavoritesOnly = newVal,
+                points = if (newVal) state.allActivePoints.filter { it.isFavorite } else state.allActivePoints
+            )
+        }
+    }
+
+    fun toggleFavorite(point: GeoPoint) {
+        val newFav = !point.isFavorite
+        viewModelScope.launch {
+            repository.toggleFavorite(point.id, newFav)
+            val snackRes = if (newFav) R.string.favorite_added_snackbar else R.string.favorite_removed_snackbar
+            _uiState.update { state ->
+                val updatedSelected = if (state.selectedPoint?.id == point.id)
+                    state.selectedPoint.copy(isFavorite = newFav) else state.selectedPoint
+                state.copy(
+                    selectedPoint = updatedSelected,
+                    favoriteSnackbarRes = snackRes
+                )
+            }
+        }
+    }
+
+    fun clearFavoriteSnackbar() = _uiState.update { it.copy(favoriteSnackbarRes = null) }
 
     private fun seedSampleDataIfEmpty() {
         viewModelScope.launch {
@@ -299,7 +363,7 @@ class MapViewModel @Inject constructor(
     private var pendingParkingPointId: String? = null
 
     fun saveParkingPoint(lat: Double, lon: Double, pointTitle: String) {
-        val existing = _uiState.value.points.find { PARKING_TAG in it.tags }
+        val existing = _uiState.value.allActivePoints.find { PARKING_TAG in it.tags }
         if (existing != null) {
             pendingParkingPointId = existing.id
             _uiState.update { it.copy(showParkingOptions = true, pendingParkingLat = lat, pendingParkingLon = lon) }
@@ -322,7 +386,7 @@ class MapViewModel @Inject constructor(
     fun confirmUpdateParking() {
         val id = pendingParkingPointId ?: return
         val state = _uiState.value
-        val existing = state.points.find { it.id == id } ?: return
+        val existing = state.allActivePoints.find { it.id == id } ?: return
         viewModelScope.launch {
             repository.save(existing.copy(latitude = state.pendingParkingLat, longitude = state.pendingParkingLon, updatedAt = Date()))
             _uiState.update { it.copy(showParkingOptions = false, parkingSnackbarRes = R.string.map_parking_updated) }
@@ -331,7 +395,7 @@ class MapViewModel @Inject constructor(
 
     fun navigateToParking() {
         val id = pendingParkingPointId ?: return
-        val existing = _uiState.value.points.find { it.id == id } ?: return
+        val existing = _uiState.value.allActivePoints.find { it.id == id } ?: return
         _uiState.update { it.copy(showParkingOptions = false, focusTarget = FocusTarget(existing.latitude, existing.longitude, pointId = existing.id, zoom = 19.0)) }
     }
 
@@ -508,7 +572,7 @@ class MapViewModel @Inject constructor(
     fun closeSearch() = _uiState.update { it.copy(isSearchOpen = false, searchQuery = "", searchResults = emptyList()) }
 
     fun updateSearchQuery(q: String) {
-        val results = if (q.isBlank()) emptyList() else _uiState.value.points.filter { point ->
+        val results = if (q.isBlank()) emptyList() else _uiState.value.allActivePoints.filter { point ->
             point.title.contains(q, ignoreCase = true) ||
             point.description.contains(q, ignoreCase = true) ||
             point.tags.any { it.contains(q, ignoreCase = true) } ||

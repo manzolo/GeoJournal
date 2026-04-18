@@ -45,7 +45,8 @@ data class ListUiState(
     val sortOrder: SortOrder = SortOrder.NEWEST,
     val isLoading: Boolean = true,
     val showArchived: Boolean = false,
-    val isSearchingAll: Boolean = false
+    val isSearchingAll: Boolean = false,
+    val showFavoritesOnly: Boolean = false
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -103,13 +104,15 @@ class ListViewModel @Inject constructor(
     private val _selectedTags = MutableStateFlow<Set<String>>(emptySet())
     private val _sortOrder = MutableStateFlow(SortOrder.NEWEST)
     private val _showArchived = MutableStateFlow(false)
+    private val _showFavoritesOnly = MutableStateFlow(false)
 
-    private val _pointsSource = combine(_showArchived, _query) { showArchived, query ->
-        showArchived to query
-    }.flatMapLatest { (showArchived, query) ->
+    private val _pointsSource = combine(_showArchived, _query, _showFavoritesOnly) { showArchived, query, favOnly ->
+        Triple(showArchived, query, favOnly)
+    }.flatMapLatest { (showArchived, query, favOnly) ->
         when {
             query.isNotBlank() -> repository.observeAll()
             showArchived -> repository.observeArchived()
+            favOnly -> repository.observeFavorites()
             else -> repository.observeActive()
         }
     }
@@ -119,8 +122,8 @@ class ListViewModel @Inject constructor(
         _query,
         _selectedTags,
         _sortOrder,
-        _showArchived
-    ) { all, query, selectedTags, sortOrder, showArchived ->
+        combine(_showArchived, _showFavoritesOnly) { a, b -> a to b }
+    ) { all, query, selectedTags, sortOrder, (showArchived, showFavoritesOnly) ->
         val allTags = all.flatMap { it.tags }.distinct().sorted()
 
         val filtered = all
@@ -150,7 +153,8 @@ class ListViewModel @Inject constructor(
             sortOrder = sortOrder,
             isLoading = false,
             showArchived = showArchived,
-            isSearchingAll = query.isNotBlank()
+            isSearchingAll = query.isNotBlank(),
+            showFavoritesOnly = showFavoritesOnly
         )
     }.stateIn(
         scope = viewModelScope,
@@ -162,6 +166,10 @@ class ListViewModel @Inject constructor(
     fun toggleTag(tag: String) = _selectedTags.update { if (tag in it) it - tag else it + tag }
     fun setSortOrder(order: SortOrder) = _sortOrder.update { order }
     fun toggleArchiveView() = _showArchived.update { !it }
+    fun toggleFavoritesOnly() = _showFavoritesOnly.update { !it }
+    fun toggleFavorite(point: GeoPoint) = viewModelScope.launch {
+        repository.toggleFavorite(point.id, !point.isFavorite)
+    }
     fun deletePoint(point: GeoPoint) = viewModelScope.launch { repository.delete(point) }
     fun archivePoint(point: GeoPoint) = viewModelScope.launch { repository.archivePoint(point.id) }
     fun unarchivePoint(point: GeoPoint) = viewModelScope.launch { repository.unarchivePoint(point.id) }

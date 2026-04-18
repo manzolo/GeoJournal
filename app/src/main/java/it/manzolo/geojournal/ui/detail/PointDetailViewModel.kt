@@ -46,7 +46,8 @@ data class PointDetailUiState(
     val isTracking: Boolean = false,
     val trackingPointCount: Int = 0,
     val showShareDialog: Boolean = false,
-    val shareAvailability: ShareAvailability = ShareAvailability()
+    val shareAvailability: ShareAvailability = ShareAvailability(),
+    @androidx.annotation.StringRes val favoriteSnackbarRes: Int? = null
 )
 
 @HiltViewModel
@@ -138,6 +139,18 @@ class PointDetailViewModel @Inject constructor(
     fun logVisitAt(timestamp: Long, note: String = "") {
         viewModelScope.launch { visitLogRepository.logVisitAt(pointId, timestamp, note) }
     }
+
+    fun toggleFavorite() {
+        val point = _uiState.value.point ?: return
+        val newFav = !point.isFavorite
+        viewModelScope.launch {
+            repository.toggleFavorite(point.id, newFav)
+            val snackRes = if (newFav) it.manzolo.geojournal.R.string.favorite_added_snackbar else it.manzolo.geojournal.R.string.favorite_removed_snackbar
+            _uiState.update { it.copy(favoriteSnackbarRes = snackRes) }
+        }
+    }
+
+    fun clearFavoriteSnackbar() = _uiState.update { it.copy(favoriteSnackbarRes = null) }
 
     fun deleteVisitLog(entry: VisitLogEntry) {
         viewModelScope.launch { visitLogRepository.delete(entry) }

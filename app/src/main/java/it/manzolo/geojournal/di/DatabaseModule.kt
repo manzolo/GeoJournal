@@ -16,6 +16,12 @@ import it.manzolo.geojournal.data.local.db.ReminderDao
 import it.manzolo.geojournal.data.local.db.VisitLogDao
 import javax.inject.Singleton
 
+private val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE geo_points ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 private val MIGRATION_5_6 = object : Migration(5, 6) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE geo_points ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
@@ -121,7 +127,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .build()
 
     @Provides fun provideGeoPointDao(db: AppDatabase): GeoPointDao = db.geoPointDao()

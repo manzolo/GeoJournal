@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.OpenInFull
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -48,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import it.manzolo.geojournal.R
@@ -66,7 +69,8 @@ fun PointBottomSheet(
     onOpenGoogleMaps: ((GeoPoint) -> Unit)? = null,
     onShareGoogleMaps: ((GeoPoint) -> Unit)? = null,
     onArchiveClick: ((GeoPoint) -> Unit)? = null,
-    onDeleteClick: ((GeoPoint) -> Unit)? = null
+    onDeleteClick: ((GeoPoint) -> Unit)? = null,
+    onFavoriteClick: ((GeoPoint) -> Unit)? = null
 ) {
     // skipPartiallyExpanded = false → il bottom sheet inizia in peek (parziale)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -165,7 +169,7 @@ fun PointBottomSheet(
             // SEZIONE PEEK — visibile immediatamente
             // ═══════════════════════════════════════════════════════════
 
-            // Header: emoji + titolo
+            // Header: emoji + titolo + stella preferito
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -182,6 +186,15 @@ fun PointBottomSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
+                if (onFavoriteClick != null) {
+                    IconButton(onClick = { onFavoriteClick(point) }) {
+                        Icon(
+                            imageVector = if (point.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            contentDescription = null,
+                            tint = if (point.isFavorite) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             // Coordinate + (i) per creato/modificato

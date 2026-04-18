@@ -7,6 +7,9 @@ interface GeoPointRepository {
     fun observeAll(): Flow<List<GeoPoint>>
     fun observeActive(): Flow<List<GeoPoint>>
     fun observeArchived(): Flow<List<GeoPoint>>
+    fun observeFavorites(): Flow<List<GeoPoint>>
+    fun countFavorites(): Flow<Int>
+    suspend fun toggleFavorite(id: String, isFavorite: Boolean)
     suspend fun archivePoint(id: String)
     suspend fun unarchivePoint(id: String)
     fun getAllUsedTags(): Flow<List<String>>

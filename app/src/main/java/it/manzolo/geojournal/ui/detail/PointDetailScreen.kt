@@ -165,6 +165,15 @@ fun PointDetailScreen(
         if (uiState.isDeleted) navController.popBackStack()
     }
 
+    // Snackbar preferiti
+    val favoriteSnackbarText = uiState.favoriteSnackbarRes?.let { stringResource(it) }
+    LaunchedEffect(uiState.favoriteSnackbarRes) {
+        favoriteSnackbarText?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearFavoriteSnackbar()
+        }
+    }
+
     // Share file event → apre il chooser di sistema
     LaunchedEffect(Unit) {
         viewModel.shareFileEvent.collect { file ->
@@ -248,6 +257,13 @@ fun PointDetailScreen(
                 },
                 actions = {
                     uiState.point?.let { point ->
+                        IconButton(onClick = { viewModel.toggleFavorite() }) {
+                            Icon(
+                                imageVector = if (point.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = null,
+                                tint = if (point.isFavorite) androidx.compose.ui.graphics.Color(0xFFFFD700) else androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         IconButton(onClick = {
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
                         }) {

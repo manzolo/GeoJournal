@@ -38,6 +38,15 @@ class GeoPointRepositoryImpl @Inject constructor(
     override fun observeArchived(): Flow<List<GeoPoint>> =
         dao.observeArchived().map { entities -> entities.map { it.toDomain() } }
 
+    override fun observeFavorites(): Flow<List<GeoPoint>> =
+        dao.observeFavorites().map { entities -> entities.map { it.toDomain() } }
+
+    override fun countFavorites(): Flow<Int> = dao.countFavorites()
+
+    override suspend fun toggleFavorite(id: String, isFavorite: Boolean) {
+        dao.setFavorite(id, isFavorite, System.currentTimeMillis())
+    }
+
     override suspend fun archivePoint(id: String) {
         dao.setArchived(id, true)
         val point = dao.getById(id)?.toDomain() ?: return

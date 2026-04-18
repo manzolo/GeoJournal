@@ -195,6 +195,7 @@ class BackupManager @Inject constructor(
                         put("rating", p.rating)
                         put("notes", p.notes)
                         put("isArchived", p.isArchived)
+                        put("isFavorite", p.isFavorite)
                         // KML metadata (file path in ZIP: kmls/{pointId}/{filename})
                         put("kmls", JSONArray().also { kmlArr ->
                             kmlsByPoint[p.id]?.forEach { kml ->
@@ -311,7 +312,8 @@ class BackupManager @Inject constructor(
                 updatedAt   = Date(obj.getLong("updatedAt")),
                 rating      = obj.optInt("rating", 0),
                 notes       = obj.optString("notes", ""),
-                isArchived  = obj.optBoolean("isArchived", false)
+                isArchived  = obj.optBoolean("isArchived", false),
+                isFavorite  = obj.optBoolean("isFavorite", false)
             )
             geoPointRepository.save(point)
             pointCount++

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -55,6 +56,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -179,6 +181,20 @@ fun ListScreen(navController: NavController) {
                         onClick = {
                             contextMenuPoint = null
                             viewModel.onShareRequested(point)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (point.isFavorite) stringResource(R.string.favorite_removed_snackbar) else stringResource(R.string.favorite_added_snackbar)) },
+                        leadingIcon = {
+                            Icon(
+                                if (point.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                null,
+                                tint = if (point.isFavorite) androidx.compose.ui.graphics.Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        onClick = {
+                            contextMenuPoint = null
+                            viewModel.toggleFavorite(point)
                         }
                     )
                     if (point.isArchived) {
@@ -369,6 +385,29 @@ fun ListScreen(navController: NavController) {
                     unfocusedBorderColor = Color.Transparent,
                 )
             )
+
+            // Chip "Preferiti"
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = state.showFavoritesOnly,
+                        onClick = viewModel::toggleFavoritesOnly,
+                        label = { Text(stringResource(R.string.list_filter_favorites), style = MaterialTheme.typography.labelMedium) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (state.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                tint = if (state.showFavoritesOnly) androidx.compose.ui.graphics.Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                }
+            }
 
             if (state.allTags.isNotEmpty()) {
                 val visibleTags = if (tagsExpanded) state.allTags else state.allTags.take(5)

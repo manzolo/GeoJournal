@@ -67,4 +67,13 @@ interface GeoPointDao {
     // Tag suggeriti (Feature 3)
     @Query("SELECT tags FROM geo_points WHERE tags != ''")
     fun observeAllTagStrings(): Flow<List<String>>
+
+    @Query("SELECT * FROM geo_points WHERE is_favorite = 1 AND is_archived = 0 ORDER BY created_at DESC")
+    fun observeFavorites(): Flow<List<GeoPointEntity>>
+
+    @Query("SELECT COUNT(*) FROM geo_points WHERE is_favorite = 1 AND is_archived = 0")
+    fun countFavorites(): Flow<Int>
+
+    @Query("UPDATE geo_points SET is_favorite = :value, updated_at = :ts WHERE id = :id")
+    suspend fun setFavorite(id: String, value: Boolean, ts: Long)
 }

@@ -216,6 +216,12 @@
     <string name="point_delete_confirm_message">Are you sure you want to delete this point? This action cannot be undone.</string>
     <string name="point_archived_snackbar">Point archived</string>
     <string name="point_deleted_snackbar">Point deleted</string>
+    <string name="favorite_added_snackbar">Added to favorites ⭐</string>
+    <string name="favorite_removed_snackbar">Removed from favorites</string>
+    <string name="map_filter_favorites">Favorites</string>
+    <string name="map_filter_all">All</string>
+    <string name="map_no_favorites_hint">No favorites yet.\nTap ☆ on a point to add it.</string>
+    <string name="list_filter_favorites">Favorites</string>
 
     <!-- Add/Edit Screen -->
     <string name="addedit_error_no_location">Set a location before saving the point.</string>

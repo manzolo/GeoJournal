@@ -18,5 +18,6 @@ data class GeoPoint(
     val isShared: Boolean = false,
     val rating: Int = 0,  // 0 = non valutato, 1-5 stelle
     val isArchived: Boolean = false,
-    val notes: String = ""  // note personali private, mai esportate in .geoj
+    val notes: String = "",  // note personali private, mai esportate in .geoj
+    val isFavorite: Boolean = false  // preferito locale, mai esportato in .geoj o Firestore
 )
