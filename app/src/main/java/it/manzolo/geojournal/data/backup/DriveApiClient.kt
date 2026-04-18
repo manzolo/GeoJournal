@@ -4,6 +4,7 @@ import android.accounts.Account
 import android.content.Context
 import com.google.android.gms.auth.GoogleAuthUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -137,11 +138,24 @@ class DriveApiClient(
     /**
      * Uploads [file] to Drive, replacing an existing backup file if found.
      * Handles stale token (HTTP 401) with a single automatic retry.
+     * Retries up to 3 times on transient I/O errors (connection abort, SSL reset, etc.)
+     * with exponential backoff: immediate → 20 s → 60 s.
      * @return Drive file ID of the resulting file.
      */
-    suspend fun uploadOrReplaceBackup(file: File, name: String = BACKUP_FILENAME): String =
-        withTokenRetry { token ->
-            val existingId = findFileId(token, name)
-            uploadMultipart(token, file, name, existingId)
+    suspend fun uploadOrReplaceBackup(file: File, name: String = BACKUP_FILENAME): String {
+        val retryDelays = listOf(0L, 20_000L, 60_000L)
+        var lastError: Throwable? = null
+        for (delayMs in retryDelays) {
+            if (delayMs > 0L) delay(delayMs)
+            try {
+                return withTokenRetry { token ->
+                    val existingId = findFileId(token, name)
+                    uploadMultipart(token, file, name, existingId)
+                }
+            } catch (e: java.io.IOException) {
+                lastError = e
+            }
         }
+        throw lastError!!
+    }
 }
