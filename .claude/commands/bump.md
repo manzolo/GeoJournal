@@ -1,4 +1,4 @@
-Esegui una release completa di GeoJournal seguendo questi 7 step nell'ordine esatto, senza saltarne nessuno.
+Esegui una release completa di GeoJournal seguendo questi 9 step nell'ordine esatto, senza saltarne nessuno.
 
 ## Step 1 — Aggiorna versione
 
@@ -61,7 +61,30 @@ git push origin vX.Y.Z
 gh release create vX.Y.Z --generate-notes --title "vX.Y.Z"
 ```
 
-## Step 8 — Aggiorna memoria
+## Step 8 — Aggiorna CHANGELOG.md
+
+Aggiorna (o crea se non esiste) `CHANGELOG.md` nella root del progetto seguendo il formato [Keep a Changelog](https://keepachangelog.com/):
+
+```markdown
+## [X.Y.Z] - YYYY-MM-DD
+### Added / Fixed / Changed / Removed
+- <voce sintetica per ogni commit dal tag precedente>
+```
+
+Per ottenere i commit dall'ultima versione precedente usa:
+```bash
+git log --oneline $(git describe --tags --abbrev=0 HEAD~1)..HEAD
+```
+
+Escludi i commit di tipo `chore: bump` dall'elenco. Raggruppa le voci per tipo (`feat`→Added, `fix`→Fixed, `refactor`/`chore`→Changed, ecc.). Aggiungi la nuova sezione in cima (sotto `# Changelog`), prima della sezione precedente. Poi committa:
+
+```bash
+git add CHANGELOG.md
+git commit -m "docs: update CHANGELOG for vX.Y.Z"
+git push origin main
+```
+
+## Step 9 — Aggiorna memoria
 
 Aggiorna la versione nei file di memoria del progetto:
 

@@ -1442,9 +1442,10 @@ private fun createCloudBubbleDrawable(
     if (displayTitle.length < title.length) displayTitle = displayTitle.dropLast(2) + "…"
     val titleW = titlePaint.measureText(displayTitle)
 
+    val badgeR = if (isFavorite) 7f * d else 0f
     val bodyW = paddingH + emojiSize + gap + titleW + paddingH
     val bodyH = paddingV + emojiSize + paddingV
-    val totalW = (bodyW + shadowDx + 2f * d).toInt()
+    val totalW = (bodyW + shadowDx + 2f * d + badgeR).toInt()
     val totalH = (bodyH + tailH + shadowDy + 2f * d).toInt()
 
     val bitmap = Bitmap.createBitmap(totalW, totalH, Bitmap.Config.ARGB_8888)
@@ -1490,11 +1491,24 @@ private fun createCloudBubbleDrawable(
         strokeWidth = 2f * d
     })
 
-    // Stella preferito in alto a destra
+    // Badge circolare dorato in alto a destra (sovrapposto all'angolo del fumetto)
     if (isFavorite) {
-        canvas.drawText("⭐", bodyW - paddingH - 8f * d, paddingV + 6f * d, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 10f * d
-            textAlign = Paint.Align.RIGHT
+        val bx = bodyW - cornerR * 0.3f
+        val by = cornerR * 0.3f
+        canvas.drawCircle(bx, by, badgeR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.argb(255, 220, 165, 0)
+            style = Paint.Style.FILL
+        })
+        canvas.drawCircle(bx, by, badgeR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 1.2f * d
+        })
+        canvas.drawText("★", bx, by + badgeR * 0.38f, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = AndroidColor.WHITE
+            textSize = badgeR * 1.15f
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT_BOLD
         })
     }
 
