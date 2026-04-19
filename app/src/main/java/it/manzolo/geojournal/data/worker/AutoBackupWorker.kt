@@ -14,6 +14,8 @@ import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import android.app.NotificationManager
+import android.content.pm.ServiceInfo
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import it.manzolo.geojournal.R
 
@@ -65,8 +67,18 @@ class AutoBackupWorker @AssistedInject constructor(
             .setTimeoutAfter(NOTIFICATION_TIMEOUT_MS)
             .build()
 
+        val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            androidx.work.ForegroundInfo(
+                NOTIF_ID_PROGRESS,
+                progressNotif,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            androidx.work.ForegroundInfo(NOTIF_ID_PROGRESS, progressNotif)
+        }
+
         try {
-            setForeground(androidx.work.ForegroundInfo(NOTIF_ID_PROGRESS, progressNotif))
+            setForeground(foregroundInfo)
         } catch (e: Exception) {
             // setForeground() può fallire su Android 12+ se avviato dal deep background
             nm.notify(NOTIF_ID_PROGRESS, progressNotif)

@@ -20,6 +20,7 @@
     <!-- ForegroundService GPS tracking -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Storage OSMDroid tile cache -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -121,6 +122,13 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- Aggiunto per fixare il crash di WorkManager su Android 14+ per il setForeground -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+            tools:node="merge" />
 
         <!-- LocationTrackingService: GPS track recording -->
         <service
