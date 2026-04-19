@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.2] - 2026-04-19
+### Changed
+- Map favorite bubble markers: replaced inline ⭐ text with a circular gold badge overlapping the top-right corner of the bubble (badge-style, white ★ inside)
+
+---
+
 ## [1.2.1] - 2026-04-19
 ### Fixed
 - WorkManager crash on Android 14+: added `FOREGROUND_SERVICE_DATA_SYNC` permission and `foregroundServiceType=dataSync` on `SystemForegroundService`; `ForegroundInfo` now passes `FOREGROUND_SERVICE_TYPE_DATA_SYNC` on API 29+
