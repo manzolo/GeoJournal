@@ -33,35 +33,7 @@ git add app/build.gradle.kts
 git commit -m "chore: bump versionCode=N, versionName=X.Y.Z"
 ```
 
-## Step 4 — Genera AAB release
-
-```bash
-./geojournal.sh aab
-```
-
-- NON usare `./gradlew bundleRelease` → non carica `.env`, keystore non trovato
-- NON usare `./gradlew assembleRelease` → genera APK, non AAB
-
-## Step 5 — Push
-
-```bash
-git push origin main
-```
-
-## Step 6 — Tag
-
-```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
-```
-
-## Step 7 — GitHub Release
-
-```bash
-gh release create vX.Y.Z --generate-notes --title "vX.Y.Z"
-```
-
-## Step 8 — Aggiorna CHANGELOG.md
+## Step 4 — Aggiorna CHANGELOG.md
 
 Aggiorna (o crea se non esiste) `CHANGELOG.md` nella root del progetto seguendo il formato [Keep a Changelog](https://keepachangelog.com/):
 
@@ -76,12 +48,39 @@ Per ottenere i commit dall'ultima versione precedente usa:
 git log --oneline $(git describe --tags --abbrev=0 HEAD~1)..HEAD
 ```
 
-Escludi i commit di tipo `chore: bump` dall'elenco. Raggruppa le voci per tipo (`feat`→Added, `fix`→Fixed, `refactor`/`chore`→Changed, ecc.). Aggiungi la nuova sezione in cima (sotto `# Changelog`), prima della sezione precedente. Poi committa:
+Escludi i commit di tipo `chore: bump` e `docs: update CHANGELOG` dall'elenco. Raggruppa le voci per tipo (`feat`→Added, `fix`→Fixed, `refactor`/`chore`→Changed, ecc.). Aggiungi la nuova sezione in cima (sotto `# Changelog`), prima della sezione precedente. Poi committa:
 
 ```bash
 git add CHANGELOG.md
 git commit -m "docs: update CHANGELOG for vX.Y.Z"
+```
+
+## Step 5 — Genera AAB release
+
+```bash
+./geojournal.sh aab
+```
+
+- NON usare `./gradlew bundleRelease` → non carica `.env`, keystore non trovato
+- NON usare `./gradlew assembleRelease` → genera APK, non AAB
+
+## Step 6 — Push
+
+```bash
 git push origin main
+```
+
+## Step 7 — Tag
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+## Step 8 — GitHub Release
+
+```bash
+gh release create vX.Y.Z --generate-notes --title "vX.Y.Z"
 ```
 
 ## Step 9 — Aggiorna memoria
