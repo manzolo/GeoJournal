@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.3] - 2026-04-20
+### Changed
+- Auto-backup worker: now runs as a foreground worker with a progress notification and 10-minute operation timeout
+- Auto-backup receiver: uses `REPLACE` policy and `setExpedited` for higher-priority scheduling; network constraint moved out of receiver
+- Cloud upload: explicit SAF fallback if Drive REST API fails and a SAF URI is configured
+- Auto-backup: conditional re-arm after work completes — re-schedules next alarm only if `autoBackupEnabled` is true
+- Auto-backup: cloud upload failure triggers a `BigTextStyle` error notification with exception detail
+
+---
+
 ## [1.2.2] - 2026-04-19
 ### Changed
 - Map favorite bubble markers: replaced inline ⭐ text with a circular gold badge overlapping the top-right corner of the bubble (badge-style, white ★ inside)
