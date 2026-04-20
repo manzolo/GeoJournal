@@ -56,9 +56,7 @@ class AutoBackupWorker @AssistedInject constructor(
         Unit
     }
 
-    override suspend fun doWork(): Result {
-        val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo {
         val progressNotif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setContentTitle(applicationContext.getString(R.string.backup_notif_title))
             .setContentText(applicationContext.getString(R.string.backup_notif_text))
@@ -67,7 +65,7 @@ class AutoBackupWorker @AssistedInject constructor(
             .setTimeoutAfter(NOTIFICATION_TIMEOUT_MS)
             .build()
 
-        val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             androidx.work.ForegroundInfo(
                 NOTIF_ID_PROGRESS,
                 progressNotif,
@@ -76,12 +74,15 @@ class AutoBackupWorker @AssistedInject constructor(
         } else {
             androidx.work.ForegroundInfo(NOTIF_ID_PROGRESS, progressNotif)
         }
+    }
+
+    override suspend fun doWork(): Result {
+        val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         try {
-            setForeground(foregroundInfo)
+            setForeground(getForegroundInfo())
         } catch (e: Exception) {
-            // setForeground() può fallire su Android 12+ se avviato dal deep background
-            nm.notify(NOTIF_ID_PROGRESS, progressNotif)
+            // setForeground() può fallire su Android 12+ se avviato dal deep background e non expedited
         }
 
         return try {
