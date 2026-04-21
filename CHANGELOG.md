@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.2.4] - 2026-04-21
+### Fixed
+- Map: auto-disable favorites-only filter when selecting a non-favorite point via deeplink
+
+---
+
 ## [1.2.3] - 2026-04-20
 ### Changed
 - Auto-backup worker: now runs as a foreground worker with a progress notification and 10-minute operation timeout
