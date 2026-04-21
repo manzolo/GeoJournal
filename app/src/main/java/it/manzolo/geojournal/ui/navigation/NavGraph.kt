@@ -13,6 +13,7 @@ import it.manzolo.geojournal.ui.help.HelpScreen
 import it.manzolo.geojournal.ui.onboarding.OnboardingScreen
 import it.manzolo.geojournal.ui.detail.PointDetailScreen
 import it.manzolo.geojournal.ui.calendar.CalendarScreen
+import it.manzolo.geojournal.ui.list.AlbumScreen
 import it.manzolo.geojournal.ui.list.ListScreen
 import it.manzolo.geojournal.ui.map.MapScreen
 import it.manzolo.geojournal.ui.profile.ProfileScreen
@@ -64,6 +65,9 @@ fun AppNavGraph(
         }
         composable(Routes.List.route) {
             ListScreen(navController = navController)
+        }
+        composable(Routes.Album.route) {
+            AlbumScreen(navController = navController)
         }
         composable(Routes.Calendar.route) {
             CalendarScreen(navController = navController)

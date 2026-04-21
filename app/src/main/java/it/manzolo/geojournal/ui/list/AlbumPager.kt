@@ -10,9 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,12 +19,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import it.manzolo.geojournal.ui.navigation.Routes
 import java.io.File
@@ -42,7 +41,7 @@ fun AlbumPager(
     if (points.isEmpty()) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "Nessun punto da mostrare nell'album.",
+                text = stringResource(R.string.album_empty),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -87,7 +86,7 @@ private fun AlbumPage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f) // Prende il 40% dell'altezza per la copertina
+                    .weight(0.4f)
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
@@ -152,7 +151,6 @@ private fun AlbumPage(
                 }
             }
 
-            // Dettagli e Foto Pager (Sotto)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -171,16 +169,15 @@ private fun AlbumPage(
                 }
 
                 if (point.photoUrls.isNotEmpty()) {
+                    val photoPagerState = rememberPagerState(pageCount = { point.photoUrls.size })
+
                     Text(
-                        text = "Foto (${point.photoUrls.size})",
+                        text = stringResource(R.string.detail_section_photos, point.photoUrls.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    // Pager Interno per le foto
-                    val photoPagerState = rememberPagerState(pageCount = { point.photoUrls.size })
-                    
                     Box(modifier = Modifier.fillMaxSize()) {
                         HorizontalPager(
                             state = photoPagerState,
@@ -200,8 +197,7 @@ private fun AlbumPage(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        
-                        // Indicatori Paginazione Foto
+
                         if (point.photoUrls.size > 1) {
                             Row(
                                 modifier = Modifier
@@ -243,7 +239,7 @@ private fun AlbumPage(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Nessuna foto disponibile",
+                                text = stringResource(R.string.album_no_photos),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )

@@ -191,6 +191,10 @@
     <string name="list_archived_empty">L\'archivio è vuoto</string>
     <string name="list_archived_empty_hint">I punti archiviati appariranno qui</string>
     <string name="list_sort">Ordina</string>
+    <string name="album_title">Album</string>
+    <string name="album_open">Apri album</string>
+    <string name="album_empty">Nessun punto disponibile nell\'album.</string>
+    <string name="album_no_photos">Nessuna foto disponibile</string>
     <string name="list_search_placeholder">Cerca nei tuoi ricordi…</string>
     <string name="list_search_clear">Cancella</string>
     <string name="list_badge_archived">Archiviato</string>

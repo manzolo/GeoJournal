@@ -83,7 +83,9 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
-                    val showBottomNav = currentRoute != Routes.Login.route
+                    val showBottomNav =
+                        currentRoute != Routes.Login.route &&
+                        currentRoute != Routes.Album.route
 
                     LaunchedEffect(Unit) {
                         mainViewModel.navigateToMap.collect {

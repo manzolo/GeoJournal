@@ -191,6 +191,10 @@
     <string name="list_archived_empty">The archive is empty</string>
     <string name="list_archived_empty_hint">Archived points will appear here</string>
     <string name="list_sort">Sort</string>
+    <string name="album_title">Album</string>
+    <string name="album_open">Open album</string>
+    <string name="album_empty">No points available in the album.</string>
+    <string name="album_no_photos">No photos available</string>
     <string name="list_search_placeholder">Search your memories…</string>
     <string name="list_search_clear">Clear</string>
     <string name="list_badge_archived">Archived</string>

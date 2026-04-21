@@ -3,6 +3,7 @@ package it.manzolo.geojournal.ui.navigation
 sealed class Routes(val route: String) {
     data object Map : Routes("map")
     data object List : Routes("list")
+    data object Album : Routes("album")
     data object Calendar : Routes("calendar")
     data object Profile : Routes("profile")
     data object Login : Routes("login")
