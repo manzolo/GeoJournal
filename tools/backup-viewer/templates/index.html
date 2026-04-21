@@ -506,8 +506,8 @@
       width: 100%;
       height: 100%;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
+      grid-template-columns: 1fr;
+      gap: 0;
       perspective: 1800px;
     }
     .book-spread.flip-next .book-page {
@@ -588,6 +588,9 @@
       display: flex; justify-content: center;
       font-size: 0.74rem; letter-spacing: .18em; text-transform: uppercase;
       color: rgba(90,69,51,.56);
+    }
+    .page-title.centered-title {
+      text-align: center;
     }
     .page-accent {
       font-size: 0.72rem; text-transform: uppercase; letter-spacing: .16em;
@@ -1031,11 +1034,7 @@
         padding: 0 34px;
         align-items: stretch;
       }
-      .book-spread {
-        grid-template-columns: 1fr;
-        gap: 0;
-        height: 100%;
-      }
+      .book-spread { height: 100%; }
       .book-gutter { display: none; }
       .book-page {
         min-height: 0;
@@ -1667,9 +1666,8 @@ function buildHeroPage(page, pageIndex) {
       <div class="hero-side">
         <div class="hero-copy">
           <div class="hero-title-row">
-            <div class="hero-emoji">${escHtml(p.emoji || '📍')}</div>
-            <div>
-              <div class="hero-heading">${escHtml(p.title)}</div>
+            <div style="width:100%">
+              <div class="hero-heading" style="text-align:center">${escHtml(p.emoji || '📍')} ${escHtml(p.title)}</div>
               ${summary ? `<div class="hero-summary">${escHtml(summary)}</div>` : ''}
             </div>
           </div>
@@ -1696,7 +1694,7 @@ function buildHeroPage(page, pageIndex) {
 function buildPhotoPage(page, pageIndex) {
   return `<article class="book-page photo-page">
     <div class="page-accent">${escHtml(page.title)} · Fotografia</div>
-    <div class="page-title">Scatto ${page.photoIndex + 1}</div>
+    <div class="page-title centered-title">${escHtml(page.title)}</div>
     <div class="photo-page-frame" style="--photo-bg:url('${page.photo.replace(/'/g, "\\'")}')">
       <img src="${page.photo}" alt="" onclick="openAlbumPhoto('${page.pointId}', ${page.photoIndex})" loading="lazy" />
     </div>
@@ -1743,14 +1741,9 @@ function updateAlbumFooter() {
 }
 
 function renderAlbumSpread(flipDirection = null) {
-  const isSingle = window.innerWidth < 768;
   const spread = document.getElementById('bookSpread');
-  const rightIndex = isSingle ? null : albumState.currentIndex + 1;
   spread.className = 'book-spread';
-  spread.innerHTML = [
-    renderAlbumPage(albumState.pages[albumState.currentIndex], albumState.currentIndex),
-    isSingle ? '' : renderAlbumPage(albumState.pages[rightIndex], rightIndex, true)
-  ].join('');
+  spread.innerHTML = renderAlbumPage(albumState.pages[albumState.currentIndex], albumState.currentIndex);
   if (flipDirection) {
     spread.classList.add(flipDirection === 'next' ? 'flip-next' : 'flip-prev');
     clearTimeout(albumState.flipTimer);
@@ -1759,8 +1752,7 @@ function renderAlbumSpread(flipDirection = null) {
     }, 620);
   }
   document.getElementById('albumPrevBtn').disabled = albumState.currentIndex <= 0;
-  const step = isSingle ? 1 : 2;
-  document.getElementById('albumNextBtn').disabled = albumState.currentIndex + step >= albumState.pages.length;
+  document.getElementById('albumNextBtn').disabled = albumState.currentIndex + 1 >= albumState.pages.length;
   updateAlbumFooter();
 }
 
@@ -1784,8 +1776,7 @@ function toggleAlbumMode(force) {
 }
 
 function stepAlbum(direction) {
-  const step = window.innerWidth < 768 ? 1 : 2;
-  const next = Math.max(0, Math.min(albumState.pages.length - 1, albumState.currentIndex + (direction * step)));
+  const next = Math.max(0, Math.min(albumState.pages.length - 1, albumState.currentIndex + direction));
   if (next === albumState.currentIndex) return;
   albumState.currentIndex = next;
   renderAlbumSpread(direction > 0 ? 'next' : 'prev');
