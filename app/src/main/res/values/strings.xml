@@ -29,6 +29,13 @@
     <string name="map_layer_road">Stradale</string>
     <string name="map_layer_topo">Topografica</string>
     <string name="map_layer_satellite">Satellite</string>
+    <string name="map_zoom_in">Zoom avanti</string>
+    <string name="map_zoom_out">Zoom indietro</string>
+    <string name="map_fit_all_points">Inquadra tutti i punti</string>
+    <string name="map_cluster_points_in_area">%d punti in questa zona</string>
+    <string name="map_kml_group_summary">%d KML</string>
+    <string name="map_kml_active_suffix"> · %d attivi</string>
+    <string name="map_kml_distance_suffix"> · %s</string>
 
     <!-- Point Details -->
     <string name="point_edit">Modifica</string>
@@ -63,6 +70,9 @@
     <string name="login_with_google">Accedi con Google</string>
     <string name="login_with_email">Accedi con email</string>
     <string name="logout">Esci</string>
+    <string name="auth_google_token_error">Errore nel token Google: %s</string>
+    <string name="auth_unsupported_credential">Credenziale non supportata (%s)</string>
+    <string name="auth_google_signin_failed">Accesso Google fallito: %s</string>
     <string name="auth_app_subtitle">Il tuo diario dei luoghi speciali</string>
     <string name="auth_guest_button">Esplora come ospite</string>
     <string name="auth_guest_note">I dati rimarranno solo su questo dispositivo</string>
@@ -85,6 +95,11 @@
     <string name="profile_sign_out">Esci dall\'account</string>
     <string name="profile_delete_account">Elimina account e tutti i dati</string>
     <string name="profile_sign_in">Accedi</string>
+    <string name="profile_error_message">Errore: %s</string>
+    <string name="profile_export_ok">✓ Backup esportato: %d punti</string>
+    <string name="profile_import_ok">✓ Importati: %1$d punti, %2$d promemoria, %3$d visite</string>
+    <string name="profile_import_point_ok">✓ Punto \"%s\" importato</string>
+    <string name="profile_operation_error">✗ %s</string>
     <string name="profile_dark_theme">Tema scuro</string>
     <string name="profile_dark_theme_on">Attivo</string>
     <string name="profile_dark_theme_off">Disattivo</string>
@@ -195,6 +210,10 @@
     <string name="album_open">Apri album</string>
     <string name="album_empty">Nessun punto disponibile nell\'album.</string>
     <string name="album_no_photos">Nessuna foto disponibile</string>
+    <string name="error_unknown">Errore sconosciuto</string>
+    <string name="import_geoj_success">✓ Punto \"%s\" importato</string>
+    <string name="import_geoj_save_error">Errore salvataggio: %s</string>
+    <string name="import_geoj_error">Errore importazione: %s</string>
     <string name="list_search_placeholder">Cerca nei tuoi ricordi…</string>
     <string name="list_search_clear">Cancella</string>
     <string name="list_badge_archived">Archiviato</string>
@@ -243,11 +262,18 @@
     <string name="addedit_location_set">Posizione rilevata</string>
     <string name="addedit_view_on_map">Vedi sulla mappa</string>
     <string name="addedit_detect_gps">Rileva GPS</string>
+    <string name="addedit_coordinates">Coordinate</string>
     <string name="addedit_add_tag">Aggiungi tag</string>
+    <string name="addedit_badge_notes">📝</string>
+    <string name="addedit_badge_reminders">⏰%d</string>
+    <string name="addedit_badge_kml">🗺%d</string>
+    <string name="addedit_badge_tags">🏷️%d</string>
+    <string name="addedit_badge_rating">★%d</string>
     <string name="addedit_section_photos">Foto</string>
     <string name="addedit_remove_photo">Rimuovi foto</string>
     <string name="addedit_section_reminders">Promemoria</string>
     <string name="addedit_add_reminder">Aggiungi promemoria</string>
+    <string name="addedit_reminder_chip">🔔 %1$s · %2$s</string>
     <string name="addedit_section_rating">Valutazione</string>
     <string name="addedit_stars">%d stelle</string>
     <string name="addedit_section_additional_details">Dettagli aggiuntivi</string>
@@ -421,6 +447,10 @@
     <string name="profile_sync_geo_points_desc">Titolo, descrizione, coordinate, emoji, tag e valutazione salvati online</string>
     <string name="profile_sync_photos_title">Foto</string>
     <string name="profile_sync_photos_desc">Le foto vengono caricate online come backup</string>
+    <string name="backup_error_export">Errore durante l\'esportazione</string>
+    <string name="backup_error_import">Errore durante l\'importazione</string>
+    <string name="backup_error_import_point">Errore durante l\'importazione del punto</string>
+    <string name="backup_error_compress">Errore compressione</string>
     <string name="profile_sync_reminders_title">Promemoria</string>
     <string name="profile_sync_reminders_desc">I promemoria vengono salvati online</string>
     <string name="profile_sync_visit_logs_title">Registro visite</string>

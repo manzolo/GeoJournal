@@ -410,7 +410,7 @@ private fun AccountCard(
                 if (uiState.deleteAccountError != null) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Errore: ${uiState.deleteAccountError}",
+                        stringResource(R.string.profile_error_message, uiState.deleteAccountError),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -799,7 +799,7 @@ private fun BackupCard(
                 is BackupViewModel.State.ExportOk -> {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "✓ Backup esportato: ${s.pointCount} punti",
+                        stringResource(R.string.profile_export_ok, s.pointCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -807,7 +807,7 @@ private fun BackupCard(
                 is BackupViewModel.State.ImportOk -> {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "✓ Importati: ${s.pointCount} punti, ${s.reminderCount} promemoria, ${s.visitCount} visite",
+                        stringResource(R.string.profile_import_ok, s.pointCount, s.reminderCount, s.visitCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -815,7 +815,7 @@ private fun BackupCard(
                 is BackupViewModel.State.ImportPointOk -> {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "✓ Punto \"${s.title}\" importato",
+                        stringResource(R.string.profile_import_point_ok, s.title),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -839,7 +839,7 @@ private fun BackupCard(
                 is BackupViewModel.State.Error -> {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "✗ ${s.message}",
+                        stringResource(R.string.profile_operation_error, s.message),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )

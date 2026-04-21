@@ -554,7 +554,7 @@ fun AddEditScreen(
                         if (hasLocation) {
                             IconButton(onClick = { showCoords = !showCoords },
                                 modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.Info, contentDescription = "Coordinate",
+                                Icon(Icons.Filled.Info, contentDescription = stringResource(R.string.addedit_coordinates),
                                     modifier = Modifier.size(18.dp),
                                     tint = if (showCoords) MaterialTheme.colorScheme.primary
                                            else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -780,27 +780,30 @@ fun AddEditScreen(
                         // Badge riassuntivi quando collassata
                         if (!uiState.isAdditionalDetailsExpanded) {
                             if (uiState.notes.isNotBlank()) {
-                                Text("📝", style = MaterialTheme.typography.labelSmall,
+                                Text(stringResource(R.string.addedit_badge_notes), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(6.dp))
                             }
                             if (uiState.reminders.isNotEmpty()) {
-                                Text("⏰${uiState.reminders.size}", style = MaterialTheme.typography.labelSmall,
+                                Text(stringResource(R.string.addedit_badge_reminders, uiState.reminders.size), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(6.dp))
                             }
                             if (uiState.kmls.isNotEmpty()) {
-                                Text("🗺${uiState.kmls.size}", style = MaterialTheme.typography.labelSmall,
+                                Text(stringResource(R.string.addedit_badge_kml, uiState.kmls.size), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(6.dp))
                             }
-                            if (uiState.tags.filter { !it.startsWith("_") }.isNotEmpty()) {
-                                Text("🏷️${uiState.tags.filter { !it.startsWith("_") }.size}", style = MaterialTheme.typography.labelSmall,
+                            val visibleTagCount = uiState.tags.count { !it.startsWith("_") }
+                            if (visibleTagCount > 0) {
+                                Text(
+                                    stringResource(R.string.addedit_badge_tags, visibleTagCount),
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(Modifier.width(6.dp))
                             }
                             if (uiState.rating > 0) {
-                                Text("★${uiState.rating}", style = MaterialTheme.typography.labelSmall,
+                                Text(stringResource(R.string.addedit_badge_rating, uiState.rating), style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -864,7 +867,7 @@ fun AddEditScreen(
                                         InputChip(
                                             selected = false,
                                             onClick = {},
-                                            label = { Text("🔔 ${reminder.title} · $dateStr") },
+                                            label = { Text(stringResource(R.string.addedit_reminder_chip, reminder.title, dateStr)) },
                                             trailingIcon = {
                                                 IconButton(onClick = { viewModel.deleteReminder(reminder) },
                                                     modifier = Modifier.size(18.dp)) {

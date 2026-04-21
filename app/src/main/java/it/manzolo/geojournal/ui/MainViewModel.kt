@@ -1,10 +1,13 @@
 package it.manzolo.geojournal.ui
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import it.manzolo.geojournal.R
 import it.manzolo.geojournal.data.backup.GeoPointExporter
 import it.manzolo.geojournal.data.local.datastore.UserPreferencesRepository
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
@@ -27,6 +30,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val userPrefs: UserPreferencesRepository,
     private val geoPointRepository: GeoPointRepository,
     private val geojExporter: GeoPointExporter,
@@ -72,16 +76,30 @@ class MainViewModel @Inject constructor(
                         }
                     }
                         .onSuccess {
-                            _geojImportMessage.emit("✓ Punto \"${result.point.title}\" importato")
+                            _geojImportMessage.emit(
+                                context.getString(R.string.import_geoj_success, result.point.title)
+                            )
                             if (!result.senderMessage.isNullOrBlank()) {
                                 _pendingGeojSenderMessage.value = result.senderMessage
                             }
                         }
-                        .onFailure { _geojImportMessage.emit("Errore salvataggio: ${it.message}") }
+                        .onFailure {
+                            _geojImportMessage.emit(
+                                context.getString(
+                                    R.string.import_geoj_save_error,
+                                    it.message ?: context.getString(R.string.error_unknown)
+                                )
+                            )
+                        }
                 }
                 .onFailure {
                     Log.e(TAG, "importGeojPoint: FAILED", it)
-                    _geojImportMessage.emit("Errore importazione: ${it.message}")
+                    _geojImportMessage.emit(
+                        context.getString(
+                            R.string.import_geoj_error,
+                            it.message ?: context.getString(R.string.error_unknown)
+                        )
+                    )
                 }
         }
     }

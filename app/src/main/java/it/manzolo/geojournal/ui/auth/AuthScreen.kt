@@ -89,10 +89,17 @@ fun AuthScreen(
                 viewModel.signInWithGoogle(tokenCredential.idToken)
             } catch (e: GoogleIdTokenParsingException) {
                 Log.e("GeoJournal_Auth", "Token parsing failed", e)
-                viewModel.setError("Errore nel token Google: ${e.message}")
+                viewModel.setError(
+                    context.getString(
+                        R.string.auth_google_token_error,
+                        e.message ?: context.getString(R.string.error_unknown)
+                    )
+                )
             }
         } else {
-            viewModel.setError("Credenziale non supportata (${credential.type})")
+            viewModel.setError(
+                context.getString(R.string.auth_unsupported_credential, credential.type)
+            )
         }
     }
 
@@ -124,10 +131,20 @@ fun AuthScreen(
                     // utente ha annullato
                 } catch (e2: GetCredentialException) {
                     Log.e("GeoJournal_Auth", "Fallback failed: ${e2.message}", e2)
-                    viewModel.setError("Accesso Google fallito: ${e2.message ?: e2.type}")
+                    viewModel.setError(
+                        context.getString(
+                            R.string.auth_google_signin_failed,
+                            e2.message ?: e2.type ?: context.getString(R.string.error_unknown)
+                        )
+                    )
                 }
             } catch (e: GetCredentialException) {
-                viewModel.setError("Accesso Google fallito: ${e.message}")
+                viewModel.setError(
+                    context.getString(
+                        R.string.auth_google_signin_failed,
+                        e.message ?: context.getString(R.string.error_unknown)
+                    )
+                )
             }
         }
     }

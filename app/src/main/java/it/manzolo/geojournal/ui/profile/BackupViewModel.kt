@@ -221,7 +221,9 @@ class BackupViewModel @Inject constructor(
                 val count = backupManager.exportToUri(uri)
                 userPrefsRepository.setLastLocalBackup(System.currentTimeMillis())
                 State.ExportOk(count)
-            }.getOrElse { State.Error(it.message ?: "Errore durante l'esportazione") }
+            }.getOrElse {
+                State.Error(it.message ?: context.getString(R.string.backup_error_export))
+            }
         }
     }
 
@@ -231,7 +233,9 @@ class BackupViewModel @Inject constructor(
             _state.value = runCatching {
                 val r = backupManager.importFromUri(uri)
                 State.ImportOk(r.pointCount, r.reminderCount, r.visitCount)
-            }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione") }
+            }.getOrElse {
+                State.Error(it.message ?: context.getString(R.string.backup_error_import))
+            }
         }
     }
 
@@ -246,7 +250,9 @@ class BackupViewModel @Inject constructor(
                     kmlRepository.restoreFromBackup(java.util.UUID.randomUUID().toString(), result.point.id, name, bytes)
                 }
                 State.ImportPointOk(result.point.title)
-            }.getOrElse { State.Error(it.message ?: "Errore durante l'importazione del punto") }
+            }.getOrElse {
+                State.Error(it.message ?: context.getString(R.string.backup_error_import_point))
+            }
         }
     }
 
@@ -268,7 +274,9 @@ class BackupViewModel @Inject constructor(
                             }
                     }
                     State.CompressOk(savedBytes / 1024)
-                }.getOrElse { State.Error(it.message ?: "Errore compressione") }
+                }.getOrElse {
+                    State.Error(it.message ?: context.getString(R.string.backup_error_compress))
+                }
             }
             _state.value = result
         }

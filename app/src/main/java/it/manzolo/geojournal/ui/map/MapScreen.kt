@@ -228,7 +228,7 @@ fun MapScreen(
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            context.startActivity(Intent.createChooser(intent, "Condividi punto"))
+            context.startActivity(Intent.createChooser(intent, context.getString(R.string.point_share)))
         }
     }
 
@@ -532,16 +532,16 @@ fun MapScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 IconButton(onClick = { mapView.controller.zoomIn() }) {
-                    Icon(Icons.Filled.ZoomIn, contentDescription = "Zoom avanti", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Filled.ZoomIn, contentDescription = stringResource(R.string.map_zoom_in), tint = MaterialTheme.colorScheme.onSurface)
                 }
                 HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 IconButton(onClick = { mapView.controller.zoomOut() }) {
-                    Icon(Icons.Filled.ZoomOut, contentDescription = "Zoom indietro", tint = MaterialTheme.colorScheme.onSurface)
+                    Icon(Icons.Filled.ZoomOut, contentDescription = stringResource(R.string.map_zoom_out), tint = MaterialTheme.colorScheme.onSurface)
                 }
                 if (uiState.points.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     IconButton(onClick = { fitAllPoints(mapView, uiState.points) }) {
-                        Icon(Icons.Filled.FitScreen, contentDescription = "Inquadra tutti i punti", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.Filled.FitScreen, contentDescription = stringResource(R.string.map_fit_all_points), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -914,7 +914,7 @@ private fun ClusterPickerSheet(
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Text(
-            text = "${points.size} punti in questa zona",
+            text = stringResource(R.string.map_cluster_points_in_area, points.size),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
@@ -1034,11 +1034,23 @@ private fun KmlLayerSheet(
                             },
                             supportingContent = {
                                 val distStr = if (hasUserLocation) {
-                                    " · ${formatDistance(distanceBetween(userLat, userLon, items.first().pointLat, items.first().pointLon))}"
+                                    stringResource(
+                                        R.string.map_kml_distance_suffix,
+                                        formatDistance(
+                                            distanceBetween(
+                                                userLat,
+                                                userLon,
+                                                items.first().pointLat,
+                                                items.first().pointLon
+                                            )
+                                        )
+                                    )
                                 } else ""
                                 Text(
-                                    "${items.size} KML" +
-                                        (if (activeCount > 0) " · $activeCount attivi" else "") +
+                                    stringResource(R.string.map_kml_group_summary, items.size) +
+                                        (if (activeCount > 0) {
+                                            stringResource(R.string.map_kml_active_suffix, activeCount)
+                                        } else "") +
                                         distStr,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1493,8 +1505,8 @@ private fun createCloudBubbleDrawable(
 
     // Badge circolare dorato in alto a destra (sovrapposto all'angolo del fumetto)
     if (isFavorite) {
-        val bx = bodyW - cornerR * 0.3f
-        val by = cornerR * 0.3f
+        val bx = bodyW - badgeR * 0.45f
+        val by = badgeR + 2f * d
         canvas.drawCircle(bx, by, badgeR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = AndroidColor.argb(255, 220, 165, 0)
             style = Paint.Style.FILL
