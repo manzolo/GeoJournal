@@ -217,9 +217,21 @@ class MapViewModel @Inject constructor(
 
     private fun trySelectPendingPoint() {
         val id = pendingSelectPointId ?: return
-        val point = _uiState.value.points.find { it.id == id } ?: return
+        val state = _uiState.value
+        val point = state.allActivePoints.find { it.id == id } ?: return
         pendingSelectPointId = null
-        _uiState.update { it.copy(selectedPoint = point, isBottomSheetVisible = true) }
+
+        if (state.showFavoritesOnly && !point.isFavorite) {
+            _showFavoritesOnly.value = false
+            _uiState.update { it.copy(
+                showFavoritesOnly = false,
+                points = it.allActivePoints,
+                selectedPoint = point,
+                isBottomSheetVisible = true
+            ) }
+        } else {
+            _uiState.update { it.copy(selectedPoint = point, isBottomSheetVisible = true) }
+        }
     }
 
     /** Canale singleton per richiedere il focus sulla mappa da qualsiasi schermata.
