@@ -64,6 +64,19 @@
     .util-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
     .util-menu-btn .util-chevron { font-size: 0.6rem; transition: transform .2s; }
     .util-menu-btn.open .util-chevron { transform: rotate(180deg); }
+    .mode-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface2); color: var(--text);
+      cursor: pointer; transition: all .15s; white-space: nowrap; user-select: none;
+    }
+    .mode-btn:hover { border-color: #d6b25e; color: #f5deb3; }
+    .mode-btn.active {
+      border-color: #d6b25e;
+      color: #241a12;
+      background: linear-gradient(135deg, #f1d7a2, #d8b36a);
+      box-shadow: 0 6px 18px rgba(0,0,0,.28);
+    }
     .util-dropdown {
       display: none; position: absolute; right: 0; top: calc(100% + 6px);
       min-width: 200px; background: var(--surface2); border: 1px solid var(--border);
@@ -82,7 +95,7 @@
     .util-item + .util-item { border-top: 1px solid var(--border); }
     .util-item-icon { font-size: 1rem; flex-shrink: 0; }
 
-    .body { display: flex; flex: 1; overflow: hidden; }
+    .body { display: flex; flex: 1; overflow: hidden; position: relative; }
 
     /* ── Sidebar ─────────────────────────────────────────────────────────── */
     .sidebar {
@@ -382,6 +395,573 @@
     }
     .sidebar-overlay.visible { display: block; }
 
+    /* ── Album mode ───────────────────────────────────────────────────────── */
+    .layout.album-mode .sidebar,
+    .layout.album-mode #map,
+    .layout.album-mode .sidebar-overlay,
+    .layout.album-mode .fab-toggle { visibility: hidden; pointer-events: none; }
+
+    .album-shell {
+      display: none;
+      position: absolute; inset: 0;
+      z-index: 950;
+      color: #2d241d;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.28), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255,255,255,.18), transparent 24%),
+        linear-gradient(135deg, #2d2a37 0%, #1b1721 38%, #141118 100%);
+      overflow: hidden;
+    }
+    .layout.album-mode .album-shell { display: flex; }
+    .album-shell::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: .18;
+      pointer-events: none;
+    }
+    .album-inner {
+      position: relative;
+      z-index: 1;
+      display: flex; flex-direction: column;
+      width: 100%; height: 100%;
+      padding: 18px;
+      gap: 14px;
+    }
+    .album-toolbar {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      border: 1px solid rgba(239,219,185,.22);
+      border-radius: 18px;
+      background: rgba(37,29,23,.72);
+      box-shadow: 0 10px 30px rgba(0,0,0,.28);
+      backdrop-filter: blur(12px);
+      color: #f4e7d0;
+    }
+    .album-title-block { display: flex; flex-direction: column; gap: 2px; }
+    .album-kicker {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: .16em;
+      color: rgba(244,231,208,.62);
+    }
+    .album-title { font-size: 1.12rem; font-weight: 700; }
+    .album-toolbar-meta {
+      margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .album-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-radius: 999px;
+      background: rgba(255,248,238,.08);
+      border: 1px solid rgba(255,248,238,.12);
+      color: rgba(244,231,208,.92);
+      font-size: 0.76rem;
+    }
+    .album-toolbar-actions {
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .album-action-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(239,219,185,.22);
+      background: rgba(255,248,238,.08);
+      color: #f4e7d0;
+      cursor: pointer;
+      transition: transform .15s, background .15s, border-color .15s;
+      font-size: 0.78rem; font-weight: 600;
+    }
+    .album-action-btn:hover { transform: translateY(-1px); background: rgba(255,248,238,.14); border-color: rgba(239,219,185,.34); }
+    .album-action-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .album-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 8px 16px;
+    }
+    .album-stage::before {
+      content: '';
+      position: absolute;
+      width: min(1080px, 88vw);
+      height: min(740px, 74vh);
+      border-radius: 36px;
+      background: radial-gradient(circle at center, rgba(0,0,0,.32), transparent 72%);
+      filter: blur(24px);
+      opacity: .8;
+      pointer-events: none;
+    }
+    .book-shell {
+      position: relative;
+      width: min(1120px, 92vw);
+      height: min(760px, 76vh);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 72px;
+    }
+    .book-spread {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      perspective: 1800px;
+    }
+    .book-spread.flip-next .book-page {
+      animation: pageFlipNext .6s cubic-bezier(.22,.8,.21,1);
+      transform-origin: left center;
+    }
+    .book-spread.flip-prev .book-page {
+      animation: pageFlipPrev .6s cubic-bezier(.22,.8,.21,1);
+      transform-origin: right center;
+    }
+    @keyframes pageFlipNext {
+      0% { transform: rotateY(0deg) translateX(0); opacity: .88; }
+      50% { transform: rotateY(-14deg) translateX(10px); opacity: .98; }
+      100% { transform: rotateY(0deg) translateX(0); opacity: 1; }
+    }
+    @keyframes pageFlipPrev {
+      0% { transform: rotateY(0deg) translateX(0); opacity: .88; }
+      50% { transform: rotateY(14deg) translateX(-10px); opacity: .98; }
+      100% { transform: rotateY(0deg) translateX(0); opacity: 1; }
+    }
+    .book-shell::before {
+      content: '';
+      position: absolute; inset: 18px 86px 14px;
+      border-radius: 32px;
+      background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.12));
+      opacity: .28;
+      pointer-events: none;
+    }
+    .book-gutter {
+      position: absolute;
+      top: 24px; bottom: 24px; left: 50%;
+      width: 40px; transform: translateX(-50%);
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(64,42,28,.3), rgba(120,84,48,.14), rgba(64,42,28,.3));
+      box-shadow: inset 0 0 18px rgba(67,49,29,.3);
+      pointer-events: none;
+    }
+    .book-page {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      padding: 28px 28px 64px;
+      background:
+        linear-gradient(180deg, rgba(255,252,247,.95), rgba(244,234,219,.97)),
+        linear-gradient(90deg, rgba(115,91,67,.05), transparent 15%, transparent 85%, rgba(115,91,67,.06));
+      box-shadow:
+        0 18px 50px rgba(0,0,0,.35),
+        inset 0 0 0 1px rgba(90,64,40,.08),
+        inset 0 0 70px rgba(255,255,255,.22);
+      display: flex; flex-direction: column;
+      gap: 18px;
+    }
+    .book-page::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(transparent 0%, rgba(106,80,49,.03) 100%),
+        radial-gradient(circle at top right, rgba(255,255,255,.38), transparent 24%);
+      mix-blend-mode: multiply;
+      pointer-events: none;
+    }
+    .hero-page {
+      overflow-y: auto;
+    }
+    .hero-page .hero-stats-wrap:last-child,
+    .photo-page .photo-page-caption:last-child {
+      margin-bottom: 8px;
+    }
+    .book-page.is-blank {
+      background:
+        linear-gradient(180deg, rgba(244,234,219,.76), rgba(229,216,198,.82));
+      justify-content: center; align-items: center;
+      color: rgba(77,58,42,.45);
+    }
+    .book-page.is-blank::after { display: none; }
+    .page-number {
+      position: absolute; left: 28px; right: 28px; bottom: 18px;
+      display: flex; justify-content: center;
+      font-size: 0.74rem; letter-spacing: .18em; text-transform: uppercase;
+      color: rgba(90,69,51,.56);
+    }
+    .page-accent {
+      font-size: 0.72rem; text-transform: uppercase; letter-spacing: .16em;
+      color: #9c6d41;
+    }
+    .cover-page {
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.3), transparent 34%),
+        linear-gradient(135deg, #f6ead2, #dcb97a 52%, #c58b54 100%);
+      color: #23160e;
+    }
+    .cover-page::after { display: none; }
+    .cover-top { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+    .cover-mark {
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(35,22,14,.1);
+      font-size: 0.74rem; letter-spacing: .14em; text-transform: uppercase;
+    }
+    .cover-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(2.5rem, 4vw, 4.4rem);
+      line-height: .95;
+      max-width: 10ch;
+    }
+    .cover-subtitle {
+      margin-top: 10px;
+      font-size: 1rem;
+      max-width: 34ch;
+      line-height: 1.5;
+      color: rgba(35,22,14,.78);
+    }
+    .cover-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .cover-stat {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(255,248,238,.58);
+      border: 1px solid rgba(78,52,26,.08);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .cover-stat strong {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .cover-foot {
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+      color: rgba(35,22,14,.72);
+      font-size: 0.88rem;
+    }
+    .index-page .page-title,
+    .hero-page .page-title,
+    .photo-grid-page .page-title,
+    .text-page .page-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.75rem;
+      line-height: 1.05;
+      color: #2d1f17;
+    }
+    .index-list {
+      display: flex; flex-direction: column; gap: 10px;
+      overflow: auto;
+      padding-right: 6px;
+    }
+    .index-entry {
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      gap: 12px; align-items: center;
+      border: 1px solid rgba(92,68,49,.1);
+      border-radius: 16px;
+      padding: 9px 10px;
+      background: rgba(255,255,255,.48);
+      cursor: pointer;
+      transition: transform .12s, border-color .12s, box-shadow .12s;
+    }
+    .index-entry:hover {
+      transform: translateY(-1px);
+      border-color: rgba(156,109,65,.46);
+      box-shadow: 0 10px 18px rgba(0,0,0,.08);
+    }
+    .index-thumb {
+      width: 52px; height: 52px; border-radius: 12px;
+      overflow: hidden; background: rgba(72,53,38,.14);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    .index-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .index-title { font-size: 0.92rem; font-weight: 700; color: #35261c; }
+    .index-meta { font-size: 0.74rem; color: rgba(53,38,28,.64); margin-top: 2px; }
+    .index-page-no {
+      font-size: 0.8rem; font-weight: 700;
+      padding: 7px 10px; border-radius: 999px;
+      background: rgba(53,38,28,.08);
+      color: #564132;
+    }
+    .hero-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(280px, 1fr) auto;
+      gap: 14px;
+      min-height: 0;
+      flex: 1;
+      align-content: start;
+    }
+    .hero-image {
+      position: relative;
+      min-height: 280px;
+      max-height: 360px;
+      border-radius: 24px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(72,53,38,.2), rgba(30,21,15,.06));
+      box-shadow: inset 0 0 0 1px rgba(92,68,49,.08);
+      display: flex; align-items: stretch; justify-content: center;
+    }
+    .hero-image::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--hero-bg, linear-gradient(135deg, rgba(72,53,38,.2), rgba(30,21,15,.06)));
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px) saturate(.92);
+      transform: scale(1.08);
+      opacity: .72;
+      pointer-events: none;
+    }
+    .hero-image img {
+      position: relative;
+      z-index: 1;
+      width: 100%; height: 100%; object-fit: contain;
+      display: block; cursor: zoom-in;
+    }
+    .hero-image.empty {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; color: rgba(53,38,28,.58);
+      background: linear-gradient(135deg, rgba(220,193,160,.85), rgba(246,236,220,.82));
+    }
+    .hero-image-badge {
+      position: absolute; left: 18px; bottom: 18px;
+      padding: 8px 12px; border-radius: 999px;
+      background: rgba(23,16,11,.55); color: #fffaf2;
+      backdrop-filter: blur(6px); font-size: 0.8rem;
+      z-index: 2;
+    }
+    .hero-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      align-items: start;
+    }
+    .hero-copy {
+      display: flex; flex-direction: column; gap: 12px; min-width: 0;
+      width: 100%;
+    }
+    .hero-title-row { display: flex; align-items: flex-start; gap: 10px; }
+    .hero-emoji { font-size: 2rem; line-height: 1; }
+    .hero-heading {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: clamp(1.9rem, 3.2vw, 2.3rem);
+      line-height: .95;
+      color: #2d1f17;
+    }
+    .hero-summary {
+      margin-top: 4px;
+      font-size: 0.9rem; line-height: 1.55;
+      color: rgba(53,38,28,.76);
+    }
+    .hero-summary:empty { display: none; }
+    .album-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .album-chip {
+      padding: 5px 10px; border-radius: 999px;
+      background: rgba(92,68,49,.08);
+      border: 1px solid rgba(92,68,49,.08);
+      font-size: 0.75rem; color: #4f3a2d;
+      max-width: 100%;
+    }
+    .hero-stat-grid {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+      width: 100%;
+    }
+    .hero-stat-card {
+      padding: 10px 12px; border-radius: 16px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(92,68,49,.08);
+      display: flex; flex-direction: column; gap: 4px;
+      min-width: 0;
+    }
+    .hero-stat-card span {
+      font-size: 0.72rem;
+      color: rgba(53,38,28,.68);
+    }
+    .hero-stat-card strong {
+      font-size: 1.05rem; color: #2d1f17;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hero-stats-wrap {
+      display: flex; flex-direction: column; gap: 10px;
+      width: 100%;
+    }
+    .photo-page {
+      overflow-y: auto;
+    }
+    .photo-page-frame {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(72,53,38,.16), rgba(30,21,15,.05));
+      box-shadow: inset 0 0 0 1px rgba(92,68,49,.08);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .photo-page-frame::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--photo-bg, linear-gradient(135deg, rgba(72,53,38,.16), rgba(30,21,15,.05)));
+      background-size: cover;
+      background-position: center;
+      filter: blur(18px) saturate(.92);
+      transform: scale(1.08);
+      opacity: .72;
+      pointer-events: none;
+    }
+    .photo-page-frame img {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      cursor: zoom-in;
+    }
+    .photo-page-caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      color: rgba(53,38,28,.76);
+      font-size: 0.88rem;
+    }
+    .photo-page-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(92,68,49,.08);
+      border: 1px solid rgba(92,68,49,.08);
+      color: #4f3a2d;
+      font-size: 0.76rem;
+    }
+    .text-page .text-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+    .text-column,
+    .text-panel {
+      display: flex; flex-direction: column; gap: 10px; min-height: 0;
+    }
+    .text-panel {
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.5);
+      border: 1px solid rgba(92,68,49,.08);
+      overflow: auto;
+    }
+    .text-panel h4 {
+      font-size: 0.72rem; letter-spacing: .16em; text-transform: uppercase;
+      color: #9c6d41;
+    }
+    .text-panel p,
+    .text-panel li {
+      font-size: 0.86rem; line-height: 1.65;
+      color: rgba(53,38,28,.82);
+      white-space: pre-wrap;
+    }
+    .text-panel ul {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .text-panel strong { color: #2d1f17; }
+    .album-nav-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 54px; height: 54px; border-radius: 50%;
+      border: 1px solid rgba(239,219,185,.28);
+      background: rgba(37,29,23,.74);
+      color: #f4e7d0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 1.45rem;
+      box-shadow: 0 16px 30px rgba(0,0,0,.22);
+      transition: transform .15s, background .15s;
+      z-index: 6;
+      pointer-events: auto;
+    }
+    .album-nav-btn:hover { transform: translateY(-50%) scale(1.03); background: rgba(53,41,32,.88); }
+    .album-nav-btn:disabled { opacity: .35; cursor: not-allowed; transform: translateY(-50%); }
+    .album-nav-btn.prev { left: 4px; }
+    .album-nav-btn.next { right: 4px; }
+    .album-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap;
+      color: rgba(244,231,208,.92);
+    }
+    .album-progress {
+      display: flex; align-items: center; gap: 12px; flex: 1;
+      min-width: min(420px, 100%);
+    }
+    .album-progress-bar {
+      flex: 1; height: 8px; border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+    .album-progress-fill {
+      height: 100%; width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #f0d59f, #c68e5b);
+      transition: width .25s ease;
+    }
+    .album-progress-text {
+      font-size: 0.8rem; white-space: nowrap;
+      color: rgba(244,231,208,.82);
+    }
+    .album-index-drawer {
+      position: absolute; top: 84px; right: 22px; bottom: 24px;
+      width: min(360px, calc(100vw - 44px));
+      border-radius: 22px;
+      background: rgba(31,24,19,.9);
+      border: 1px solid rgba(239,219,185,.14);
+      box-shadow: 0 22px 50px rgba(0,0,0,.32);
+      backdrop-filter: blur(16px);
+      padding: 18px;
+      display: none; flex-direction: column; gap: 12px;
+      z-index: 3;
+    }
+    .album-index-drawer.open { display: flex; }
+    .drawer-title {
+      font-size: 0.76rem; letter-spacing: .18em; text-transform: uppercase;
+      color: rgba(244,231,208,.62);
+    }
+    .drawer-list {
+      display: flex; flex-direction: column; gap: 8px;
+      overflow: auto;
+    }
+    .drawer-entry {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 10px; align-items: center;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: rgba(255,248,238,.06);
+      border: 1px solid transparent;
+      color: #f4e7d0;
+      cursor: pointer;
+      transition: background .12s, border-color .12s;
+    }
+    .drawer-entry:hover { background: rgba(255,248,238,.1); border-color: rgba(239,219,185,.22); }
+    .drawer-entry-thumb {
+      width: 40px; height: 40px; border-radius: 10px;
+      overflow: hidden; background: rgba(255,248,238,.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .drawer-entry-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .drawer-entry small { color: rgba(244,231,208,.62); display: block; margin-top: 2px; }
+    .drawer-entry-page {
+      font-size: 0.78rem; font-weight: 700;
+      color: #f0d59f;
+    }
+
     /* ── Responsive breakpoint ───────────────────────────────────────────── */
     @media (max-width: 767px) {
       /* Sidebar diventa un drawer fixed sopra tutto — position:fixed evita
@@ -409,6 +989,116 @@
         flex-wrap: wrap;
       }
       .meta-mobile strong { color: var(--text); }
+
+      .album-inner { padding: 10px; gap: 10px; }
+      .album-toolbar {
+        padding: 10px 12px;
+        gap: 10px;
+        border-radius: 16px;
+      }
+      .album-title { font-size: 1rem; }
+      .album-kicker { font-size: 0.64rem; }
+      .album-toolbar-meta {
+        margin-left: 0;
+        width: 100%;
+        gap: 6px;
+      }
+      .album-pill {
+        flex: 1 1 calc(50% - 6px);
+        justify-content: center;
+        min-width: 0;
+        font-size: 0.72rem;
+        padding: 6px 8px;
+      }
+      .album-toolbar-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .album-action-btn {
+        width: 100%;
+        padding: 9px 8px;
+        font-size: 0.78rem;
+      }
+      .album-stage {
+        align-items: stretch;
+        padding: 2px 0 6px;
+      }
+      .book-shell {
+        width: 100%;
+        height: 100%;
+        padding: 0 34px;
+        align-items: stretch;
+      }
+      .book-spread {
+        grid-template-columns: 1fr;
+        gap: 0;
+        height: 100%;
+      }
+      .book-gutter { display: none; }
+      .book-page {
+        min-height: 0;
+        height: 100%;
+        padding: 20px 18px 64px;
+        border-radius: 24px;
+        gap: 14px;
+        overflow-y: auto;
+      }
+      .book-page.hidden-mobile { display: none; }
+      .book-shell::before {
+        inset: 6px 28px 6px;
+        border-radius: 24px;
+      }
+      .album-nav-btn {
+        width: 40px; height: 40px; font-size: 1rem;
+        top: auto;
+        bottom: 18px;
+        transform: none;
+        background: rgba(37,29,23,.82);
+      }
+      .album-nav-btn:hover { transform: scale(1.03); }
+      .album-nav-btn:disabled { transform: none; }
+      .album-nav-btn.prev { left: 6px; }
+      .album-nav-btn.next { right: 6px; }
+      .text-page .text-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-layout {
+        grid-template-rows: minmax(200px, 32vh) auto;
+      }
+      .hero-image { min-height: 200px; max-height: 32vh; }
+      .hero-side { gap: 10px; }
+      .hero-heading { font-size: 1.7rem; }
+      .hero-summary { font-size: 0.85rem; line-height: 1.5; }
+      .hero-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .photo-page-frame { min-height: 220px; }
+      .photo-page-caption {
+        font-size: 0.8rem;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .album-index-drawer {
+        left: 12px; right: 12px; bottom: 12px; top: 88px; width: auto;
+      }
+      .album-progress { min-width: 100%; }
+      .album-footer {
+        gap: 8px;
+        padding: 0 2px;
+      }
+      .album-progress-text {
+        font-size: 0.76rem;
+      }
+      .page-number {
+        left: 18px; right: 18px; bottom: 14px;
+        font-size: 0.68rem;
+        z-index: 3;
+        pointer-events: none;
+      }
+      .text-panel {
+        padding: 12px;
+        border-radius: 16px;
+      }
     }
 
     @media (min-width: 768px) {
@@ -430,6 +1120,9 @@
       <span class="sep">·</span>
       <div>v<strong>{{ meta.app_version }}</strong></div>
     </div>
+    <button class="mode-btn" id="albumModeBtn" onclick="toggleAlbumMode()">
+      📖 Album
+    </button>
     <!-- Hidden file inputs -->
     <input type="file" id="fitInput" accept=".fit" style="display:none" onchange="convertFit(this)">
     <input type="file" id="backupInput" accept=".zip" style="display:none" onchange="uploadBackup(this)">
@@ -526,6 +1219,48 @@
 
     <!-- Map -->
     <div id="map"></div>
+
+    <!-- Album mode -->
+    <section class="album-shell" id="albumShell" aria-hidden="true">
+      <div class="album-inner">
+        <div class="album-toolbar">
+          <div class="album-title-block">
+            <div class="album-kicker">GeoJournal Archive</div>
+            <div class="album-title">Diario fotografico del backup</div>
+          </div>
+          <div class="album-toolbar-meta" id="albumToolbarMeta"></div>
+          <div class="album-toolbar-actions">
+            <button class="album-action-btn" id="albumIndexBtn" onclick="toggleAlbumIndex()">Indice</button>
+            <button class="album-action-btn" onclick="goToAlbumCover()">Copertina</button>
+            <button class="album-action-btn" onclick="toggleAlbumMode(false)">Chiudi album</button>
+          </div>
+        </div>
+
+        <div class="album-stage">
+          <button class="album-nav-btn prev" id="albumPrevBtn" onclick="stepAlbum(-1)" aria-label="Pagina precedente">&#8249;</button>
+          <div class="book-shell">
+            <div class="book-gutter"></div>
+            <div class="book-spread" id="bookSpread"></div>
+          </div>
+          <button class="album-nav-btn next" id="albumNextBtn" onclick="stepAlbum(1)" aria-label="Pagina successiva">&#8250;</button>
+
+          <aside class="album-index-drawer" id="albumIndexDrawer">
+            <div class="drawer-title">Indice rapido</div>
+            <div class="drawer-list" id="albumDrawerList"></div>
+          </aside>
+        </div>
+
+        <div class="album-footer">
+          <div class="album-progress">
+            <div class="album-progress-bar">
+              <div class="album-progress-fill" id="albumProgressFill"></div>
+            </div>
+            <div class="album-progress-text" id="albumProgressText"></div>
+          </div>
+          <div class="album-progress-text" id="albumPageContext"></div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
@@ -605,6 +1340,7 @@ function applyI18n() {
 }
 
 const POINTS = {{ points | tojson }};
+const META = {{ meta | tojson }};
 
 // ── Meta ─────────────────────────────────────────────────────────────────────
 const nActive    = POINTS.filter(p => !p.isArchived).length;
@@ -746,6 +1482,340 @@ let _photos = [];
 let _cidx   = 0;
 let _touchX = null;
 let viewMode = localStorage.getItem('gjViewMode') || 'carousel';
+let appMode  = localStorage.getItem('gjAppMode') || 'map';
+
+const sortedAlbumPoints = [...POINTS].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+const albumState = {
+  pages: [],
+  entries: [],
+  currentIndex: 0,
+  drawerOpen: false,
+  flipTimer: null,
+};
+
+function formatLongDate(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return dateStr;
+  const dt = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  try {
+    return new Intl.DateTimeFormat(LANG === 'it' ? 'it-IT' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }).format(dt);
+  } catch (_) {
+    return dateStr;
+  }
+}
+
+function splitIntoChunks(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
+function buildAlbumPages() {
+  const pointGroups = [];
+  const pageMapByPointId = {};
+
+  sortedAlbumPoints.forEach(p => {
+    const pages = [];
+    const photos = p.webPhotos || [];
+    const heroPhoto = photos[0] || null;
+    const extraPhotos = photos.slice(1);
+
+    pages.push({
+      type: 'pointHero',
+      pointId: p.id,
+      title: p.title,
+      point: p,
+      heroPhoto,
+      photos,
+    });
+
+    extraPhotos.forEach((photo, photoIdx) => {
+      pages.push({
+        type: 'photoPage',
+        pointId: p.id,
+        title: p.title,
+        point: p,
+        photo,
+        photoIndex: photoIdx + 1,
+        photoCount: photos.length,
+      });
+    });
+
+    pointGroups.push({ point: p, pages });
+  });
+
+  const indexPageCount = Math.max(1, Math.ceil(sortedAlbumPoints.length / 8));
+  let runningIndex = 1 + indexPageCount;
+  pointGroups.forEach(group => {
+    pageMapByPointId[group.point.id] = runningIndex;
+    runningIndex += group.pages.length;
+  });
+
+  const indexEntries = sortedAlbumPoints.map(p => ({
+    id: p.id,
+    title: p.title,
+    emoji: p.emoji || '📍',
+    thumb: (p.webPhotos || [])[0] || null,
+    createdAt_fmt: p.createdAt_fmt,
+    pageNumber: pageMapByPointId[p.id],
+    point: p,
+  }));
+
+  const pages = [{
+    type: 'cover',
+    title: 'Cover',
+    stats: {
+      count: POINTS.length,
+      active: nActive,
+      archived: nArchived,
+      favorites: nFavorites,
+    }
+  }];
+
+  splitIntoChunks(indexEntries, 8).forEach((chunk, idx) => {
+    pages.push({
+      type: 'index',
+      title: 'Indice',
+      chunkIndex: idx,
+      entries: chunk,
+    });
+  });
+
+  pointGroups.forEach(group => group.pages.forEach(page => pages.push(page)));
+
+  albumState.pages = pages;
+  albumState.entries = indexEntries;
+}
+
+function renderAlbumToolbarMeta() {
+  document.getElementById('albumToolbarMeta').innerHTML = [
+    `<span class="album-pill">📦 ${META.exported_at}</span>`,
+    `<span class="album-pill">📍 ${POINTS.length} punti</span>`,
+    `<span class="album-pill">⭐ ${nFavorites} preferiti</span>`,
+    `<span class="album-pill">v${META.app_version}</span>`
+  ].join('');
+}
+
+function albumPageNumberLabel(pageIndex) {
+  return pageIndex === 0 ? 'Cover' : `Pag. ${pageIndex}`;
+}
+
+function albumPageFooter(pageIndex) {
+  return `<div class="page-number">${albumPageNumberLabel(pageIndex)}</div>`;
+}
+
+function buildCoverPage(pageIndex) {
+  return `<article class="book-page cover-page">
+    <div class="cover-top">
+      <div>
+        <div class="cover-mark">GeoJournal Backup</div>
+        <div class="cover-title">Il libro dei tuoi luoghi</div>
+        <div class="cover-subtitle">Una sequenza editoriale dei punti salvati nel backup, ordinati per data di creazione e pronti da sfogliare.</div>
+      </div>
+      <div class="cover-mark">${META.exported_at}</div>
+    </div>
+    <div class="cover-stats">
+      <div class="cover-stat"><span>Punti</span><strong>${POINTS.length}</strong></div>
+      <div class="cover-stat"><span>Attivi</span><strong>${nActive}</strong></div>
+      <div class="cover-stat"><span>Archiviati</span><strong>${nArchived}</strong></div>
+      <div class="cover-stat"><span>Preferiti</span><strong>${nFavorites}</strong></div>
+    </div>
+    <div class="cover-foot">
+      <div>Backup esportato il <strong>${META.exported_at}</strong><br/>Versione app <strong>${META.app_version}</strong></div>
+      <div>Apri l’indice o sfoglia per iniziare.</div>
+    </div>
+    ${albumPageFooter(pageIndex)}
+  </article>`;
+}
+
+function buildIndexPage(page, pageIndex) {
+  return `<article class="book-page index-page">
+    <div class="page-accent">Indice dei punti</div>
+    <div class="page-title">Scegli una tappa</div>
+    <div class="index-list">
+      ${page.entries.map(entry => `
+        <button class="index-entry" onclick="goToAlbumPage(${entry.pageNumber})">
+          <div class="index-thumb">${entry.thumb ? `<img src="${entry.thumb}" alt="" loading="lazy" />` : entry.emoji}</div>
+          <div>
+            <div class="index-title">${escHtml(entry.title)}</div>
+            <div class="index-meta">${entry.createdAt_fmt}</div>
+          </div>
+          <div class="index-page-no">${entry.pageNumber}</div>
+        </button>
+      `).join('')}
+    </div>
+    ${albumPageFooter(pageIndex)}
+  </article>`;
+}
+
+function buildHeroPage(page, pageIndex) {
+  const p = page.point;
+  const hero = page.heroPhoto;
+  const coordStr = (p.latitude != null && p.longitude != null)
+    ? `${Number(p.latitude).toFixed(5)}, ${Number(p.longitude).toFixed(5)}`
+    : 'Coordinate assenti';
+  const stars = p.rating > 0 ? '★'.repeat(p.rating) + '☆'.repeat(5 - p.rating) : '';
+  const summary = p.description || p.notes || '';
+  return `<article class="book-page hero-page">
+    <div class="page-accent">${formatLongDate(p.createdAt_fmt)} · ${page.photos.length || 0} foto</div>
+    <div class="hero-layout">
+      <div class="hero-image ${hero ? '' : 'empty'}"${hero ? ` style="--hero-bg:url('${hero.replace(/'/g, "\\'")}')"` : ''}>
+        ${hero ? `<img src="${hero}" alt="" onclick="openAlbumPhoto('${p.id}', 0)" loading="lazy" />` : `${escHtml(p.emoji || '📍')}`}
+        <div class="hero-image-badge">${escHtml(p.emoji || '📍')} ${escHtml(p.title)}</div>
+      </div>
+      <div class="hero-side">
+        <div class="hero-copy">
+          <div class="hero-title-row">
+            <div class="hero-emoji">${escHtml(p.emoji || '📍')}</div>
+            <div>
+              <div class="hero-heading">${escHtml(p.title)}</div>
+              ${summary ? `<div class="hero-summary">${escHtml(summary)}</div>` : ''}
+            </div>
+          </div>
+          <div class="album-chip-row">
+            <span class="album-chip">📍 ${coordStr}</span>
+            <span class="album-chip">📅 ${p.createdAt_fmt}</span>
+            ${p.isFavorite ? `<span class="album-chip">⭐ Preferito</span>` : ''}
+          </div>
+        </div>
+        <div class="hero-stats-wrap">
+          <div class="hero-stat-grid">
+            <div class="hero-stat-card"><span>Foto</span><strong>${page.photos.length}</strong></div>
+            <div class="hero-stat-card"><span>Visite</span><strong>${(p.visits || []).length}</strong></div>
+            <div class="hero-stat-card"><span>Reminder</span><strong>${(p.reminders || []).length}</strong></div>
+            <div class="hero-stat-card"><span>Valutazione</span><strong>${stars || '—'}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${albumPageFooter(pageIndex)}
+  </article>`;
+}
+
+function buildPhotoPage(page, pageIndex) {
+  return `<article class="book-page photo-page">
+    <div class="page-accent">${escHtml(page.title)} · Fotografia</div>
+    <div class="page-title">Scatto ${page.photoIndex + 1}</div>
+    <div class="photo-page-frame" style="--photo-bg:url('${page.photo.replace(/'/g, "\\'")}')">
+      <img src="${page.photo}" alt="" onclick="openAlbumPhoto('${page.pointId}', ${page.photoIndex})" loading="lazy" />
+    </div>
+    <div class="photo-page-caption">
+      <span class="photo-page-pill">${page.photoIndex + 1} / ${page.photoCount}</span>
+      <span>${escHtml(page.title)}</span>
+    </div>
+    ${albumPageFooter(pageIndex)}
+  </article>`;
+}
+
+function renderAlbumPage(page, pageIndex, hiddenOnMobile = false) {
+  if (!page) return `<article class="book-page is-blank ${hiddenOnMobile ? 'hidden-mobile' : ''}"><div>Fine del volume</div></article>`;
+  let html = '';
+  if (page.type === 'cover') html = buildCoverPage(pageIndex);
+  if (page.type === 'index') html = buildIndexPage(page, pageIndex);
+  if (page.type === 'pointHero') html = buildHeroPage(page, pageIndex);
+  if (page.type === 'photoPage') html = buildPhotoPage(page, pageIndex);
+  return hiddenOnMobile ? html.replace('class="book-page', 'class="book-page hidden-mobile') : html;
+}
+
+function renderAlbumDrawer() {
+  document.getElementById('albumDrawerList').innerHTML = albumState.entries.map(entry => `
+    <button class="drawer-entry" onclick="goToAlbumPage(${entry.pageNumber}); toggleAlbumIndex(false);">
+      <div class="drawer-entry-thumb">${entry.thumb ? `<img src="${entry.thumb}" alt="" loading="lazy" />` : entry.emoji}</div>
+      <div>
+        <div>${escHtml(entry.title)}</div>
+        <small>${entry.createdAt_fmt}</small>
+      </div>
+      <div class="drawer-entry-page">${entry.pageNumber}</div>
+    </button>
+  `).join('');
+}
+
+function updateAlbumFooter() {
+  const total = albumState.pages.length - 1;
+  const currentPageNo = albumState.currentIndex;
+  const percent = total > 0 ? (currentPageNo / total) * 100 : 0;
+  document.getElementById('albumProgressFill').style.width = `${percent}%`;
+  document.getElementById('albumProgressText').textContent = currentPageNo === 0 ? 'Copertina' : `Pagina ${currentPageNo} di ${total}`;
+  const current = albumState.pages[albumState.currentIndex];
+  const context = current?.point ? `${current.point.emoji || '📍'} ${current.point.title}` : (current?.type === 'index' ? 'Indice' : 'Introduzione');
+  document.getElementById('albumPageContext').textContent = context;
+}
+
+function renderAlbumSpread(flipDirection = null) {
+  const isSingle = window.innerWidth < 768;
+  const spread = document.getElementById('bookSpread');
+  const rightIndex = isSingle ? null : albumState.currentIndex + 1;
+  spread.className = 'book-spread';
+  spread.innerHTML = [
+    renderAlbumPage(albumState.pages[albumState.currentIndex], albumState.currentIndex),
+    isSingle ? '' : renderAlbumPage(albumState.pages[rightIndex], rightIndex, true)
+  ].join('');
+  if (flipDirection) {
+    spread.classList.add(flipDirection === 'next' ? 'flip-next' : 'flip-prev');
+    clearTimeout(albumState.flipTimer);
+    albumState.flipTimer = setTimeout(() => {
+      spread.classList.remove('flip-next', 'flip-prev');
+    }, 620);
+  }
+  document.getElementById('albumPrevBtn').disabled = albumState.currentIndex <= 0;
+  const step = isSingle ? 1 : 2;
+  document.getElementById('albumNextBtn').disabled = albumState.currentIndex + step >= albumState.pages.length;
+  updateAlbumFooter();
+}
+
+function setAlbumMode(enabled) {
+  appMode = enabled ? 'album' : 'map';
+  localStorage.setItem('gjAppMode', appMode);
+  document.querySelector('.layout').classList.toggle('album-mode', enabled);
+  document.getElementById('albumModeBtn').classList.toggle('active', enabled);
+  document.getElementById('albumShell').setAttribute('aria-hidden', enabled ? 'false' : 'true');
+  if (!enabled) {
+    toggleAlbumIndex(false);
+    closeLb();
+  } else {
+    renderAlbumSpread();
+  }
+}
+
+function toggleAlbumMode(force) {
+  const enabled = typeof force === 'boolean' ? force : appMode !== 'album';
+  setAlbumMode(enabled);
+}
+
+function stepAlbum(direction) {
+  const step = window.innerWidth < 768 ? 1 : 2;
+  const next = Math.max(0, Math.min(albumState.pages.length - 1, albumState.currentIndex + (direction * step)));
+  if (next === albumState.currentIndex) return;
+  albumState.currentIndex = next;
+  renderAlbumSpread(direction > 0 ? 'next' : 'prev');
+}
+
+function goToAlbumPage(pageNumber) {
+  const next = Math.max(0, Math.min(albumState.pages.length - 1, pageNumber));
+  if (appMode !== 'album') setAlbumMode(true);
+  const direction = next >= albumState.currentIndex ? 'next' : 'prev';
+  albumState.currentIndex = next;
+  renderAlbumSpread(direction);
+}
+
+function goToAlbumCover() {
+  goToAlbumPage(0);
+}
+
+function toggleAlbumIndex(force) {
+  albumState.drawerOpen = typeof force === 'boolean' ? force : !albumState.drawerOpen;
+  document.getElementById('albumIndexDrawer').classList.toggle('open', albumState.drawerOpen);
+  document.getElementById('albumIndexBtn').classList.toggle('active', albumState.drawerOpen);
+}
+
+function openAlbumPhoto(pointId, idx) {
+  const point = POINTS.find(p => p.id === pointId);
+  if (!point) return;
+  _photos = point.webPhotos || [];
+  if (!_photos.length) return;
+  openLb(Math.max(0, Math.min(_photos.length - 1, idx)));
+}
 
 function setViewMode(m) {
   viewMode = m;
@@ -1013,7 +2083,7 @@ function closeLb()      { document.getElementById('lightbox').classList.remove('
 function onLbClick(e)   { if (e.target === document.getElementById('lightbox')) closeLb(); }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
-function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function copyCoord(s) { navigator.clipboard?.writeText(s); }
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
@@ -1021,8 +2091,15 @@ document.addEventListener('keydown', e => {
   const lbOpen = document.getElementById('lightbox').classList.contains('open');
   if (e.key === 'Escape') {
     if (lbOpen) { closeLb(); return; }
+    if (appMode === 'album') {
+      if (albumState.drawerOpen) { toggleAlbumIndex(false); return; }
+      setAlbumMode(false);
+      return;
+    }
     showList();
   }
+  if (appMode === 'album' && !lbOpen && e.key === 'ArrowLeft') { stepAlbum(-1); return; }
+  if (appMode === 'album' && !lbOpen && e.key === 'ArrowRight') { stepAlbum(1); return; }
   if (lbOpen && e.key === 'ArrowLeft')  lbStep(-1);
   if (lbOpen && e.key === 'ArrowRight') lbStep(1);
   if (!lbOpen && e.key === 'ArrowLeft')  cStep(-1);
@@ -1211,7 +2288,21 @@ document.addEventListener('click', e => {
     document.getElementById('utilDropdown').classList.remove('open');
     document.getElementById('utilMenuBtn').classList.remove('open');
   }
+  const drawer = document.getElementById('albumIndexDrawer');
+  const btn = document.getElementById('albumIndexBtn');
+  if (drawer && btn && albumState.drawerOpen && !drawer.contains(e.target) && !btn.contains(e.target)) {
+    toggleAlbumIndex(false);
+  }
 });
+
+window.addEventListener('resize', () => {
+  if (appMode === 'album') renderAlbumSpread();
+});
+
+buildAlbumPages();
+renderAlbumToolbarMeta();
+renderAlbumDrawer();
+setAlbumMode(appMode === 'album');
 </script>
 </body>
 </html>
