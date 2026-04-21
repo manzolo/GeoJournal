@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
@@ -117,6 +119,7 @@ fun ListScreen(navController: NavController) {
     var archiveConfirmPoint by remember { mutableStateOf<GeoPoint?>(null) }
     var deleteTagConfirm by remember { mutableStateOf<String?>(null) }
     var tagsExpanded by remember { mutableStateOf(false) }
+    var isAlbumMode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Emette il file .geoj da condividere via share sheet
@@ -312,6 +315,12 @@ fun ListScreen(navController: NavController) {
             TopAppBar(
                 title = { Text(stringResource(R.string.list_title)) },
                 actions = {
+                    IconButton(onClick = { isAlbumMode = !isAlbumMode }) {
+                        Icon(
+                            imageVector = if (isAlbumMode) Icons.AutoMirrored.Filled.List else Icons.Filled.PhotoLibrary,
+                            contentDescription = "Toggle Album Mode"
+                        )
+                    }
                     IconButton(onClick = viewModel::toggleArchiveView) {
                         Icon(
                             imageVector = if (state.showArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
@@ -475,89 +484,93 @@ fun ListScreen(navController: NavController) {
                     )
                 }
                 else -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        item {
-                            BuyMeCoffeeBanner(context = context)
-                        }
-                        items(state.points, key = { it.id }) { point ->
-                            val swipeState = rememberSwipeToDismissBoxState(
-                                positionalThreshold = { it * 0.35f }
-                            )
-                            // pattern non-deprecated: osserva currentValue e snapBack dopo l'azione
-                            LaunchedEffect(swipeState.currentValue) {
-                                when (swipeState.currentValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> {
-                                        archiveConfirmPoint = point
-                                        swipeState.snapTo(SwipeToDismissBoxValue.Settled)
-                                    }
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        deleteConfirmPoint = point
-                                        swipeState.snapTo(SwipeToDismissBoxValue.Settled)
-                                    }
-                                    SwipeToDismissBoxValue.Settled -> {}
-                                }
+                    if (isAlbumMode) {
+                        AlbumPager(points = state.points, navController = navController)
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            item {
+                                BuyMeCoffeeBanner(context = context)
                             }
-                            SwipeToDismissBox(
-                                state = swipeState,
-                                enableDismissFromStartToEnd = true,
-                                enableDismissFromEndToStart = true,
-                                backgroundContent = {
-                                    // requireOffset() legge il pixel offset live → icona visibile da subito
-                                    val offset = runCatching { swipeState.requireOffset() }.getOrDefault(0f)
-                                    val isRight = offset > 2f
-                                    val isLeft  = offset < -2f
-                                    // targetValue indica se si è superata la soglia (past-threshold = azione confermata)
-                                    val confirmed = swipeState.targetValue != SwipeToDismissBoxValue.Settled
-                                    val bgColor = when {
-                                        isRight -> Color(0xFFFFF9C4)
-                                        isLeft  -> MaterialTheme.colorScheme.errorContainer
-                                        else    -> Color.Transparent
+                            items(state.points, key = { it.id }) { point ->
+                                val swipeState = rememberSwipeToDismissBoxState(
+                                    positionalThreshold = { it * 0.35f }
+                                )
+                                // pattern non-deprecated: osserva currentValue e snapBack dopo l'azione
+                                LaunchedEffect(swipeState.currentValue) {
+                                    when (swipeState.currentValue) {
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            archiveConfirmPoint = point
+                                            swipeState.snapTo(SwipeToDismissBoxValue.Settled)
+                                        }
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            deleteConfirmPoint = point
+                                            swipeState.snapTo(SwipeToDismissBoxValue.Settled)
+                                        }
+                                        SwipeToDismissBoxValue.Settled -> {}
                                     }
-                                    val icon = when {
-                                        isRight -> if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
-                                        isLeft  -> Icons.Filled.Delete
-                                        else    -> null
-                                    }
-                                    val iconTint = if (isLeft) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF5D4037)
-                                    val label = when {
-                                        isRight -> stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive)
-                                        isLeft  -> stringResource(R.string.point_delete_confirm_button)
-                                        else    -> null
-                                    }
-                                    val align = if (isRight) Alignment.CenterStart else Alignment.CenterEnd
-                                    // icona più grande e piena quando la soglia è superata (feedback "si attiva")
-                                    val iconSize = if (confirmed) 32.dp else 24.dp
-                                    val contentAlpha = if (confirmed) 1f else 0.65f
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(20.dp))
-                                            .background(bgColor)
-                                            .padding(horizontal = 20.dp),
-                                        contentAlignment = align
-                                    ) {
-                                        if (icon != null && label != null) {
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                                                modifier = Modifier.graphicsLayer { alpha = contentAlpha }
-                                            ) {
-                                                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(iconSize))
-                                                Text(label, style = MaterialTheme.typography.labelSmall, color = iconTint, fontWeight = FontWeight.SemiBold)
+                                }
+                                SwipeToDismissBox(
+                                    state = swipeState,
+                                    enableDismissFromStartToEnd = true,
+                                    enableDismissFromEndToStart = true,
+                                    backgroundContent = {
+                                        // requireOffset() legge il pixel offset live → icona visibile da subito
+                                        val offset = runCatching { swipeState.requireOffset() }.getOrDefault(0f)
+                                        val isRight = offset > 2f
+                                        val isLeft  = offset < -2f
+                                        // targetValue indica se si è superata la soglia (past-threshold = azione confermata)
+                                        val confirmed = swipeState.targetValue != SwipeToDismissBoxValue.Settled
+                                        val bgColor = when {
+                                            isRight -> Color(0xFFFFF9C4)
+                                            isLeft  -> MaterialTheme.colorScheme.errorContainer
+                                            else    -> Color.Transparent
+                                        }
+                                        val icon = when {
+                                            isRight -> if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                                            isLeft  -> Icons.Filled.Delete
+                                            else    -> null
+                                        }
+                                        val iconTint = if (isLeft) MaterialTheme.colorScheme.onErrorContainer else Color(0xFF5D4037)
+                                        val label = when {
+                                            isRight -> stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive)
+                                            isLeft  -> stringResource(R.string.point_delete_confirm_button)
+                                            else    -> null
+                                        }
+                                        val align = if (isRight) Alignment.CenterStart else Alignment.CenterEnd
+                                        // icona più grande e piena quando la soglia è superata (feedback "si attiva")
+                                        val iconSize = if (confirmed) 32.dp else 24.dp
+                                        val contentAlpha = if (confirmed) 1f else 0.65f
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(bgColor)
+                                                .padding(horizontal = 20.dp),
+                                            contentAlignment = align
+                                        ) {
+                                            if (icon != null && label != null) {
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                                    modifier = Modifier.graphicsLayer { alpha = contentAlpha }
+                                                ) {
+                                                    Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(iconSize))
+                                                    Text(label, style = MaterialTheme.typography.labelSmall, color = iconTint, fontWeight = FontWeight.SemiBold)
+                                                }
                                             }
                                         }
                                     }
+                                ) {
+                                    GeoPointCard(
+                                        point = point,
+                                        onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
+                                        onLongClick = { contextMenuPoint = point },
+                                        showArchivedBadge = state.isSearchingAll
+                                    )
                                 }
-                            ) {
-                                GeoPointCard(
-                                    point = point,
-                                    onClick = { navController.navigate(Routes.PointDetail.createRoute(point.id)) },
-                                    onLongClick = { contextMenuPoint = point },
-                                    showArchivedBadge = state.isSearchingAll
-                                )
                             }
                         }
                     }
