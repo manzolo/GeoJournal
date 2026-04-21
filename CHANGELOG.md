@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.3.1] - 2026-04-22
+### Changed
+- Album mode: migrated from local state to navigation-based routing for improved navigation consistency
+- Album mode: added full localization support (IT/EN) for all UI strings
+
+---
+
 ## [1.3.0] - 2026-04-21
 ### Added
 - List: album mode toggle in ListScreen — switch between list and full-screen photo pager via TopAppBar icon
