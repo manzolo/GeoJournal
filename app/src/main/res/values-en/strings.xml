@@ -261,7 +261,7 @@
     <string name="addedit_location_not_set">Location not set</string>
     <string name="addedit_location_set">Location detected</string>
     <string name="addedit_view_on_map">View on map</string>
-    <string name="addedit_detect_gps">Detect GPS</string>
+    <string name="addedit_detect_gps">Choose location</string>
     <string name="addedit_coordinates">Coordinates</string>
     <string name="addedit_add_tag">Add tag</string>
     <string name="addedit_badge_notes">📝</string>

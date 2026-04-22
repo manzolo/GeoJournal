@@ -1240,7 +1240,9 @@ private fun GpsPreviewDialog(
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
         ) {
             Column {
                 // Mappa con suggerimento sovrapposto
@@ -1297,11 +1299,17 @@ private fun GpsPreviewDialog(
                 }
 
                 // Info posizione + bottoni
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     when {
                         manualTapPosition != null -> {
                             // Posizione manuale selezionata sulla mappa
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
                                 Icon(
                                     Icons.Filled.LocationOn,
                                     contentDescription = null,
@@ -1321,7 +1329,8 @@ private fun GpsPreviewDialog(
                                     manualTapPosition!!.latitude,
                                     manualTapPosition!!.longitude
                                 ),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center
                             )
                         }
                         location != null -> {
@@ -1334,10 +1343,14 @@ private fun GpsPreviewDialog(
                             }
                             Text(
                                 "%.5f, %.5f".format(location!!.latitude, location!!.longitude),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center
                             )
                             Spacer(Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
@@ -1348,13 +1361,17 @@ private fun GpsPreviewDialog(
                                 Text(
                                     stringResource(R.string.addedit_gps_accuracy, acc.toInt()),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = accColor
+                                    color = accColor,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
                         !hasLocationPermission -> {
                             // Nessun permesso GPS: solo selezione manuale
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
                                 Icon(
                                     Icons.Filled.Map,
                                     contentDescription = null,
@@ -1365,13 +1382,17 @@ private fun GpsPreviewDialog(
                                 Text(
                                     stringResource(R.string.addedit_gps_tap_to_select),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
                         else -> {
                             // In attesa del primo fix GPS
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp
@@ -1380,26 +1401,31 @@ private fun GpsPreviewDialog(
                                 Text(
                                     stringResource(R.string.addedit_gps_acquiring),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        when {
-                            // Posizione bloccata/manuale: "Riprendi GPS" riattiva il tracking
-                            manualTapPosition != null && hasLocationPermission -> {
-                                TextButton(onClick = {
-                                    manualTapPosition = null
-                                    userScrolled = false
-                                }) {
+                    val showResumeGps = manualTapPosition != null && hasLocationPermission
+                    val showLockHere = location != null && manualTapPosition == null
+
+                    if (showResumeGps || showLockHere) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (showResumeGps) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        manualTapPosition = null
+                                        userScrolled = false
+                                    }
+                                ) {
                                     Icon(
                                         Icons.Filled.GpsFixed,
                                         contentDescription = null,
@@ -1408,13 +1434,13 @@ private fun GpsPreviewDialog(
                                     Spacer(Modifier.width(4.dp))
                                     Text(stringResource(R.string.addedit_use_gps))
                                 }
-                                Spacer(Modifier.width(4.dp))
-                            }
-                            // GPS attivo con fix: "Blocca qui" congela la posizione corrente
-                            location != null && manualTapPosition == null -> {
-                                TextButton(onClick = {
-                                    manualTapPosition = OsmGeoPoint(location!!.latitude, location!!.longitude)
-                                }) {
+                            } else if (showLockHere) {
+                                OutlinedButton(
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        manualTapPosition = OsmGeoPoint(location!!.latitude, location!!.longitude)
+                                    }
+                                ) {
                                     Icon(
                                         Icons.Filled.GpsFixed,
                                         contentDescription = null,
@@ -1423,18 +1449,33 @@ private fun GpsPreviewDialog(
                                     Spacer(Modifier.width(4.dp))
                                     Text(stringResource(R.string.addedit_gps_lock))
                                 }
-                                Spacer(Modifier.width(4.dp))
+                            }
+
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = onDismiss
+                            ) {
+                                Text(stringResource(R.string.action_cancel))
                             }
                         }
-                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                effectivePos?.let { onLocationConfirmed(it.latitude, it.longitude) }
-                            },
-                            enabled = effectivePos != null
-                        ) { Text(stringResource(R.string.addedit_use_location)) }
+                    } else {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onDismiss
+                        ) {
+                            Text(stringResource(R.string.action_cancel))
+                        }
                     }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            effectivePos?.let { onLocationConfirmed(it.latitude, it.longitude) }
+                        },
+                        enabled = effectivePos != null
+                    ) { Text(stringResource(R.string.addedit_use_location)) }
                 }
             }
         }
