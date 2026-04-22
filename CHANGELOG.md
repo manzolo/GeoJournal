@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.3.3] - 2026-04-22
+### Changed
+- GPS dialog: improved layout with better alignment, button arrangement, and "Choose location" label
+
+---
+
 ## [1.3.2] - 2026-04-22
 ### Added
 - Complete localization of error and success messages across all screens (IT/EN) — MainViewModel import messages, map controls, profile operations, auth errors, backup notifications
