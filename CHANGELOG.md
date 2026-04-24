@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.1] - 2026-04-24
+### Fixed
+- KML track line color bug: `#FF4466EE` was parsed by MapLibre as CSS `RRGGBBAA` (rendering as red/dark instead of blue); replaced with unambiguous CSS hex colors.
+- KML track line now renders as a double-layer path (white halo 9dp + orange `#FF6633` 5dp) for high contrast on both road and satellite basemaps (Strava-like style).
+- KML start/end markers redesigned as map-pin shapes (circle + downward triangular tail) with canvas-drawn play-triangle (▶ start, green) and stop-square (■ end, red) icons; anchor corrected to `"bottom"` so the pin tip aligns to the coordinate.
+- GPS pick-location dialog: initial zoom reduced from 19.0 to 15.0 (neighbourhood scale) so the user can see the surrounding context on the map.
+
 ## [1.4.0] - 2026-04-24
 ### Changed
 - **Map engine migrated from OSMDroid to MapLibre Android 11.12.2.** OSMDroid was archived in November 2024 and used deprecated Android APIs (`setStatusBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) flagged in Play Console on Android 15+. MapLibre is actively maintained with vector tile support.
