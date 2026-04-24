@@ -1280,7 +1280,7 @@ private fun GpsPreviewDialog(
                                 location?.let { loc ->
                                     val ll = LatLng(loc.latitude, loc.longitude)
                                     if (firstFix) {
-                                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 19.0))
+                                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 15.0))
                                         firstFix = false
                                     } else if (!userScrolled) {
                                         map.moveCamera(CameraUpdateFactory.newLatLng(ll))
