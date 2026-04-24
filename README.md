@@ -79,7 +79,7 @@ Il viewer mostra tutti i punti sulla mappa con foto, tag, descrizioni e punti ar
 | UI | Jetpack Compose + Material 3 (BOM 2026.03.00) |
 | Dependency Injection | Hilt 2.59 |
 | Database locale | Room 2.7.0 |
-| Mappa | OSMDroid 6.1.20 |
+| Mappa | MapLibre Android 11.12.2 (OpenFreeMap / OpenTopoMap / ESRI) |
 | Auth / Cloud | Firebase BOM 33.7.0 |
 | Min SDK | 26 (Android 8.0 Oreo) |
 

@@ -22,11 +22,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
-    <!-- Storage OSMDroid tile cache -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"
-        tools:ignore="ScopedStorage" />
-
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -104,12 +99,6 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-
-        <!-- Google Maps API key placeholder -->
-        <!-- NOTA: non necessario per OSMDroid, ma utile per futura integrazione -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_MAPS_API_KEY_HERE" />
 
         <!-- Rimuove WorkManagerInitializer: necessario con on-demand init (Configuration.Provider) -->
         <provider

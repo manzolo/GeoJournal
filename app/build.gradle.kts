@@ -125,8 +125,9 @@ dependencies {
     implementation(libs.firebase.storage.ktx)
     implementation(libs.firebase.crashlytics.ktx)
 
-    // OSMDroid
-    implementation(libs.osmdroid)
+    // MapLibre Android SDK + annotation plugin (engine mappa)
+    implementation(libs.maplibre)
+    implementation(libs.maplibre.annotations)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)

@@ -6,8 +6,10 @@
 -keep class it.manzolo.geojournal.domain.model.** { *; }
 -keep class it.manzolo.geojournal.data.local.db.**Entity { *; }
 
-# OSMDroid: alcune classi caricate via reflection
--keep class org.osmdroid.** { *; }
+# MapLibre: plugin annotations + JNI-backed classes — caricate via reflection
+-keep class org.maplibre.android.** { *; }
+-keep class com.mapbox.** { *; }
+-dontwarn org.maplibre.android.**
 
 # Kotlin Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

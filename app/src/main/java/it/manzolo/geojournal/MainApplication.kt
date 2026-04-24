@@ -40,6 +40,8 @@ class MainApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // MapLibre bootstrap: deve essere la prima chiamata prima di qualsiasi MapView
+        org.maplibre.android.MapLibre.getInstance(this)
         createNotificationChannels()
         ensureRemindersScheduled()
         ensureAutoBackupScheduled()

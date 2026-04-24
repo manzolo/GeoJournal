@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.0] - 2026-04-24
+### Changed
+- **Map engine migrated from OSMDroid to MapLibre Android 11.12.2.** OSMDroid was archived in November 2024 and used deprecated Android APIs (`setStatusBarColor`, `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`) flagged in Play Console on Android 15+. MapLibre is actively maintained with vector tile support.
+- Road layer now uses OpenFreeMap Liberty (vector tiles, free, no API key); TOPO and SATELLITE layers unchanged (OpenTopoMap + ESRI World Imagery raster).
+- User location: replaced custom `MyLocationOverlay` (radial gradient + rotation sensor) with built-in `LocationComponent` (accuracy circle + bearing puck).
+- KML overlay rendering: now uses MapLibre annotation plugin (`SymbolManager` / `LineManager` / `FillManager`) with dedicated managers isolated from main marker manager.
+- Cluster click logic refactored via sealed `SymbolTarget { Single | Cluster }` — cleaner dispatch between single-marker bottom sheet and cluster zoom/picker.
+
+### Removed
+- OSMDroid 6.1.20 dependency.
+- `WRITE_EXTERNAL_STORAGE` permission (was used for OSMDroid tile cache; MapLibre uses private app cache).
+- Unused `com.google.android.geo.API_KEY` manifest meta-data placeholder.
+
+---
+
 ## [1.3.3] - 2026-04-22
 ### Changed
 - GPS dialog: improved layout with better alignment, button arrangement, and "Choose location" label

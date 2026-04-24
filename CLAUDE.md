@@ -16,6 +16,7 @@ App Android per diario geo-personale con GPS, foto, reminders e backup.
 | Hilt | 2.59 |
 | Room | 2.7.0 (schema v7) |
 | Firebase BOM | 33.7.0 |
+| MapLibre Android | 11.12.2 (+ annotation plugin v9 3.0.2) |
 | minSdk / targetSdk | 26 / 36 |
 
 Tutti i processori (Hilt + Room) usano **KSP**, niente KAPT.
@@ -54,7 +55,7 @@ app/
 │   └── repository/       # interfacce (AuthRepository, GeoPointRepository, PointKmlRepository, ...)
 ├── ui/
 │   ├── auth/             # AuthScreen + AuthViewModel
-│   ├── map/              # MapScreen + MapViewModel (OSMDroid) + KmlOverlayManager
+│   ├── map/              # MapScreen + MapViewModel (MapLibre) + KmlOverlayManager
 │   ├── list/             # ListScreen + ListViewModel
 │   ├── detail/           # PointDetailScreen
 │   ├── addedit/          # AddEditScreen (sezione "Dettagli aggiuntivi" collassabile)
@@ -150,7 +151,8 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 - **Sezione "Dettagli aggiuntivi" (AddEditScreen):** collassata di default, auto-espansa se il punto ha già tag/reminders/rating/notes/kml. Badge riassuntivi quando collassata.
 - **Sezione "Sincronizzazione & Privacy" (ProfileScreen):** collassata di default, auto-espansa se almeno un toggle è attivo. Badge riassuntivo (nomi dei toggle attivi) quando collassata.
 - **Backup su Google Drive (Drive REST API):** `DriveApiClient` usa `GoogleAuthUtil.getToken()` + scope `drive.file` + `HttpURLConnection` multipart upload. Upload immediato senza dipendere dall'app Drive. SAF mantenuto come fallback. `driveAccountEmail` in DataStore identifica l'account connesso. `Identity.getAuthorizationClient().authorize()` gestisce il consent OAuth.
-- **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser` (no osmdroid-bonuspack). Storage in `filesDir/kmls/{geoPointId}/`. Marker custom Canvas (verde ▶ Partenza, rosso ■ Arrivo). `KmlMarker` subclass esclusa dal `removeAll` clustering.
+- **Engine mappa:** **MapLibre Android 11.x** (da v1.4.0 — sostituisce OSMDroid 6.1.20). Stili: OpenFreeMap Liberty (vettoriale, ROAD), OpenTopoMap raster (TOPO), ESRI World Imagery raster (SATELLITE). Marker/cluster via `SymbolManager` con bitmap registrati in `Style.addImage()`. Cluster click handler su sealed class `SymbolTarget { Single | Cluster }`. Posizione utente via `LocationComponent` built-in (RenderMode.COMPASS + `forceLocationUpdate` per comparsa immediata). `Style.Builder().fromJson()` obbligatorio per stili JSON inline (`setStyle(String)` tratta la stringa come URI).
+- **KML overlay mappa:** SmallFAB "KML" + ModalBottomSheet con switch per-file. Parser custom `XmlPullParser`. Storage in `filesDir/kmls/{geoPointId}/`. Rendering via MapLibre annotation managers dedicati (`SymbolManager` + `LineManager` + `FillManager`, separati da quelli dei marker principali). Marker custom Canvas (verde ▶ Partenza, rosso ■ Arrivo, blu per altri).
 - **Tracciamento GPS (tracking):** `LocationTrackingService` foreground service (tipo `location`), avviato da `PointDetailScreen`. Ogni 5s o 5m registra coordinate in `TrackingManager` (singleton Hilt). Allo stop genera KML via `KmlWriter` e lo salva via `PointKmlRepository.saveKml()`. Permessi: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`.
 - **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.
 - **EXIF foto:** `ExifReader` legge `dateTaken` + `cameraModel` da file locali (off-thread via IO dispatcher). Null silenzioso per URL HTTPS. Mostrato come strip semitrasparente nel PhotoViewerDialog.

@@ -38,7 +38,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import android.view.MotionEvent
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Check
@@ -137,13 +136,12 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import org.osmdroid.events.MapListener
-import org.osmdroid.events.ScrollEvent
-import org.osmdroid.events.ZoomEvent
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint as OsmGeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.plugins.annotation.SymbolManager
+import org.maplibre.android.plugins.annotation.SymbolOptions
 import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
@@ -1157,7 +1155,7 @@ private fun GpsPreviewDialog(
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     // Posizione selezionata manualmente toccando la mappa (ha priorità sul GPS)
-    val manualTapState = remember { mutableStateOf<OsmGeoPoint?>(null) }
+    val manualTapState = remember { mutableStateOf<LatLng?>(null) }
     var manualTapPosition by manualTapState
 
     // Avvia aggiornamenti continui solo se il permesso è disponibile.
@@ -1196,46 +1194,62 @@ private fun GpsPreviewDialog(
         }
     }
 
-    // Overlay tap: qualsiasi tocco sulla mappa imposta la posizione manuale
-    val tapOverlay = remember {
-        object : org.osmdroid.views.overlay.Overlay() {
-            override fun onSingleTapConfirmed(e: MotionEvent, mapView: MapView): Boolean {
-                val gp = mapView.projection.fromPixels(e.x.toInt(), e.y.toInt())
-                manualTapState.value = OsmGeoPoint(gp.latitude, gp.longitude)
-                return true
+    // True dopo che l'utente scrolla la mappa: blocca il ricentramento GPS
+    // (il marker continua ad aggiornarsi, ma la camera non segue più)
+    var userScrolled by remember { mutableStateOf(false) }
+    var firstFix by remember { mutableStateOf(true) }
+
+    // MapView + MapLibreMap + SymbolManager: SymbolManager è disponibile solo dopo setStyle
+    val mapView = remember { MapView(context) }
+    var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    var symbolManager by remember { mutableStateOf<SymbolManager?>(null) }
+
+    // Lifecycle completo MapLibre
+    DisposableEffect(Unit) {
+        mapView.onStart()
+        mapView.onResume()
+        onDispose {
+            symbolManager?.onDestroy()
+            mapView.onPause()
+            mapView.onStop()
+            mapView.onDestroy()
+        }
+    }
+
+    // Bootstrap mappa: stile + tap listener + move listener + SymbolManager
+    LaunchedEffect(Unit) {
+        mapView.getMapAsync { map ->
+            mapLibreMap = map
+            map.uiSettings.isAttributionEnabled = true
+            map.uiSettings.isLogoEnabled = true
+            // Tap sulla mappa → posizione manuale
+            map.addOnMapClickListener { latLng ->
+                manualTapState.value = latLng
+                true
+            }
+            // Gesture utente (solo user, non camera programmatica) → blocca auto-follow GPS
+            map.addOnMoveListener(object : MapLibreMap.OnMoveListener {
+                override fun onMoveBegin(detector: org.maplibre.android.gestures.MoveGestureDetector) {
+                    userScrolled = true
+                }
+                override fun onMove(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
+                override fun onMoveEnd(detector: org.maplibre.android.gestures.MoveGestureDetector) {}
+            })
+            map.setStyle("https://tiles.openfreemap.org/styles/liberty") { style ->
+                if (style.getImage(GPS_PIN_IMAGE) == null) {
+                    style.addImage(GPS_PIN_IMAGE, makeGpsPinBitmap(context))
+                }
+                symbolManager = SymbolManager(mapView, map, style).apply {
+                    iconAllowOverlap = true
+                    iconIgnorePlacement = true
+                }
             }
         }
     }
 
-    // True dopo che l'utente scrolla la mappa: blocca il ricentramento GPS
-    // (il marker continua ad aggiornarsi, ma la camera non segue più)
-    var userScrolled by remember { mutableStateOf(false) }
-
-    // MapView OSMDroid — tapOverlay aggiunto una sola volta
-    val mapView = remember {
-        MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
-            setMultiTouchControls(true)
-            controller.setZoom(16.0)
-            overlays.add(tapOverlay)   // index 0; i marker vengono inseriti a index 0 → tapOverlay sempre a index superiore → priorità eventi
-            addMapListener(object : MapListener {
-                override fun onScroll(event: ScrollEvent): Boolean {
-                    userScrolled = true
-                    return false
-                }
-                override fun onZoom(event: ZoomEvent): Boolean = false
-            })
-        }
-    }
-    var firstFix by remember { mutableStateOf(true) }
-    DisposableEffect(mapView) {
-        mapView.onResume()
-        onDispose { mapView.onPause() }
-    }
-
     // Posizione effettiva: manuale > GPS
-    val effectivePos: OsmGeoPoint? = manualTapPosition
-        ?: location?.let { OsmGeoPoint(it.latitude, it.longitude) }
+    val effectivePos: LatLng? = manualTapPosition
+        ?: location?.let { LatLng(it.latitude, it.longitude) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1249,35 +1263,36 @@ private fun GpsPreviewDialog(
                 Box {
                     AndroidView(
                         factory = { mapView },
-                        update = { mv ->
+                        update = {
+                            val map = mapLibreMap ?: return@AndroidView
+                            val sm = symbolManager ?: return@AndroidView
                             if (manualTapPosition != null) {
                                 // Modalità manuale: marker fisso, non seguire il GPS
-                                mv.overlays.removeAll { it is Marker }
-                                mv.overlays.add(0, Marker(mv).apply {
-                                    position = manualTapPosition!!
-                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                    infoWindow = null
-                                })
-                                mv.invalidate()
+                                sm.deleteAll()
+                                sm.create(
+                                    SymbolOptions()
+                                        .withLatLng(manualTapPosition!!)
+                                        .withIconImage(GPS_PIN_IMAGE)
+                                        .withIconAnchor("center")
+                                )
                             } else {
                                 // Modalità GPS: ricentra solo finché l'utente non ha scrollato
                                 location?.let { loc ->
-                                    val gp = OsmGeoPoint(loc.latitude, loc.longitude)
+                                    val ll = LatLng(loc.latitude, loc.longitude)
                                     if (firstFix) {
-                                        mv.controller.setZoom(19.0)
-                                        mv.controller.setCenter(gp)
+                                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, 19.0))
                                         firstFix = false
                                     } else if (!userScrolled) {
-                                        mv.controller.setCenter(gp)
+                                        map.moveCamera(CameraUpdateFactory.newLatLng(ll))
                                     }
                                     // Il marker si aggiorna sempre (mostra precisione GPS)
-                                    mv.overlays.removeAll { it is Marker }
-                                    mv.overlays.add(0, Marker(mv).apply {
-                                        position = gp
-                                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                        infoWindow = null
-                                    })
-                                    mv.invalidate()
+                                    sm.deleteAll()
+                                    sm.create(
+                                        SymbolOptions()
+                                            .withLatLng(ll)
+                                            .withIconImage(GPS_PIN_IMAGE)
+                                            .withIconAnchor("center")
+                                    )
                                 }
                             }
                         },
@@ -1438,7 +1453,7 @@ private fun GpsPreviewDialog(
                                 OutlinedButton(
                                     modifier = Modifier.weight(1f),
                                     onClick = {
-                                        manualTapPosition = OsmGeoPoint(location!!.latitude, location!!.longitude)
+                                        manualTapPosition = LatLng(location!!.latitude, location!!.longitude)
                                     }
                                 ) {
                                     Icon(
@@ -1675,4 +1690,30 @@ private fun EmojiPickerDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
+}
+
+// ─── GPS Preview map marker ──────────────────────────────────────────────────
+
+private const val GPS_PIN_IMAGE = "gps_pin"
+
+/** Pin circolare blu (stile "Sono qui") per il marker della GpsPreviewDialog. */
+private fun makeGpsPinBitmap(context: Context): android.graphics.Bitmap {
+    val dp = context.resources.displayMetrics.density
+    val size = (28 * dp).toInt()
+    val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bmp)
+    val cx = size / 2f
+    val cy = size / 2f
+    val r = size / 2f - 2f * dp
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    // shadow
+    paint.color = android.graphics.Color.argb(70, 0, 0, 0)
+    canvas.drawCircle(cx + 1f * dp, cy + 1.5f * dp, r, paint)
+    // white ring
+    paint.color = android.graphics.Color.WHITE
+    canvas.drawCircle(cx, cy, r, paint)
+    // blue dot
+    paint.color = android.graphics.Color.rgb(33, 150, 243)
+    canvas.drawCircle(cx, cy, r - 2.5f * dp, paint)
+    return bmp
 }

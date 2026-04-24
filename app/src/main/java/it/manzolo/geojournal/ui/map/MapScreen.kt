@@ -8,9 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RadialGradient
 import android.graphics.RectF
-import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
 import android.location.LocationManager
@@ -94,6 +92,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.MutableState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
@@ -124,50 +123,95 @@ import it.manzolo.geojournal.ui.components.ShareOptionsDialog
 import it.manzolo.geojournal.ui.navigation.Routes
 import kotlin.math.abs
 import kotlin.math.pow
-import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapListener
-import org.osmdroid.events.ScrollEvent
-import org.osmdroid.events.ZoomEvent
-import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.tileprovider.tilesource.XYTileSource
-import org.osmdroid.util.MapTileIndex
-import org.osmdroid.util.BoundingBox
-import org.osmdroid.util.GeoPoint as OsmGeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-
-// ESRI usa Z/Y/X anziché Z/X/Y — necessita tile source custom
-private object EsriSatelliteTileSource : OnlineTileSourceBase(
-    "ESRI_Satellite", 0, 19, 256, "",
-    arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
-) {
-    override fun getTileURLString(pMapTileIndex: Long): String {
-        val z = MapTileIndex.getZoom(pMapTileIndex)
-        val x = MapTileIndex.getX(pMapTileIndex)
-        val y = MapTileIndex.getY(pMapTileIndex)
-        return "${baseUrl}$z/$y/$x"
-    }
-}
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.location.LocationComponentActivationOptions
+import org.maplibre.android.location.modes.CameraMode
+import org.maplibre.android.location.modes.RenderMode
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.plugins.annotation.SymbolManager
+import org.maplibre.android.plugins.annotation.SymbolOptions
 
 private enum class MapLayer { ROAD, TOPO, SATELLITE }
 
-private val mapLayerSources = mapOf(
-    MapLayer.ROAD to { TileSourceFactory.MAPNIK },
-    MapLayer.TOPO to {
-        XYTileSource(
-            "OpenTopoMap", 0, 17, 256, ".png",
-            arrayOf("https://tile.opentopomap.org/")
-        )
-    },
-    MapLayer.SATELLITE to { EsriSatelliteTileSource }
-)
+/**
+ * Fornisce le URL/JSON di stile per i 3 layer supportati.
+ * - ROAD: OpenFreeMap Liberty (vector, gratuito, senza API key, AGPL-friendly)
+ *   Fallback documentato: MapTiler (100k tiles/mese gratis, richiede key)
+ * - TOPO: OpenTopoMap (raster, gratuito, attribution richiesta)
+ * - SATELLITE: ESRI World Imagery (raster, {z}/{y}/{x} — URL nativa MapLibre)
+ */
+private object MapLibreStyleProvider {
+    private const val ROAD_URL = "https://tiles.openfreemap.org/styles/liberty"
+
+    private const val TOPO_JSON = """{
+        "version": 8,
+        "sources": {
+            "topo-tiles": {
+                "type": "raster",
+                "tiles": ["https://tile.opentopomap.org/{z}/{x}/{y}.png"],
+                "tileSize": 256,
+                "maxzoom": 17,
+                "attribution": "© OpenTopoMap (CC-BY-SA)"
+            }
+        },
+        "layers": [{
+            "id": "topo-layer",
+            "type": "raster",
+            "source": "topo-tiles"
+        }]
+    }"""
+
+    // ESRI usa Z/Y/X anziché Z/X/Y — MapLibre supporta natively il template {z}/{y}/{x}
+    private const val SATELLITE_JSON = """{
+        "version": 8,
+        "sources": {
+            "satellite-tiles": {
+                "type": "raster",
+                "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+                "tileSize": 256,
+                "maxzoom": 19,
+                "attribution": "© Esri, Maxar, Earthstar Geographics"
+            }
+        },
+        "layers": [{
+            "id": "satellite-layer",
+            "type": "raster",
+            "source": "satellite-tiles"
+        }]
+    }"""
+
+    /**
+     * Costruisce uno [Style.Builder] per il layer richiesto.
+     * NB: `MapLibreMap.setStyle(String)` interpreta la stringa come URI, quindi per
+     * i JSON inline serve esplicitamente `Style.Builder().fromJson(...)`.
+     */
+    fun builderFor(layer: MapLayer): Style.Builder = when (layer) {
+        MapLayer.ROAD      -> Style.Builder().fromUri(ROAD_URL)
+        MapLayer.TOPO      -> Style.Builder().fromJson(TOPO_JSON)
+        MapLayer.SATELLITE -> Style.Builder().fromJson(SATELLITE_JSON)
+    }
+}
 
 private data class MapCluster(
     val centerLat: Double,
     val centerLon: Double,
     val points: List<GeoPoint>
 )
+
+/**
+ * Payload associato a ogni [Symbol] creato sulla mappa.
+ * Il click listener del [SymbolManager] usa questo tipo per distinguere
+ * un marker singolo (apre bottom sheet) da un cluster (zoom-to-bbox o picker).
+ */
+private sealed class SymbolTarget {
+    data class Single(val point: GeoPoint) : SymbolTarget()
+    data class Cluster(val points: List<GeoPoint>) : SymbolTarget()
+}
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -274,37 +318,43 @@ fun MapScreen(
         )
     }
 
-    // Ref aggiornabile per avere sempre i punti correnti nel listener di zoom
+    // Ref aggiornabile per avere sempre i punti correnti nel listener di camera
     val pointsRef = remember { mutableStateOf<List<GeoPoint>>(emptyList()) }
     // Punti del cluster troppo vicini da separare visivamente → mostra il picker
     val clusterPickerRef = remember { mutableStateOf<List<GeoPoint>?>(null) }
-    // Overlay posizione + direzione utente (piazzato dal FAB MyLocation)
-    val myLocationOverlayRef = remember { mutableStateOf<MyLocationOverlay?>(null) }
-    // KML overlay attivi nella sessione (kmlId → lista overlay OSMDroid)
-    val kmlOverlaysRef = remember { mutableStateOf<Map<String, List<org.osmdroid.views.overlay.Overlay>>>(emptyMap()) }
+    // Ref MapLibreMap e Style (disponibili dopo getMapAsync + setStyle)
+    val mapLibreMapRef = remember { mutableStateOf<MapLibreMap?>(null) }
+    val mapStyleRef = remember { mutableStateOf<Style?>(null) }
+    // SymbolManager per i marker (inizializzato dopo setStyle)
+    val symbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
+    // SymbolId → target (marker singolo o cluster) per il click listener
+    val symbolIdToTarget = remember { mutableStateOf<Map<Long, SymbolTarget>>(emptyMap()) }
+    // KML overlay attivi nella sessione (kmlId → KmlAnnotationHandle)
+    val kmlOverlaysRef = remember { mutableStateOf<Map<String, KmlAnnotationHandle>>(emptyMap()) }
+    // True dopo che l'utente ha attivato il LocationComponent (tap MyLocation FAB).
+    // Usato per ri-attivarlo dopo cambio layer (setStyle invalida lo stato).
+    val locationPuckActive = remember { mutableStateOf(false) }
+    // SymbolManager dedicato ai KML (separato da quello marker principali)
+    val kmlSymbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
+    val kmlLineManagerRef = remember { mutableStateOf<org.maplibre.android.plugins.annotation.LineManager?>(null) }
+    val kmlFillManagerRef = remember { mutableStateOf<org.maplibre.android.plugins.annotation.FillManager?>(null) }
 
-    // Feature 5: ripristina la camera salvata nel ViewModel (persiste tra navigazioni).
-    // Al primo avvio usa lastKnownLocation (sincrona, nessun salto visivo).
-    // Nelle aperture successive usa la posizione salvata da onMapMoved.
-    val mapView = remember {
-        Configuration.getInstance().userAgentValue = context.packageName
-        val savedPosition = OsmGeoPoint(uiState.userLatitude, uiState.userLongitude)
-        val isFirstOpen = !uiState.hasAppliedInitialZoom
+    // Feature 5: calcola posizione iniziale (sincrona) prima di costruire MapView
+    val initialCenter = remember {
         val hasLocationPerm = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED
-        val lastKnown = if (isFirstOpen && hasLocationPerm) getLastKnownLocation(context) else null
-        val initialCenter = lastKnown?.let { OsmGeoPoint(it.latitude, it.longitude) } ?: savedPosition
-        val initialZoom = if (lastKnown != null) 15.0 else uiState.zoomLevel
-        MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
-            setMultiTouchControls(true)
-            zoomController.setVisibility(
-                org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER
-            )
-            controller.setZoom(initialZoom)
-            controller.setCenter(initialCenter)
-        }
+        val lastKnown = if (!uiState.hasAppliedInitialZoom && hasLocationPerm) getLastKnownLocation(context) else null
+        lastKnown?.let { LatLng(it.latitude, it.longitude) }
+            ?: LatLng(uiState.userLatitude, uiState.userLongitude)
     }
+    val initialZoom = remember {
+        val hasLocationPerm = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        val lastKnown = if (!uiState.hasAppliedInitialZoom && hasLocationPerm) getLastKnownLocation(context) else null
+        if (lastKnown != null) 15.0 else uiState.zoomLevel
+    }
+
+    val mapView = remember { MapView(context) }
 
     var currentLayer by remember { mutableStateOf(MapLayer.ROAD) }
     val layerRoadLabel = stringResource(R.string.map_layer_road)
@@ -313,13 +363,144 @@ fun MapScreen(
     val isFirstLayerRender = remember { mutableStateOf(true) }
     var showLayerLabel by remember { mutableStateOf(false) }
     var layerLabelText by remember { mutableStateOf("") }
+
+    // Lifecycle completo MapLibre (onStart/onResume/onPause/onStop/onDestroy)
+    DisposableEffect(Unit) {
+        mapView.onStart()
+        mapView.onResume()
+        onDispose {
+            symbolManagerRef.value?.onDestroy()
+            kmlSymbolManagerRef.value?.onDestroy()
+            kmlLineManagerRef.value?.onDestroy()
+            kmlFillManagerRef.value?.onDestroy()
+            mapView.onPause()
+            mapView.onStop()
+            mapView.onDestroy()
+        }
+    }
+
+    // getMapAsync: bootstrap mappa, stile iniziale, camera, camera listener, SymbolManager
+    LaunchedEffect(Unit) {
+        mapView.getMapAsync { map ->
+            mapLibreMapRef.value = map
+            // Camera iniziale
+            map.moveCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(initialCenter)
+                        .zoom(initialZoom)
+                        .build()
+                )
+            )
+            // MapLibre non ha pulsanti zoom built-in (gestiamo noi con i FAB)
+            map.uiSettings.isZoomGesturesEnabled = true
+            map.uiSettings.isAttributionEnabled = true
+            map.uiSettings.isLogoEnabled = true
+
+            // Camera move/idle: salva posizione (throttle 100ms) + ri-clustera al cambio zoom
+            var lastSaveMs = 0L
+            var lastZoom = -1
+            map.addOnCameraMoveListener {
+                val now = System.currentTimeMillis()
+                if (now - lastSaveMs > 100) {
+                    val center = map.cameraPosition.target ?: return@addOnCameraMoveListener
+                    viewModel.onMapMoved(center.latitude, center.longitude, map.cameraPosition.zoom)
+                    lastSaveMs = now
+                }
+                val z = map.cameraPosition.zoom.toInt()
+                if (z != lastZoom) {
+                    lastZoom = z
+                    mapStyleRef.value?.let { style ->
+                        symbolManagerRef.value?.let { sm ->
+                            updateClusteredMarkers(
+                                map, style, sm, symbolIdToTarget,
+                                pointsRef.value, context
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Carica lo stile iniziale
+            map.setStyle(MapLibreStyleProvider.builderFor(currentLayer)) { style ->
+                mapStyleRef.value = style
+                // SymbolManager per marker principali
+                val sm = SymbolManager(mapView, map, style).apply {
+                    iconAllowOverlap = true
+                    iconIgnorePlacement = true
+                }
+                symbolManagerRef.value = sm
+                installSymbolClickListener(sm, map, symbolIdToTarget, viewModel, clusterPickerRef)
+
+                // SymbolManager KML (separato — i click non interferiscono coi marker principali)
+                kmlSymbolManagerRef.value = SymbolManager(mapView, map, style).apply {
+                    iconAllowOverlap = true
+                    iconIgnorePlacement = true
+                }
+                kmlLineManagerRef.value = org.maplibre.android.plugins.annotation.LineManager(mapView, map, style)
+                kmlFillManagerRef.value = org.maplibre.android.plugins.annotation.FillManager(mapView, map, style)
+            }
+        }
+    }
+
+    // Switch layer: carica nuovo stile e ricrea SymbolManager + marker
     LaunchedEffect(currentLayer) {
         if (isFirstLayerRender.value) {
             isFirstLayerRender.value = false
             return@LaunchedEffect
         }
-        mapView.setTileSource(mapLayerSources[currentLayer]!!.invoke())
-        mapView.invalidate()
+        val map = mapLibreMapRef.value ?: return@LaunchedEffect
+        // Distruggi annotation manager prima di cambiare stile
+        symbolManagerRef.value?.onDestroy()
+        kmlSymbolManagerRef.value?.onDestroy()
+        kmlLineManagerRef.value?.onDestroy()
+        kmlFillManagerRef.value?.onDestroy()
+        symbolManagerRef.value = null
+        mapStyleRef.value = null
+
+        map.setStyle(MapLibreStyleProvider.builderFor(currentLayer)) { style ->
+            mapStyleRef.value = style
+            val sm = SymbolManager(mapView, map, style).apply {
+                iconAllowOverlap = true
+                iconIgnorePlacement = true
+            }
+            symbolManagerRef.value = sm
+            installSymbolClickListener(sm, map, symbolIdToTarget, viewModel, clusterPickerRef)
+
+            val kmlSm = SymbolManager(mapView, map, style).apply {
+                iconAllowOverlap = true
+                iconIgnorePlacement = true
+            }
+            kmlSymbolManagerRef.value = kmlSm
+            val kmlLm = org.maplibre.android.plugins.annotation.LineManager(mapView, map, style)
+            kmlLineManagerRef.value = kmlLm
+            val kmlFm = org.maplibre.android.plugins.annotation.FillManager(mapView, map, style)
+            kmlFillManagerRef.value = kmlFm
+
+            // Ridisegna marker col nuovo stile
+            updateClusteredMarkers(
+                map, style, sm, symbolIdToTarget,
+                pointsRef.value, context
+            )
+
+            // Ripristina KML overlay attivi dopo cambio layer (parseKml è suspend → IO)
+            coroutineScope.launch {
+                val rebuiltKml = mutableMapOf<String, KmlAnnotationHandle>()
+                uiState.kmlItems.filter { it.isActive }.forEach { item ->
+                    val geometries = viewModel.parseKml(item.kml.id)
+                    if (geometries.isNotEmpty()) {
+                        rebuiltKml[item.kml.id] =
+                            KmlOverlayManager.buildOverlays(context, style, kmlSm, kmlLm, kmlFm, geometries)
+                    }
+                }
+                kmlOverlaysRef.value = rebuiltKml
+            }
+
+            // Ripristina LocationComponent (puck + bearing) se era attivo prima del cambio layer
+            if (locationPuckActive.value && locationPermission.status.isGranted) {
+                activateLocationPuck(context, map, style)
+            }
+        }
         val label = when (currentLayer) {
             MapLayer.ROAD -> layerRoadLabel
             MapLayer.TOPO -> layerTopoLabel
@@ -331,99 +512,16 @@ fun MapScreen(
         showLayerLabel = false
     }
 
-    // Listener di zoom e scroll: ri-clustera al cambio zoom, salva camera (throttled 100ms)
-    LaunchedEffect(Unit) {
-        var lastZoom = -1
-        var lastSaveMs = 0L
-        mapView.addMapListener(object : MapListener {
-            override fun onScroll(event: ScrollEvent): Boolean {
-                val now = System.currentTimeMillis()
-                if (now - lastSaveMs > 100) {
-                    viewModel.onMapMoved(
-                        mapView.mapCenter.latitude,
-                        mapView.mapCenter.longitude,
-                        mapView.zoomLevelDouble
-                    )
-                    lastSaveMs = now
-                }
-                return false
-            }
-            override fun onZoom(event: ZoomEvent): Boolean {
-                val z = mapView.zoomLevelDouble.toInt()
-                val now = System.currentTimeMillis()
-                if (now - lastSaveMs > 100) {
-                    viewModel.onMapMoved(
-                        mapView.mapCenter.latitude,
-                        mapView.mapCenter.longitude,
-                        mapView.zoomLevelDouble
-                    )
-                    lastSaveMs = now
-                }
-                if (z != lastZoom) {
-                    lastZoom = z
-                    updateClusteredMarkers(
-                        mapView, pointsRef.value, context,
-                        onMarkerClick = { viewModel.onPointSelected(it) },
-                        onClusterTooClose = { clusterPickerRef.value = it }
-                    )
-                }
-                return false
-            }
-        })
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            mapView.overlays.clear()
-            mapView.onDetach()
-        }
-    }
-
-    // Bussola: registra il sensore solo mentre l'overlay "Sono qui" è visibile.
-    // TYPE_ROTATION_VECTOR → azimuth accurato anche con il telefono inclinato.
-    DisposableEffect(myLocationOverlayRef.value) {
-        val overlay = myLocationOverlayRef.value
-            ?: return@DisposableEffect onDispose { }
-        val sm = context.getSystemService(Context.SENSOR_SERVICE)
-            as android.hardware.SensorManager
-        val sensor = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR)
-            ?: return@DisposableEffect onDispose { }
-        var smoothAzimuth = 0f
-        val listener = object : android.hardware.SensorEventListener {
-            override fun onSensorChanged(event: android.hardware.SensorEvent) {
-                val rm  = FloatArray(9)
-                val rm2 = FloatArray(9)
-                android.hardware.SensorManager.getRotationMatrixFromVector(rm, event.values)
-                // Remap per telefono in portrait (asse Z → alto schermo)
-                android.hardware.SensorManager.remapCoordinateSystem(
-                    rm, android.hardware.SensorManager.AXIS_X,
-                    android.hardware.SensorManager.AXIS_Z, rm2
-                )
-                val or = FloatArray(3)
-                android.hardware.SensorManager.getOrientation(rm2, or)
-                val raw = ((Math.toDegrees(or[0].toDouble()).toFloat() + 360f) % 360f)
-                // Filtro passa-basso con gestione wraparound 359°→1°
-                val diff = ((raw - smoothAzimuth + 540f) % 360f) - 180f
-                smoothAzimuth = (smoothAzimuth + 0.12f * diff + 360f) % 360f
-                overlay.azimuth = smoothAzimuth
-                mapView.postInvalidate()
-            }
-            override fun onAccuracyChanged(s: android.hardware.Sensor, a: Int) {}
-        }
-        sm.registerListener(
-            listener, sensor,
-            android.hardware.SensorManager.SENSOR_DELAY_UI
-        )
-        onDispose { sm.unregisterListener(listener) }
-    }
-
+    // Aggiorna marker quando cambiano i punti o la query di ricerca
     LaunchedEffect(uiState.points, uiState.searchQuery) {
         val displayPoints = if (uiState.searchQuery.isBlank()) uiState.points else uiState.searchResults
         pointsRef.value = displayPoints
+        val map = mapLibreMapRef.value ?: return@LaunchedEffect
+        val style = mapStyleRef.value ?: return@LaunchedEffect
+        val sm = symbolManagerRef.value ?: return@LaunchedEffect
         updateClusteredMarkers(
-            mapView, displayPoints, context,
-            onMarkerClick = { viewModel.onPointSelected(it) },
-            onClusterTooClose = { clusterPickerRef.value = it }
+            map, style, sm, symbolIdToTarget,
+            displayPoints, context
         )
         if (!uiState.hasAppliedInitialZoom) {
             viewModel.markInitialFitDone()
@@ -432,12 +530,16 @@ fun MapScreen(
 
     // KML overlays: aggiunge/rimuove in base allo stato di sessione
     LaunchedEffect(uiState.kmlItems) {
+        val kmlSm = kmlSymbolManagerRef.value ?: return@LaunchedEffect
+        val kmlLm = kmlLineManagerRef.value ?: return@LaunchedEffect
+        val kmlFm = kmlFillManagerRef.value ?: return@LaunchedEffect
+        val style = mapStyleRef.value ?: return@LaunchedEffect
         val current = kmlOverlaysRef.value.toMutableMap()
         // Rimuovi overlay per KML disattivati o rimossi dalla lista
         val activeIds = uiState.kmlItems.filter { it.isActive }.map { it.kml.id }.toSet()
         val toRemove = current.keys.filter { it !in activeIds }
         toRemove.forEach { id ->
-            current[id]?.let { KmlOverlayManager.removeFromMap(mapView, it) }
+            current[id]?.let { KmlOverlayManager.removeFromMap(kmlSm, kmlLm, kmlFm, it) }
             current.remove(id)
         }
         // Aggiungi overlay per KML attivati di nuovo
@@ -445,9 +547,8 @@ fun MapScreen(
         uiState.kmlItems.filter { it.isActive && it.kml.id !in existingIds }.forEach { item ->
             val geometries = viewModel.parseKml(item.kml.id)
             if (geometries.isNotEmpty()) {
-                val overlays = KmlOverlayManager.buildOverlays(mapView, geometries)
-                KmlOverlayManager.addToMap(mapView, overlays)
-                current[item.kml.id] = overlays
+                val handle = KmlOverlayManager.buildOverlays(context, style, kmlSm, kmlLm, kmlFm, geometries)
+                current[item.kml.id] = handle
             }
         }
         kmlOverlaysRef.value = current
@@ -456,12 +557,30 @@ fun MapScreen(
     // Focus su punto specifico (es. da Lista): centra + auto-seleziona il punto
     LaunchedEffect(uiState.focusTarget) {
         uiState.focusTarget?.let { target ->
-            mapView.controller.animateTo(OsmGeoPoint(target.lat, target.lon))
-            mapView.controller.setZoom(target.zoom)
+            val map = mapLibreMapRef.value ?: return@LaunchedEffect
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(LatLng(target.lat, target.lon), target.zoom)
+            )
             target.pointId?.let { id ->
                 uiState.points.find { it.id == id }?.let { viewModel.onPointSelected(it) }
             }
             viewModel.clearFocusTarget()
+        }
+    }
+
+    // Prima concessione del permesso GPS a runtime: centra sulla posizione utente
+    LaunchedEffect(locationPermission.status.isGranted) {
+        if (locationPermission.status.isGranted
+            && viewModel.uiState.value.focusTarget == null
+            && !viewModel.uiState.value.hasAppliedInitialZoom) {
+            getLastKnownLocation(context)?.let { loc ->
+                val map = mapLibreMapRef.value
+                if (map != null) {
+                    map.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 15.0)
+                    )
+                }
+            }
         }
     }
 
@@ -491,7 +610,11 @@ fun MapScreen(
                 if (uiState.showFavoritesOnly && !point.isFavorite) {
                     viewModel.toggleFavoritesFilter()
                 }
-                mapView.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), 17.0, 800L)
+                mapLibreMapRef.value?.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(point.latitude, point.longitude), 17.0
+                    ), 800
+                )
                 coroutineScope.launch {
                     delay(200)
                     viewModel.onPointSelected(point)
@@ -531,16 +654,16 @@ fun MapScreen(
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                IconButton(onClick = { mapView.controller.zoomIn() }) {
+                IconButton(onClick = { mapLibreMapRef.value?.animateCamera(CameraUpdateFactory.zoomIn()) }) {
                     Icon(Icons.Filled.ZoomIn, contentDescription = stringResource(R.string.map_zoom_in), tint = MaterialTheme.colorScheme.onSurface)
                 }
                 HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                IconButton(onClick = { mapView.controller.zoomOut() }) {
+                IconButton(onClick = { mapLibreMapRef.value?.animateCamera(CameraUpdateFactory.zoomOut()) }) {
                     Icon(Icons.Filled.ZoomOut, contentDescription = stringResource(R.string.map_zoom_out), tint = MaterialTheme.colorScheme.onSurface)
                 }
                 if (uiState.points.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    IconButton(onClick = { fitAllPoints(mapView, uiState.points) }) {
+                    IconButton(onClick = { mapLibreMapRef.value?.let { fitAllPoints(it, uiState.points) } }) {
                         Icon(Icons.Filled.FitScreen, contentDescription = stringResource(R.string.map_fit_all_points), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
@@ -669,22 +792,28 @@ fun MapScreen(
 
                     HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                    // Tasto posizione utente / centra
+                    // Tasto posizione utente: attiva il puck LocationComponent (accuracy circle + bearing)
+                    // e centra la camera sulla posizione corrente.
                     IconButton(
                         onClick = {
                             if (locationPermission.status.isGranted) {
                                 coroutineScope.launch {
                                     isCenteringActive = true
+                                    val map = mapLibreMapRef.value
+                                    val style = mapStyleRef.value
+                                    if (map != null && style != null) {
+                                        activateLocationPuck(context, map, style)
+                                        locationPuckActive.value = true
+                                    }
                                     val result = getFreshLocation(context)
-                                    if (result != null) {
+                                    if (result != null && map != null) {
                                         val (lat, lon) = result
-                                        myLocationOverlayRef.value?.let { mapView.overlays.remove(it) }
-                                        val overlay = MyLocationOverlay(lat, lon)
-                                        mapView.overlays.add(overlay)
-                                        myLocationOverlayRef.value = overlay
-                                        mapView.invalidate()
-                                        mapView.controller.animateTo(OsmGeoPoint(lat, lon))
-                                    } else {
+                                        // Mostra subito il puck con questa fix, senza aspettare il LocationEngine
+                                        pushLocationToPuck(map, lat, lon)
+                                        map.animateCamera(
+                                            CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), map.cameraPosition.zoom)
+                                        )
+                                    } else if (result == null) {
                                         snackbarHostState.showSnackbar(locationUnavailableText)
                                     }
                                     isCenteringActive = false
@@ -724,18 +853,6 @@ fun MapScreen(
             }
         }
 
-        // Prima concessione del permesso GPS a runtime: centra sulla posizione utente
-        // solo se non c'è già un focusTarget attivo e la mappa è ancora ai default.
-        LaunchedEffect(locationPermission.status.isGranted) {
-            if (locationPermission.status.isGranted
-                && viewModel.uiState.value.focusTarget == null
-                && !viewModel.uiState.value.hasAppliedInitialZoom) {
-                getLastKnownLocation(context)?.let { loc ->
-                    mapView.controller.setCenter(OsmGeoPoint(loc.latitude, loc.longitude))
-                    mapView.controller.setZoom(15.0)
-                }
-            }
-        }
 
         // Pulsante Aggiungi Punto (uniformato agli altri controlli)
         Surface(
@@ -1312,19 +1429,17 @@ private fun isPlayServicesAvailable(context: Context): Boolean =
     com.google.android.gms.common.GoogleApiAvailability.getInstance()
         .isGooglePlayServicesAvailable(context) == com.google.android.gms.common.ConnectionResult.SUCCESS
 
-private fun fitAllPoints(mapView: MapView, points: List<GeoPoint>) {
+private fun fitAllPoints(map: MapLibreMap, points: List<GeoPoint>) {
     if (points.isEmpty()) return
     val lats = points.map { it.latitude }
     val lons = points.map { it.longitude }
     val latPad = maxOf(0.005, (lats.max() - lats.min()) * 0.25)
     val lonPad = maxOf(0.005, (lons.max() - lons.min()) * 0.25)
-    mapView.zoomToBoundingBox(
-        BoundingBox(
-            lats.max() + latPad, lons.max() + lonPad,
-            lats.min() - latPad, lons.min() - lonPad
-        ),
-        true, 120
-    )
+    val bounds = LatLngBounds.Builder()
+        .include(LatLng(lats.max() + latPad, lons.max() + lonPad))
+        .include(LatLng(lats.min() - latPad, lons.min() - lonPad))
+        .build()
+    map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 120))
 }
 
 /**
@@ -1366,59 +1481,114 @@ private fun clusterPoints(points: List<GeoPoint>, zoom: Double): List<MapCluster
 private const val MIN_SEPARABLE_DEG = 0.001
 
 private fun updateClusteredMarkers(
-    mapView: MapView,
+    map: MapLibreMap,
+    style: Style,
+    symbolManager: SymbolManager,
+    symbolIdToTarget: MutableState<Map<Long, SymbolTarget>>,
     points: List<GeoPoint>,
-    context: Context,
-    onMarkerClick: (GeoPoint) -> Unit,
-    onClusterTooClose: (List<GeoPoint>) -> Unit = {}
+    context: Context
 ) {
-    val zoom = mapView.zoomLevelDouble
+    val zoom = map.cameraPosition.zoom
     val clusters = clusterPoints(points, zoom)
-    mapView.overlays.removeAll { it is Marker && it !is KmlMarker }
+    symbolManager.deleteAll()
+    val newMap = mutableMapOf<Long, SymbolTarget>()
 
     clusters.forEach { cluster ->
-        val marker = Marker(mapView).apply {
-            position = OsmGeoPoint(cluster.centerLat, cluster.centerLon)
-            if (cluster.points.size == 1) {
-                val point = cluster.points[0]
-                icon = createCloudBubbleDrawable(context, point.emoji, point.title, point.isFavorite)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                setOnMarkerClickListener { _, mv ->
-                    val targetZoom = if (mv.zoomLevelDouble < 17.0) 17.0 else mv.zoomLevelDouble
-                    mv.controller.animateTo(OsmGeoPoint(point.latitude, point.longitude), targetZoom, 800L)
-                    onMarkerClick(point)
-                    true
-                }
-            } else {
-                icon = createClusterDrawable(context, cluster.points.size)
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                setOnMarkerClickListener { _, _ ->
-                    val lats = cluster.points.map { it.latitude }
-                    val lons = cluster.points.map { it.longitude }
-                    val latRange = lats.max() - lats.min()
-                    val lonRange = lons.max() - lons.min()
-                    if (latRange < MIN_SEPARABLE_DEG && lonRange < MIN_SEPARABLE_DEG) {
-                        // Punti troppo vicini: mostra lista invece di zoomare
-                        onClusterTooClose(cluster.points)
-                    } else {
-                        val latPad = maxOf(0.002, latRange * 0.3)
-                        val lonPad = maxOf(0.002, lonRange * 0.3)
-                        mapView.zoomToBoundingBox(
-                            BoundingBox(
-                                lats.max() + latPad, lons.max() + lonPad,
-                                lats.min() - latPad, lons.min() - lonPad
-                            ),
-                            true, 80
-                        )
-                    }
-                    true
+        if (cluster.points.size == 1) {
+            val point = cluster.points[0]
+            val key = "bubble_${point.id}_${if (point.isFavorite) 1 else 0}"
+            if (style.getImage(key) == null) {
+                style.addImage(key, createCloudBubbleBitmap(context, point.emoji, point.title, point.isFavorite))
+            }
+            val symbol = symbolManager.create(
+                SymbolOptions()
+                    .withLatLng(LatLng(cluster.centerLat, cluster.centerLon))
+                    .withIconImage(key)
+                    .withIconAnchor("bottom")
+                    .withIconOffset(arrayOf(0f, 0f))
+            )
+            newMap[symbol.id] = SymbolTarget.Single(point)
+        } else {
+            val key = "cluster_${cluster.points.size}"
+            if (style.getImage(key) == null) {
+                style.addImage(key, createClusterBitmap(context, cluster.points.size))
+            }
+            val symbol = symbolManager.create(
+                SymbolOptions()
+                    .withLatLng(LatLng(cluster.centerLat, cluster.centerLon))
+                    .withIconImage(key)
+                    .withIconAnchor("center")
+            )
+            newMap[symbol.id] = SymbolTarget.Cluster(cluster.points)
+        }
+    }
+    symbolIdToTarget.value = newMap
+}
+
+/**
+ * Installa il click listener sul [SymbolManager] principale. Dispatch:
+ *  - [SymbolTarget.Single] → animate camera + apre bottom sheet
+ *  - [SymbolTarget.Cluster] → zoom a bbox del cluster, oppure picker se i punti
+ *    sono troppo vicini da separare visivamente (< [MIN_SEPARABLE_DEG]).
+ */
+private fun installSymbolClickListener(
+    symbolManager: SymbolManager,
+    map: MapLibreMap,
+    symbolIdToTarget: MutableState<Map<Long, SymbolTarget>>,
+    viewModel: MapViewModel,
+    clusterPickerRef: MutableState<List<GeoPoint>?>
+) {
+    symbolManager.addClickListener { symbol ->
+        when (val target = symbolIdToTarget.value[symbol.id]) {
+            is SymbolTarget.Single -> {
+                val point = target.point
+                val targetZoom = if (map.cameraPosition.zoom < 17.0) 17.0 else map.cameraPosition.zoom
+                map.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(point.latitude, point.longitude), targetZoom
+                    ), 800
+                )
+                viewModel.onPointSelected(point)
+            }
+            is SymbolTarget.Cluster -> {
+                val pts = target.points
+                val lats = pts.map { it.latitude }
+                val lons = pts.map { it.longitude }
+                val latRange = lats.max() - lats.min()
+                val lonRange = lons.max() - lons.min()
+                if (latRange < MIN_SEPARABLE_DEG && lonRange < MIN_SEPARABLE_DEG) {
+                    clusterPickerRef.value = pts
+                } else {
+                    val latPad = maxOf(0.002, latRange * 0.3)
+                    val lonPad = maxOf(0.002, lonRange * 0.3)
+                    val bounds = LatLngBounds.Builder()
+                        .include(LatLng(lats.max() + latPad, lons.max() + lonPad))
+                        .include(LatLng(lats.min() - latPad, lons.min() - lonPad))
+                        .build()
+                    map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 80))
                 }
             }
+            null -> { /* simbolo sconosciuto, ignora */ }
         }
-        mapView.overlays.add(marker)
+        true
     }
-    mapView.invalidate()
 }
+
+/**
+ * Converte createCloudBubbleDrawable in Bitmap (riutilizza la logica Canvas identica).
+ */
+private fun createCloudBubbleBitmap(
+    context: Context,
+    emoji: String,
+    title: String,
+    isFavorite: Boolean = false
+): android.graphics.Bitmap = createCloudBubbleDrawable(context, emoji, title, isFavorite).bitmap
+
+/**
+ * Converte createClusterDrawable in Bitmap.
+ */
+private fun createClusterBitmap(context: Context, count: Int): android.graphics.Bitmap =
+    createClusterDrawable(context, count).bitmap
 
 /**
  * Pin Material per marker singolo: badge arrotondato (emoji + titolo) con codina triangolare.
@@ -1589,72 +1759,46 @@ private fun createClusterDrawable(context: Context, count: Int): BitmapDrawable 
 }
 
 /**
- * Overlay "Sono qui" con indicatore direzionale.
- * Disegna su canvas: settore circolare con RadialGradient (opaco vicino al punto,
- * trasparente in lontananza) + glow + anello bianco + disco blu centrale.
- * [azimuth] viene aggiornato in tempo reale dal sensore TYPE_ROTATION_VECTOR.
+ * Attiva il [LocationComponent] built-in di MapLibre con render mode bussola
+ * (puck + bearing arrow). Idempotente: safe da chiamare più volte.
+ * Va ri-invocato dopo ogni [MapLibreMap.setStyle] perché il componente è legato allo Style.
+ *
+ * Richiede permesso `ACCESS_FINE_LOCATION` (controllato dal chiamante).
  */
-private class MyLocationOverlay(var lat: Double, var lon: Double) :
-    org.osmdroid.views.overlay.Overlay() {
+@android.annotation.SuppressLint("MissingPermission")
+private fun activateLocationPuck(context: Context, map: MapLibreMap, style: Style) {
+    runCatching {
+        val lc = map.locationComponent
+        lc.activateLocationComponent(
+            LocationComponentActivationOptions.builder(context, style)
+                .useDefaultLocationEngine(true)
+                .build()
+        )
+        lc.isLocationComponentEnabled = true
+        lc.renderMode = RenderMode.COMPASS
+        lc.cameraMode = CameraMode.NONE
+    }.onFailure {
+        android.util.Log.w("MapScreen", "activateLocationPuck failed: ${it.message}", it)
+    }
+}
 
-    var azimuth: Float = 0f
-
-    override fun draw(canvas: Canvas, mapView: MapView, shadow: Boolean) {
-        if (shadow) return
-        val pt = android.graphics.Point()
-        mapView.projection.toPixels(OsmGeoPoint(lat, lon), pt)
-        val x = pt.x.toFloat()
-        val y = pt.y.toFloat()
-        val d = mapView.context.resources.displayMetrics.density
-        val dotR  =  9f * d
-        val ringR = 12f * d
-        val glowR = 17f * d
-
-        // Settore direzionale con sfumatura radiale — ruotato sull'azimuth corrente
-        canvas.save()
-        canvas.rotate(azimuth, x, y)
-        val beamLen   = 55f * d   // lunghezza del raggio
-        val halfAngle = 22f       // semi-ampiezza del settore in gradi
-        // Settore: dal centro, arco nella direzione "su" (−90° ± halfAngle)
-        val sectorPath = Path().apply {
-            moveTo(x, y)
-            arcTo(
-                RectF(x - beamLen, y - beamLen, x + beamLen, y + beamLen),
-                -90f - halfAngle,
-                halfAngle * 2f,
-                false
-            )
-            close()
+/**
+ * Spinge una posizione fresca al [LocationComponent] senza aspettare il prossimo
+ * fix del LocationEngine — il puck compare subito con la posizione passata invece
+ * di restare invisibile finché il provider non produce un fix.
+ */
+@android.annotation.SuppressLint("MissingPermission")
+private fun pushLocationToPuck(map: MapLibreMap, lat: Double, lon: Double) {
+    runCatching {
+        val lc = map.locationComponent
+        if (lc.isLocationComponentActivated && lc.isLocationComponentEnabled) {
+            val loc = android.location.Location("manual").apply {
+                latitude = lat
+                longitude = lon
+                time = System.currentTimeMillis()
+                accuracy = 10f
+            }
+            lc.forceLocationUpdate(loc)
         }
-        canvas.drawPath(sectorPath, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = RadialGradient(
-                x, y, beamLen,
-                intArrayOf(
-                    AndroidColor.argb(200, 33, 150, 243),  // opaco vicino al punto
-                    AndroidColor.argb(60,  33, 150, 243),  // semi-trasparente a metà
-                    AndroidColor.argb(0,   33, 150, 243)   // invisibile al bordo
-                ),
-                floatArrayOf(0.05f, 0.55f, 1.0f),
-                Shader.TileMode.CLAMP
-            )
-            style = Paint.Style.FILL
-        })
-        canvas.restore()
-
-        // Glow esterno
-        canvas.drawCircle(x, y, glowR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = AndroidColor.argb(55, 33, 150, 243)
-            style = Paint.Style.FILL
-        })
-        // Anello bianco
-        canvas.drawCircle(x, y, ringR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = AndroidColor.WHITE
-            style = Paint.Style.FILL
-        })
-        // Disco blu
-        canvas.drawCircle(x, y, dotR, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = AndroidColor.rgb(33, 150, 243)
-            style = Paint.Style.FILL
-        })
     }
 }
