@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.2] - 2026-04-26
+### Added
+- GPX and Garmin FIT track import: the "Import track" button now accepts `.gpx` and `.fit` files in addition to `.kml`. GPX tracks are parsed via `XmlPullParser`; FIT files via the Garmin FIT SDK 21.200.0. Both formats are converted to KML before storage so all existing overlay rendering and backup logic applies unchanged.
+
+### Changed
+- `PointKmlRepository`: `importKml` and `importTrackContent` now share a private `upsertKml()` helper; removed duplicate dedup/insert logic and eliminated a no-op `dao.update()` call on re-import.
+- `AddEditViewModel.importKml`: file I/O moved off the Main thread (was a potential ANR on large tracks); error handling simplified to a single `try/catch`.
+
+---
+
 ## [1.4.1] - 2026-04-24
 ### Fixed
 - KML track line color bug: `#FF4466EE` was parsed by MapLibre as CSS `RRGGBBAA` (rendering as red/dark instead of blue); replaced with unambiguous CSS hex colors.
