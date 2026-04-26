@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.3] - 2026-04-26
+### Added
+- Emoji picker: categorized tabbed layout (7 categories — Places, Nature, Transport, Food, Sports, Animals, Symbols) replacing the flat scrollable list.
+
+### Changed
+- `PointBottomSheet`: secondary actions (share, maps, archive, delete) now reveal progressively on scroll via `NestedScrollConnection`-driven `showMore` state.
+- `PointDetailScreen`: actions (share location, share .geoj, archive, delete) moved to a `DropdownMenu` in the TopAppBar; primary navigation actions (map, Google Maps) promoted to a full-width button row at the top of content.
+- `MapViewModel` / `PointDetailViewModel`: `toggleFavorite` now applies optimistic UI update before the Room write, eliminating the ~100–500 ms lag on star tap.
+- Removed unused `onShareGeoj`, `onArchiveToggle`, `onDelete` parameters from `PointDetailContent` (superseded by TopAppBar menu).
+
+---
+
 ## [1.4.2] - 2026-04-26
 ### Added
 - GPX and Garmin FIT track import: the "Import track" button now accepts `.gpx` and `.fit` files in addition to `.kml`. GPX tracks are parsed via `XmlPullParser`; FIT files via the Garmin FIT SDK 21.200.0. Both formats are converted to KML before storage so all existing overlay rendering and backup logic applies unchanged.
