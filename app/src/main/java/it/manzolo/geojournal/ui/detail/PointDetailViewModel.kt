@@ -143,6 +143,7 @@ class PointDetailViewModel @Inject constructor(
     fun toggleFavorite() {
         val point = _uiState.value.point ?: return
         val newFav = !point.isFavorite
+        _uiState.update { it.copy(point = point.copy(isFavorite = newFav)) }
         viewModelScope.launch {
             repository.toggleFavorite(point.id, newFav)
             val snackRes = if (newFav) it.manzolo.geojournal.R.string.favorite_added_snackbar else it.manzolo.geojournal.R.string.favorite_removed_snackbar

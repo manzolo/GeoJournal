@@ -62,11 +62,14 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -235,6 +238,8 @@ fun PointDetailScreen(
         )
     }
 
+    var showMenu by remember { mutableStateOf(false) }
+
     Scaffold(
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
@@ -268,6 +273,53 @@ fun PointDetailScreen(
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
                         }) {
                             Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.point_edit))
+                        }
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = null)
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.point_share_location)) },
+                                    leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, null))
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.detail_share_geoj)) },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.onShareRequested()
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive)) },
+                                    leadingIcon = { Icon(if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.toggleArchiveConfirm()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.point_delete_confirm_button), color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.toggleDeleteConfirm()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -304,9 +356,6 @@ fun PointDetailScreen(
                 onLogVisitAt = viewModel::logVisitAt,
                 onDeleteVisitLog = viewModel::deleteVisitLog,
                 onDeleteReminder = viewModel::deleteReminder,
-                onArchiveToggle = viewModel::toggleArchiveConfirm,
-                onDelete = viewModel::toggleDeleteConfirm,
-                onShareGeoj = viewModel::onShareRequested,
                 onMessage = { snackbarHostState.showSnackbar(it) },
                 navController = navController,
                 modifier = Modifier.padding(innerPadding)
@@ -328,9 +377,6 @@ private fun PointDetailContent(
     onLogVisitAt: (Long) -> Unit,
     onDeleteVisitLog: (VisitLogEntry) -> Unit,
     onDeleteReminder: (Reminder) -> Unit,
-    onArchiveToggle: () -> Unit,
-    onDelete: () -> Unit,
-    onShareGeoj: () -> Unit,
     onMessage: suspend (String) -> Unit,
     navController: NavController,
     modifier: Modifier = Modifier
@@ -446,6 +492,45 @@ private fun PointDetailContent(
                         modifier = Modifier.padding(16.dp)
                     )
                 }
+            }
+        }
+
+        // ── Azioni Rapide (Navigazione) ───────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = {
+                    MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
+                    navController.navigate(Routes.Map.route) {
+                        popUpTo(Routes.Map.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.point_navigate_on_map))
+            }
+            androidx.compose.material3.FilledTonalButton(
+                onClick = {
+                    val uri = android.net.Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${android.net.Uri.encode(point.title)})")
+                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            ) {
+                Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.point_open_google_maps))
             }
         }
 
@@ -601,76 +686,15 @@ private fun PointDetailContent(
             }
         }
 
-        // ── Azioni ────────────────────────────────────────────────────────────
+        // ── Registrazione percorso GPS ────────────────────────────────────────
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionGridButton(
-                        icon = Icons.Filled.MyLocation,
-                        label = stringResource(R.string.point_navigate_on_map),
-                        onClick = {
-                            MapViewModel.FocusRequest.send(point.latitude, point.longitude, point.id)
-                            navController.popBackStack(Routes.Map.route, inclusive = false)
-                        },
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    ActionGridButton(
-                        icon = Icons.Filled.Map,
-                        label = stringResource(R.string.point_open_google_maps),
-                        onClick = {
-                            val uri = Uri.parse("geo:${point.latitude},${point.longitude}?q=${point.latitude},${point.longitude}(${Uri.encode(point.title)})")
-                            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                        },
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionGridButton(
-                        icon = Icons.Filled.Share,
-                        label = stringResource(R.string.point_share_location),
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "https://maps.google.com/?q=${point.latitude},${point.longitude}")
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, null))
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActionGridButton(
-                        icon = Icons.AutoMirrored.Filled.Send,
-                        label = stringResource(R.string.detail_share_geoj),
-                        onClick = onShareGeoj,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionGridButton(
-                        icon = if (point.isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
-                        label = stringResource(if (point.isArchived) R.string.point_unarchive else R.string.point_archive),
-                        onClick = onArchiveToggle,
-                        modifier = Modifier.weight(1f),
-                        containerColor = Color(0xFFFFF9C4),
-                        contentColor = Color(0xFF5D4037)
-                    )
-                    ActionGridButton(
-                        icon = Icons.Filled.Delete,
-                        label = stringResource(R.string.point_delete_confirm_button),
-                        onClick = onDelete,
-                        modifier = Modifier.weight(1f),
-                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
-                // ── Registrazione percorso GPS ────────────────────────────────
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader(icon = Icons.Filled.MyLocation, title = stringResource(R.string.tracking_start_button))
                 if (!isTracking) {
                     Button(
                         onClick = onStartTracking,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -706,6 +730,7 @@ private fun PointDetailContent(
                         Button(
                             onClick = onStopTracking,
                             modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
@@ -775,39 +800,6 @@ private fun PointDetailContent(
     }
 }
 
-@Composable
-private fun ActionGridButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.secondaryContainer,
-    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSecondaryContainer
-) {
-    androidx.compose.material3.FilledTonalButton(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = containerColor,
-            contentColor = contentColor
-        )
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(vertical = 6.dp)
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 2
-            )
-        }
-    }
-}
 
 @Composable
 private fun SectionHeader(icon: ImageVector, title: String, modifier: Modifier = Modifier) {

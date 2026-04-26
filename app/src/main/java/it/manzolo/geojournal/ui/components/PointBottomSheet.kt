@@ -57,6 +57,12 @@ import it.manzolo.geojournal.R
 import it.manzolo.geojournal.domain.model.GeoPoint
 import java.text.SimpleDateFormat
 import java.util.Locale
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +81,17 @@ fun PointBottomSheet(
     // skipPartiallyExpanded = false → il bottom sheet inizia in peek (parziale)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    var showMore by remember { mutableStateOf(false) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (available.y < -5f && !showMore) {
+                    showMore = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
     var showDatesDialog by remember { mutableStateOf(false) }
     var showArchiveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -162,6 +179,8 @@ fun PointBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .nestedScroll(nestedScrollConnection)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp)
         ) {
@@ -197,31 +216,6 @@ fun PointBottomSheet(
                 }
             }
 
-            // Coordinate + (i) per creato/modificato
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "📍 %.5f, %.5f".format(point.latitude, point.longitude),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(
-                    onClick = { showDatesDialog = true },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.Info,
-                        contentDescription = stringResource(R.string.point_info_created, ""),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Pulsanti principali: Modifica + Dettaglio
@@ -251,7 +245,7 @@ fun PointBottomSheet(
 
             // Descrizione — visibile solo quando il sheet è espanso
             AnimatedVisibility(
-                visible = sheetState.currentValue == SheetValue.Expanded && point.description.isNotBlank(),
+                visible = showMore && point.description.isNotBlank(),
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -268,7 +262,7 @@ fun PointBottomSheet(
 
             // Tag — visibili solo quando il sheet è completamente espanso
             AnimatedVisibility(
-                visible = sheetState.currentValue == SheetValue.Expanded && point.tags.isNotEmpty(),
+                visible = showMore && point.tags.isNotEmpty(),
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -286,80 +280,122 @@ fun PointBottomSheet(
                 }
             }
 
-            // Divider tra azioni primarie e secondarie
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Azioni secondarie: Condividi, Google Maps, Condividi Maps
-            if (onShareClick != null) {
-                OutlinedButton(
-                    onClick = { onShareClick(point) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_share))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            if (onOpenGoogleMaps != null) {
-                OutlinedButton(
-                    onClick = { onOpenGoogleMaps(point) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_open_google_maps))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            if (onShareGoogleMaps != null) {
-                OutlinedButton(
-                    onClick = { onShareGoogleMaps(point) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_share_google_maps))
+            // Coordinate e Info — visibili solo quando il sheet è espanso
+            AnimatedVisibility(
+                visible = showMore,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "📍 %.5f, %.5f".format(point.latitude, point.longitude),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { showDatesDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Info,
+                                contentDescription = stringResource(R.string.point_info_created, ""),
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
                 }
             }
 
-            // Divider prima delle azioni distruttive
-            if (onArchiveClick != null || onDeleteClick != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            // Azioni secondarie — raggruppate assieme per essere visibili solo su showMore
+            AnimatedVisibility(
+                visible = showMore,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Divider tra azioni primarie e secondarie
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-            // Archivia
-            if (onArchiveClick != null) {
-                OutlinedButton(
-                    onClick = { showArchiveDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.tertiary
-                    )
-                ) {
-                    Icon(Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_archive))
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+                    // Azioni secondarie: Condividi, Google Maps, Condividi Maps
+                    if (onShareClick != null) {
+                        OutlinedButton(
+                            onClick = { onShareClick(point) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.point_share))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (onOpenGoogleMaps != null) {
+                        OutlinedButton(
+                            onClick = { onOpenGoogleMaps(point) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Map, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.point_open_google_maps))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    if (onShareGoogleMaps != null) {
+                        OutlinedButton(
+                            onClick = { onShareGoogleMaps(point) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.point_share_google_maps))
+                        }
+                    }
 
-            // Elimina
-            if (onDeleteClick != null) {
-                OutlinedButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.point_delete))
+                    // Divider prima delle azioni distruttive
+                    if (onArchiveClick != null || onDeleteClick != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    // Archivia
+                    if (onArchiveClick != null) {
+                        OutlinedButton(
+                            onClick = { showArchiveDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.tertiary
+                            )
+                        ) {
+                            Icon(Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.point_archive))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    // Elimina
+                    if (onDeleteClick != null) {
+                        OutlinedButton(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.point_delete))
+                        }
+                    }
                 }
             }
         }

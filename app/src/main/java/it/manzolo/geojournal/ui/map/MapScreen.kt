@@ -555,9 +555,10 @@ fun MapScreen(
     }
 
     // Focus su punto specifico (es. da Lista): centra + auto-seleziona il punto
-    LaunchedEffect(uiState.focusTarget) {
-        uiState.focusTarget?.let { target ->
-            val map = mapLibreMapRef.value ?: return@LaunchedEffect
+    LaunchedEffect(uiState.focusTarget, mapLibreMapRef.value) {
+        val target = uiState.focusTarget
+        val map = mapLibreMapRef.value
+        if (target != null && map != null) {
             map.animateCamera(
                 CameraUpdateFactory.newLatLngZoom(LatLng(target.lat, target.lon), target.zoom)
             )

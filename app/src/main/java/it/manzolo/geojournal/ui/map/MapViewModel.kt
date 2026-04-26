@@ -296,17 +296,15 @@ class MapViewModel @Inject constructor(
 
     fun toggleFavorite(point: GeoPoint) {
         val newFav = !point.isFavorite
+        _uiState.update { state ->
+            val updatedSelected = if (state.selectedPoint?.id == point.id)
+                state.selectedPoint.copy(isFavorite = newFav) else state.selectedPoint
+            state.copy(selectedPoint = updatedSelected)
+        }
         viewModelScope.launch {
             repository.toggleFavorite(point.id, newFav)
             val snackRes = if (newFav) R.string.favorite_added_snackbar else R.string.favorite_removed_snackbar
-            _uiState.update { state ->
-                val updatedSelected = if (state.selectedPoint?.id == point.id)
-                    state.selectedPoint.copy(isFavorite = newFav) else state.selectedPoint
-                state.copy(
-                    selectedPoint = updatedSelected,
-                    favoriteSnackbarRes = snackRes
-                )
-            }
+            _uiState.update { it.copy(favoriteSnackbarRes = snackRes) }
         }
     }
 

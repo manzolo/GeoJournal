@@ -71,6 +71,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -152,36 +154,14 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 
-private val EMOJI_LIST = listOf(
-    // Luoghi e navigazione
-    "📍", "🗺️", "🧭", "📌", "🚩", "🏁", "🔍", "🌐",
-    // Natura e paesaggi
-    "🏔️", "⛰️", "🗻", "🌋", "🏕️", "⛺", "🌊", "🏖️",
-    "🏝️", "🌅", "🌄", "🌆", "🌇", "🌉", "🌁", "🌃",
-    "🌳", "🌲", "🌴", "🌵", "🍀", "🌿", "🌾", "🍂",
-    "🌸", "🌺", "🌻", "🌼", "🌹", "🌷", "💐", "🍄",
-    // Edifici e strutture
-    "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏨",
-    "🏩", "🏪", "🏫", "🏬", "🏭", "🏯", "🏰", "🗼",
-    "🗽", "🗺️", "⛪", "🕌", "🛕", "🕍", "🏛️", "🏟️",
-    // Trasporti
-    "🚗", "🚕", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒",
-    "✈️", "🚂", "🚢", "⛵", "🚁", "🛶", "🚲", "🛤️",
-    // Cibo e bevande
-    "🍕", "🍔", "🌮", "🌯", "🍜", "🍣", "🍦", "🎂",
-    "☕", "🍷", "🍺", "🥂", "🧃", "🍹", "🥐", "🍰",
-    // Attività e sport
-    "🧗", "🚴", "🏊", "⛷️", "🏄", "🎿", "🤿", "🧘",
-    "🎯", "⛳", "🎣", "🏕️", "🏋️", "🤸", "🚵", "🧜",
-    // Arte e cultura
-    "🎨", "🎭", "🎪", "🎡", "🎠", "🎢", "🎵", "🎶",
-    "📸", "🎬", "🎤", "🎸", "🎹", "📚", "🖼️", "🎭",
-    // Animali
-    "🐘", "🦁", "🐬", "🦋", "🐦", "🦅", "🐺", "🦊",
-    "🐸", "🐢", "🦎", "🐧", "🦜", "🦩", "🦚", "🐾",
-    // Simboli e altro
-    "⭐", "🌟", "💫", "✨", "🔥", "💎", "🏺", "🗿",
-    "🌞", "🌙", "❄️", "⛅", "🌈", "💧", "🌊", "🎯"
+private val EMOJI_CATEGORIES = mapOf(
+    "📍" to listOf("📍", "🗺️", "🧭", "📌", "🚩", "🏁", "🔍", "🌐", "🧳", "🗺", "🗾", "🏔️", "⛰️", "🌋", "🗻", "🏕️", "⛺", "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏨", "🏩", "🏪", "🏫", "🏬", "🏭", "🏯", "🏰", "🗽", "🗼", "⛩️", "🕋", "🕌", "🕍", "🛕", "🏛️", "🏟️", "🎡", "🎢", "🎠", "⛲", "⛱️", "🏖️", "🏝️", "🏜️", "🛖"),
+    "🌲" to listOf("🌲", "🌳", "🌴", "🌵", "🌿", "☘️", "🍀", "🍁", "🍂", "🍃", "🍄", "🌰", "🌸", "💮", "🏵️", "🌹", "🥀", "🌺", "🌻", "🌼", "🌷", "🌱", "🪴", "🪵", "🪨", "☄️", "✨", "☀️", "🌤️", "⛅", "🌥️", "☁️", "🌦️", "🌧️", "⛈️", "🌩️", "🌨️", "❄️", "☃️", "⛄", "🌬️", "💨", "🌪️", "🌫️", "🌈", "☔", "💧", "💦", "🌊"),
+    "🚗" to listOf("🚗", "🚕", "🚙", "🚌", "🚎", "🏎️", "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🦯", "🦽", "🦼", "🛴", "🚲", "🛵", "🏍️", "🛺", "🚨", "🚔", "🚍", "🚘", "🚖", "🚡", "🚠", "🚟", "🚃", "🚋", "🚞", "🚝", "🚄", "🚅", "🚈", "🚂", "🚆", "🚇", "🚊", "🚉", "✈️", "🛫", "🛬", "🛩️", "💺", "🛰️", "🚀", "🛸", "🚁", "🛶", "⛵", "🚤", "🛥️", "🛳️", "⛴️", "🚢", "⚓", "🪝"),
+    "🍔" to listOf("🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆", "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🥨", "🧀", "🥚", "🍳", "🧈", "🥞", "🧇", "🥓", "🥩", "🍗", "🍖", "🌭", "🍔", "🍟", "🍕", "🫓", "🥪", "🥙", "🧆", "🌮", "🌯", "🫔", "🥗", "🥘", "🫕", "🥫", "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🦪", "🍤", "🍙", "🍚", "🍘", "🍥", "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰", "🥜", "🍯", "🥛", "🍼", "🫖", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾", "🧊", "🥄", "🍴", "🍽️", "🥣", "🥡", "🥢", "🧂"),
+    "⚽" to listOf("⚽", "⚾", "🥎", "🏀", "🏐", "🏈", "🏉", "🎾", "🥏", "🎳", "🏏", "🏑", "🏒", "🥍", "🏓", "🏸", "🥊", "🥋", "🥅", "⛳", "⛸️", "🎣", "🤿", "🎽", "🎿", "🛷", "🥌", "🎯", "🪀", "🪁", "🎱", "🔮", "🪄", "🧿", "🎮", "🕹️", "🎰", "🎲", "🧩", "🧸", "🪅", "🪆", "♠️", "♥️", "♦️", "♣️", "♟️", "🃏", "🀄", "🎴", "🎭", "🖼️", "🎨", "🧵", "🪡", "🧶", "🪢"),
+    "🐶" to listOf("🐵", "🐒", "🦍", "🦧", "🐶", "🐕", "🦮", "🐕‍🦺", "🐩", "🐺", "🦊", "🦝", "🐱", "🐈", "🐈‍⬛", "🦁", "🐯", "🐅", "🐆", "🐴", "🐎", "🦄", "🦓", "🦌", "🦬", "🐮", "🐂", "🐃", "🐄", "🐷", "🐖", "🐗", "🐽", "🐏", "🐑", "🐐", "🐪", "🐫", "🦙", "🦒", "🐘", "🦣", "🦏", "🦛", "🐭", "🐁", "🐀", "🐹", "🐰", "🐇", "🐿️", "🦫", "🦔", "🦇", "熊", "🐨", "🐼", "🦥", "🦦", "🦨", "🦘", "🦡", "🐾", "🦃", "🐔", "🐓", "🐣", "🐤", "🐥", "🐦", "🐧", "🕊️", "🦅", "🦆", "🦢", "🦉", "🦤", "🪶", "🦩", "🦚", "🦜", "🐸", "🐊", "🐢", "🦎", "🐍", "🐲", "🐉", "🦕", "🦖", "🐳", "🐋", "🐬", "🦭", "🐟", "🐠", "🐡", "🦈", "🐙", "🐚", "🐌", "🦋", "🐛", "🐜", "🐝", "🪲", "🐞", "🦗", "🪳", "🕷️", "🕸️", "🦂", "🦟", "🪰", "🪱", "🦠"),
+    "🌟" to listOf("⭐", "🌟", "💫", "✨", "🔥", "💎", "🏺", "🗿", "🌞", "🌙", "❄️", "⛅", "🌈", "💧", "🌊", "🎯")
 )
 
 private fun createCameraUri(context: Context): Uri {
@@ -1667,21 +1647,52 @@ private fun EmojiPickerDialog(
     onEmojiSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val categories = EMOJI_CATEGORIES.keys.toList()
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.addedit_emoji_title)) },
         text = {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(8),
-                modifier = Modifier.height(360.dp)
-            ) {
-                items(EMOJI_LIST) { emoji ->
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.size(40.dp).clickable { onEmojiSelected(emoji) }
-                    ) {
-                        Text(text = emoji, style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    edgePadding = 0.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = Color.Transparent,
+                    divider = {}
+                ) {
+                    categories.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(title, style = MaterialTheme.typography.titleMedium) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(56.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.height(350.dp)
+                ) {
+                    val currentCategoryEmojis = EMOJI_CATEGORIES[categories[selectedTabIndex]] ?: emptyList()
+                    items(currentCategoryEmojis) { emoji ->
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable { onEmojiSelected(emoji) }
+                        ) {
+                            Text(
+                                text = emoji, 
+                                style = MaterialTheme.typography.headlineMedium,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
