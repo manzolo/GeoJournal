@@ -13,13 +13,11 @@ class TrackImportConverterTest {
 
     private lateinit var contentResolver: ContentResolver
     private lateinit var uri: Uri
-    private lateinit var converter: TrackImportConverter
 
     @Before
     fun setup() {
         contentResolver = mockk()
         uri = mockk()
-        converter = TrackImportConverter()
     }
 
     @Test
@@ -28,7 +26,7 @@ class TrackImportConverterTest {
         val inputStream = ByteArrayInputStream(kmlContent.toByteArray())
         every { contentResolver.openInputStream(uri) } returns inputStream
 
-        val result = converter.convert(uri, "test.KML", contentResolver)
+        val result = TrackImportConverter.convert(uri, "test.KML", contentResolver)
 
         assertEquals("test.kml", result.newName)
         assertEquals(kmlContent, String(result.kmlContent))
@@ -37,18 +35,18 @@ class TrackImportConverterTest {
     @Test(expected = IllegalArgumentException::class)
     fun `convert KML with null stream throws exception`() {
         every { contentResolver.openInputStream(uri) } returns null
-        converter.convert(uri, "test.kml", contentResolver)
+        TrackImportConverter.convert(uri, "test.kml", contentResolver)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `convert GPX with null stream throws exception`() {
         every { contentResolver.openInputStream(uri) } returns null
-        converter.convert(uri, "my_track.gpx", contentResolver)
+        TrackImportConverter.convert(uri, "my_track.gpx", contentResolver)
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `convert FIT with null stream throws exception`() {
         every { contentResolver.openInputStream(uri) } returns null
-        converter.convert(uri, "my_track.fit", contentResolver)
+        TrackImportConverter.convert(uri, "my_track.fit", contentResolver)
     }
 }

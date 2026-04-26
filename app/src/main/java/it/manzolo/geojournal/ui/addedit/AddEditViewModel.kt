@@ -283,42 +283,31 @@ class AddEditViewModel @Inject constructor(
     fun importKml(uri: Uri, displayName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val converter = TrackImportConverter()
-                val result = converter.convert(uri, displayName, context.contentResolver)
-                
-                withContext(Dispatchers.Main) {
+                val result = TrackImportConverter.convert(uri, displayName, context.contentResolver)
+                if (isEditMode) {
+                    kmlRepository.importTrackContent(existingId, result.newName, result.kmlContent)
                     _uiState.update { it.copy(isDirty = true) }
-                    if (isEditMode) {
-                        runCatching { kmlRepository.importTrackContent(existingId, result.newName, result.kmlContent) }.onFailure { e ->
-                            _uiState.update { it.copy(error = e.message) }
-                        }
+                } else {
+                    // New-point mode: GeoPoint not in DB yet, save file and track pending
+                    val existing = withContext(Dispatchers.Main) {
+                        pendingNewKmls.firstOrNull { it.name == result.newName }
+                    }
+                    if (existing != null) {
+                        File(existing.filePath).writeBytes(result.kmlContent)
+                        _uiState.update { it.copy(isDirty = true) }
                     } else {
-                        // New-point mode: GeoPoint not in DB yet, so save file only and track pending
-                        runCatching {
-                            // Dedup by name within pending list
-                            val existing = pendingNewKmls.firstOrNull { it.name == result.newName }
-                            if (existing != null) {
-                                // Overwrite the existing pending KML file
-                                File(existing.filePath).writeBytes(result.kmlContent)
-                            } else {
-                                val dir = File(context.filesDir, "kmls/$existingId").apply { mkdirs() }
-                                val dest = File(dir, "${UUID.randomUUID()}.kml")
-                                dest.writeBytes(result.kmlContent)
-                                val kml = PointKml(geoPointId = existingId, name = result.newName, filePath = dest.absolutePath)
-                                pendingNewKmls.add(kml)
-                                _uiState.update { state ->
-                                    state.copy(kmls = state.kmls + kml, isAdditionalDetailsExpanded = true)
-                                }
-                            }
-                        }.onFailure { e ->
-                            _uiState.update { it.copy(error = e.message) }
+                        val dir = File(context.filesDir, "kmls/$existingId").apply { mkdirs() }
+                        val dest = File(dir, "${UUID.randomUUID()}.kml")
+                        dest.writeBytes(result.kmlContent)
+                        val kml = PointKml(geoPointId = existingId, name = result.newName, filePath = dest.absolutePath)
+                        withContext(Dispatchers.Main) { pendingNewKmls.add(kml) }
+                        _uiState.update { state ->
+                            state.copy(kmls = state.kmls + kml, isDirty = true, isAdditionalDetailsExpanded = true)
                         }
                     }
                 }
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(error = e.message ?: "Errore durante l'importazione") }
-                }
+                _uiState.update { it.copy(error = e.message ?: "Errore durante l'importazione") }
             }
         }
     }

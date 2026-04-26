@@ -30,31 +30,28 @@ class PointKmlRepositoryImpl @Inject constructor(
     override suspend fun getAll(): List<PointKml> =
         dao.getAll().map { it.toDomain() }
 
-    override suspend fun importKml(uri: Uri, geoPointId: String, displayName: String): PointKml {
-        val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
-        // Deduplication by name: overwrite if a KML with the same name exists for this point
-        val existing = dao.findByName(geoPointId, displayName)
-        val dest = if (existing != null) File(existing.filePath) else File(dir, "${UUID.randomUUID()}.kml")
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            dest.outputStream().use { output -> input.copyTo(output) }
+    override suspend fun importKml(uri: Uri, geoPointId: String, displayName: String): PointKml =
+        upsertKml(geoPointId, displayName) { dest ->
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { output -> input.copyTo(output) }
+            }
         }
-        return if (existing != null) {
-            existing.toDomain().also { dao.update(existing) }
-        } else {
-            val kml = PointKml(geoPointId = geoPointId, name = displayName, filePath = dest.absolutePath)
-            dao.insert(kml.toEntity())
-            kml
-        }
-    }
 
-    override suspend fun importTrackContent(geoPointId: String, name: String, content: ByteArray): PointKml {
-        val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
-        // Deduplication by name: overwrite if a KML with the same name exists for this point
+    override suspend fun importTrackContent(geoPointId: String, name: String, content: ByteArray): PointKml =
+        upsertKml(geoPointId, name) { dest -> dest.writeBytes(content) }
+
+    // Deduplication by name: overwrites the existing file if a KML with the same name exists for this point.
+    private suspend fun upsertKml(geoPointId: String, name: String, write: (File) -> Unit): PointKml {
         val existing = dao.findByName(geoPointId, name)
-        val dest = if (existing != null) File(existing.filePath) else File(dir, "${UUID.randomUUID()}.kml")
-        dest.writeBytes(content)
+        val dest = if (existing != null) {
+            File(existing.filePath)
+        } else {
+            File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
+                .let { File(it, "${UUID.randomUUID()}.kml") }
+        }
+        write(dest)
         return if (existing != null) {
-            existing.toDomain().also { dao.update(existing) }
+            existing.toDomain()
         } else {
             val kml = PointKml(geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
             dao.insert(kml.toEntity())
