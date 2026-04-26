@@ -32,6 +32,7 @@ googleid = "1.2.0"
 googleServicesLocationVersion = "21.3.0"
 googleServicesPlugin = "4.4.2"
 crashlyticsPlugin = "3.0.2"
+fit = "21.200.0"
 
 [libraries]
 # AndroidX Core
@@ -102,6 +103,9 @@ credentials = { group = "androidx.credentials", name = "credentials", version.re
 credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialManager" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googleServicesLocationVersion" }
+
+# Garmin FIT SDK
+garmin-fit = { group = "com.garmin", name = "fit", version.ref = "fit" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

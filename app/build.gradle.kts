@@ -143,6 +143,9 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.play.services.location)
 
+    // Garmin FIT SDK
+    implementation(libs.garmin.fit)
+
     // Credential Manager (Sign in with Google — sostituisce legacy GoogleSignIn)
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)

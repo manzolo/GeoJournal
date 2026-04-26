@@ -280,7 +280,7 @@
     <string name="addedit_section_notes">Personal notes</string>
     <string name="addedit_notes_hint">Private notes…</string>
     <string name="addedit_section_kml">GPS Tracks</string>
-    <string name="addedit_import_kml">Import track</string>
+    <string name="addedit_import_kml">Import track (KML, GPX, FIT)</string>
     <string name="addedit_kml_rename_title">Rename track</string>
     <string name="addedit_kml_rename_hint">Name</string>
     <string name="addedit_remove_photo_confirm_title">Remove photo</string>

@@ -22,7 +22,10 @@ import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.repository.GeoPointRepository
 import it.manzolo.geojournal.domain.repository.PointKmlRepository
 import it.manzolo.geojournal.domain.repository.ReminderRepository
+import it.manzolo.geojournal.data.kml.TrackImportConverter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -278,32 +281,43 @@ class AddEditViewModel @Inject constructor(
     fun toggleAdditionalDetails() = _uiState.update { it.copy(isAdditionalDetailsExpanded = !it.isAdditionalDetailsExpanded) }
 
     fun importKml(uri: Uri, displayName: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isDirty = true) }
-            if (isEditMode) {
-                runCatching { kmlRepository.importKml(uri, existingId, displayName) }
-            } else {
-                // New-point mode: GeoPoint not in DB yet, so save file only and track pending
-                runCatching {
-                    // Dedup by name within pending list
-                    val existing = pendingNewKmls.firstOrNull { it.name == displayName }
-                    if (existing != null) {
-                        // Overwrite the existing pending KML file
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            File(existing.filePath).outputStream().use { output -> input.copyTo(output) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val converter = TrackImportConverter()
+                val result = converter.convert(uri, displayName, context.contentResolver)
+                
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(isDirty = true) }
+                    if (isEditMode) {
+                        runCatching { kmlRepository.importTrackContent(existingId, result.newName, result.kmlContent) }.onFailure { e ->
+                            _uiState.update { it.copy(error = e.message) }
                         }
                     } else {
-                        val dir = File(context.filesDir, "kmls/$existingId").apply { mkdirs() }
-                        val dest = File(dir, "${UUID.randomUUID()}.kml")
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            dest.outputStream().use { output -> input.copyTo(output) }
-                        }
-                        val kml = PointKml(geoPointId = existingId, name = displayName, filePath = dest.absolutePath)
-                        pendingNewKmls.add(kml)
-                        _uiState.update { state ->
-                            state.copy(kmls = state.kmls + kml, isAdditionalDetailsExpanded = true)
+                        // New-point mode: GeoPoint not in DB yet, so save file only and track pending
+                        runCatching {
+                            // Dedup by name within pending list
+                            val existing = pendingNewKmls.firstOrNull { it.name == result.newName }
+                            if (existing != null) {
+                                // Overwrite the existing pending KML file
+                                File(existing.filePath).writeBytes(result.kmlContent)
+                            } else {
+                                val dir = File(context.filesDir, "kmls/$existingId").apply { mkdirs() }
+                                val dest = File(dir, "${UUID.randomUUID()}.kml")
+                                dest.writeBytes(result.kmlContent)
+                                val kml = PointKml(geoPointId = existingId, name = result.newName, filePath = dest.absolutePath)
+                                pendingNewKmls.add(kml)
+                                _uiState.update { state ->
+                                    state.copy(kmls = state.kmls + kml, isAdditionalDetailsExpanded = true)
+                                }
+                            }
+                        }.onFailure { e ->
+                            _uiState.update { it.copy(error = e.message) }
                         }
                     }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(error = e.message ?: "Errore durante l'importazione") }
                 }
             }
         }

@@ -47,6 +47,21 @@ class PointKmlRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun importTrackContent(geoPointId: String, name: String, content: ByteArray): PointKml {
+        val dir = File(context.filesDir, "kmls/$geoPointId").apply { mkdirs() }
+        // Deduplication by name: overwrite if a KML with the same name exists for this point
+        val existing = dao.findByName(geoPointId, name)
+        val dest = if (existing != null) File(existing.filePath) else File(dir, "${UUID.randomUUID()}.kml")
+        dest.writeBytes(content)
+        return if (existing != null) {
+            existing.toDomain().also { dao.update(existing) }
+        } else {
+            val kml = PointKml(geoPointId = geoPointId, name = name, filePath = dest.absolutePath)
+            dao.insert(kml.toEntity())
+            kml
+        }
+    }
+
     override suspend fun deleteKml(kml: PointKml) {
         File(kml.filePath).delete()
         dao.deleteById(kml.id)
