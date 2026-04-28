@@ -26,6 +26,8 @@ data class UserPreferences(
     val lastLocalBackupTimestamp: Long = 0L,
     val lastDriveBackupTimestamp: Long = 0L,
     val lastDriveBackupSuccess: Boolean = false,
+    val lastBackupCheckedTimestamp: Long = 0L,  // ultima volta che il worker è girato (skip o backup)
+    val lastBackupFingerprint: String = "",      // fingerprint dati all'ultimo backup riuscito
     val hasSeenDataOnboarding: Boolean = false,
     val mapLat: Double = 0.0,
     val mapLon: Double = 0.0,
@@ -52,6 +54,8 @@ class UserPreferencesRepository @Inject constructor(
         val LAST_LOCAL_BACKUP = longPreferencesKey("last_local_backup_timestamp")
         val LAST_DRIVE_BACKUP = longPreferencesKey("last_drive_backup_timestamp")
         val LAST_DRIVE_BACKUP_SUCCESS = booleanPreferencesKey("last_drive_backup_success")
+        val LAST_BACKUP_CHECKED = longPreferencesKey("last_backup_checked_timestamp")
+        val LAST_BACKUP_FINGERPRINT = stringPreferencesKey("last_backup_fingerprint")
         val HAS_SEEN_DATA_ONBOARDING = booleanPreferencesKey("has_seen_data_onboarding")
         val MAP_LAT = doublePreferencesKey("map_lat")
         val MAP_LON = doublePreferencesKey("map_lon")
@@ -80,6 +84,8 @@ class UserPreferencesRepository @Inject constructor(
                 lastLocalBackupTimestamp = prefs[Keys.LAST_LOCAL_BACKUP] ?: 0L,
                 lastDriveBackupTimestamp = prefs[Keys.LAST_DRIVE_BACKUP] ?: 0L,
                 lastDriveBackupSuccess = prefs[Keys.LAST_DRIVE_BACKUP_SUCCESS] ?: false,
+                lastBackupCheckedTimestamp = prefs[Keys.LAST_BACKUP_CHECKED] ?: 0L,
+                lastBackupFingerprint = prefs[Keys.LAST_BACKUP_FINGERPRINT] ?: "",
                 hasSeenDataOnboarding = prefs[Keys.HAS_SEEN_DATA_ONBOARDING] ?: false,
                 mapLat = prefs[Keys.MAP_LAT] ?: 0.0,
                 mapLon = prefs[Keys.MAP_LON] ?: 0.0,
@@ -127,6 +133,19 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.edit {
             it[Keys.LAST_DRIVE_BACKUP] = timestamp
             it[Keys.LAST_DRIVE_BACKUP_SUCCESS] = success
+        }
+    }
+
+    suspend fun setLastBackupChecked(timestamp: Long) {
+        dataStore.edit { it[Keys.LAST_BACKUP_CHECKED] = timestamp }
+    }
+
+    /** Marca un backup completato in un'unica edit atomica (un solo fsync, una sola emissione). */
+    suspend fun setBackupSuccess(timestamp: Long, fingerprint: String) {
+        dataStore.edit {
+            it[Keys.LAST_LOCAL_BACKUP] = timestamp
+            it[Keys.LAST_BACKUP_FINGERPRINT] = fingerprint
+            it[Keys.LAST_BACKUP_CHECKED] = timestamp
         }
     }
 

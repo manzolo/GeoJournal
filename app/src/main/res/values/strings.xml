@@ -351,6 +351,7 @@
     <string name="profile_last_drive_backup_ok">Drive: sincronizzato il %s</string>
     <string name="profile_last_drive_backup_error">Drive: ultimo invio fallito (%s)</string>
     <string name="profile_drive_never_synced">Drive: mai sincronizzato dall\'auto-backup</string>
+    <string name="profile_backup_checked_no_changes">Verificato il %s — nessuna modifica</string>
     <string name="profile_backup_info_title">Come funziona il backup</string>
     <string name="profile_backup_info_body_api">Il backup viene inviato direttamente sul tuo Google Drive, senza bisogno di aprire l\'app Drive.\n\nIl file sarà visibile su drive.google.com appena completato.\n\n(Per i curiosi: upload diretto tramite Drive REST API, senza buffer locale)</string>
     <string name="profile_backup_info_body_saf">La data e l\'ora indicano quando GeoJournal ha salvato il file nella destinazione che hai scelto.\n\nSe hai selezionato Google Drive, l\'app Drive lo caricherà online nei minuti successivi — di solito quando sei connesso al Wi-Fi.\n\nSe il file non compare subito su Drive, apri l\'app Drive per avviare il caricamento.</string>

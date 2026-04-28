@@ -94,6 +94,7 @@ fun ProfileScreen(
     val lastLocalBackupTimestamp by backupViewModel.lastLocalBackupTimestamp.collectAsState()
     val lastDriveBackupTimestamp by backupViewModel.lastDriveBackupTimestamp.collectAsState()
     val lastDriveBackupSuccess by backupViewModel.lastDriveBackupSuccess.collectAsState()
+    val lastBackupCheckedTimestamp by backupViewModel.lastBackupCheckedTimestamp.collectAsState()
     val context = LocalContext.current
 
     var showDeleteAccountConfirm by remember { mutableStateOf(false) }
@@ -192,6 +193,7 @@ fun ProfileScreen(
             lastLocalBackupTimestamp = lastLocalBackupTimestamp,
             lastDriveBackupTimestamp = lastDriveBackupTimestamp,
             lastDriveBackupSuccess = lastDriveBackupSuccess,
+            lastBackupCheckedTimestamp = lastBackupCheckedTimestamp,
             backupState = backupState,
             dateTag = dateTag,
             onAutoBackupChange = backupViewModel::setAutoBackup,
@@ -474,6 +476,7 @@ private fun BackupCard(
     lastLocalBackupTimestamp: Long,
     lastDriveBackupTimestamp: Long,
     lastDriveBackupSuccess: Boolean,
+    lastBackupCheckedTimestamp: Long,
     backupState: BackupViewModel.State,
     dateTag: String,
     onAutoBackupChange: (Boolean) -> Unit,
@@ -714,6 +717,7 @@ private fun BackupCard(
                     lastLocalBackupTimestamp = lastLocalBackupTimestamp,
                     lastDriveBackupTimestamp = lastDriveBackupTimestamp,
                     lastDriveBackupSuccess = lastDriveBackupSuccess,
+                    lastBackupCheckedTimestamp = lastBackupCheckedTimestamp,
                     hasCloudTarget = hasCloudTarget,
                     onInfoClick = { showBackupInfoDialog = true }
                 )
@@ -855,10 +859,12 @@ private fun BackupStatusSection(
     lastLocalBackupTimestamp: Long,
     lastDriveBackupTimestamp: Long,
     lastDriveBackupSuccess: Boolean,
+    lastBackupCheckedTimestamp: Long,
     hasCloudTarget: Boolean,
     onInfoClick: () -> Unit
 ) {
     val fmt = remember { SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault()) }
+    val wasSkipped = lastBackupCheckedTimestamp > lastLocalBackupTimestamp && lastLocalBackupTimestamp > 0L
 
     if (lastLocalBackupTimestamp > 0L) {
         val localDateStr = remember(lastLocalBackupTimestamp) { fmt.format(Date(lastLocalBackupTimestamp)) }
@@ -878,6 +884,15 @@ private fun BackupStatusSection(
                 )
             }
         }
+    }
+
+    if (wasSkipped) {
+        val checkedDateStr = remember(lastBackupCheckedTimestamp) { fmt.format(Date(lastBackupCheckedTimestamp)) }
+        Text(
+            stringResource(R.string.profile_backup_checked_no_changes, checkedDateStr),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 
     if (hasCloudTarget) {

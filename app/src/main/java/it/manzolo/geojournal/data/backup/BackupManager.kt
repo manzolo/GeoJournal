@@ -5,6 +5,7 @@ import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import it.manzolo.geojournal.BuildConfig
 import it.manzolo.geojournal.domain.model.GeoPoint
+import it.manzolo.geojournal.domain.model.PointKml
 import it.manzolo.geojournal.domain.model.Reminder
 import it.manzolo.geojournal.domain.model.ReminderType
 import it.manzolo.geojournal.domain.model.VisitLogEntry
@@ -51,26 +52,53 @@ class BackupManager @Inject constructor(
     private val backupDir: File
         get() = File(context.filesDir, AUTO_BACKUP_DIR).also { it.mkdirs() }
 
+    private data class BackupData(
+        val points: List<GeoPoint>,
+        val reminders: List<Reminder>,
+        val visits: List<VisitLogEntry>,
+        val kmls: List<PointKml>
+    )
+
+    private suspend fun loadAll(): BackupData = BackupData(
+        points    = geoPointRepository.observeAll().first(),
+        reminders = reminderRepository.getAll(),
+        visits    = visitLogRepository.getAll(),
+        kmls      = kmlRepository.getAll()
+    )
+
+    /**
+     * Fingerprint dei dati per detection di "nessuna modifica" tra backup.
+     * Il prefisso `v1:` permette di evolvere il formato senza falsi match.
+     * Usa count + max(timestamp) per ogni tabella: cattura add/delete sempre,
+     * edit solo se il record cambia il proprio timestamp (limite noto per
+     * reminder/visit che hanno solo start_date/visited_at, non un updatedAt).
+     */
+    suspend fun computeFingerprint(): String {
+        val data = loadAll()
+        val gpMax  = data.points.maxOfOrNull { it.updatedAt.time } ?: 0L
+        val remMax = data.reminders.maxOfOrNull { it.startDate } ?: 0L
+        val visMax = data.visits.maxOfOrNull { it.visitedAt } ?: 0L
+        val kmlMax = data.kmls.maxOfOrNull { it.importedAt } ?: 0L
+        return "v1:${data.points.size}:$gpMax:${data.reminders.size}:$remMax:${data.visits.size}:$visMax:${data.kmls.size}:$kmlMax"
+    }
+
     // ─── Auto-backup (salvataggio locale) ─────────────────────────────────────
 
     suspend fun exportToFile(): File {
-        val points    = geoPointRepository.observeAll().first()
-        val reminders = reminderRepository.getAll()
-        val visits    = visitLogRepository.getAll()
-        val allKmls   = kmlRepository.getAll()
-        val kmlsByPoint = allKmls.groupBy { it.geoPointId }
+        val data = loadAll()
+        val kmlsByPoint = data.kmls.groupBy { it.geoPointId }
 
         val dateTag = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
         val file = File(backupDir, "geojournal_backup_$dateTag.zip")
 
         FileOutputStream(file).use { out ->
             ZipOutputStream(BufferedOutputStream(out)).use { zip ->
-                val json = buildJson(points, reminders, visits, kmlsByPoint)
+                val json = buildJson(data.points, data.reminders, data.visits, kmlsByPoint)
                 zip.putNextEntry(ZipEntry("backup.json"))
                 zip.write(json.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
 
-                points.forEach { point ->
+                data.points.forEach { point ->
                     point.photoUrls.forEach { url ->
                         if (!url.startsWith("https://") && !url.startsWith("content://")) {
                             val photoFile = File(url)
@@ -107,24 +135,18 @@ class BackupManager @Inject constructor(
     // ─── Export (SAF) ─────────────────────────────────────────────────────────
 
     suspend fun exportToUri(uri: Uri): Int {
-        val points    = geoPointRepository.observeAll().first()
-        val reminders = reminderRepository.getAll()
-        val visits    = visitLogRepository.getAll()
-        val allKmls   = kmlRepository.getAll()
-        val kmlsByPoint = allKmls.groupBy { it.geoPointId }
+        val data = loadAll()
+        val kmlsByPoint = data.kmls.groupBy { it.geoPointId }
 
         context.contentResolver.openFileDescriptor(uri, "wt")?.use { pfd ->
             java.io.FileOutputStream(pfd.fileDescriptor).use { out ->
                 ZipOutputStream(BufferedOutputStream(out)).use { zip ->
-
-                    // 1. backup.json
-                    val json = buildJson(points, reminders, visits, kmlsByPoint)
+                    val json = buildJson(data.points, data.reminders, data.visits, kmlsByPoint)
                     zip.putNextEntry(ZipEntry("backup.json"))
                     zip.write(json.toByteArray(Charsets.UTF_8))
                     zip.closeEntry()
 
-                    // 2. Foto locali (le URL Firebase vengono saltate — sono già nel cloud)
-                    points.forEach { point ->
+                    data.points.forEach { point ->
                         point.photoUrls.forEach { url ->
                             if (!url.startsWith("https://") && !url.startsWith("content://")) {
                                 val file = File(url)
@@ -135,7 +157,6 @@ class BackupManager @Inject constructor(
                                 }
                             }
                         }
-                        // 3. File KML associati al punto
                         kmlsByPoint[point.id]?.forEach { kml ->
                             val kmlFile = File(kml.filePath)
                             if (kmlFile.exists()) {
@@ -150,7 +171,7 @@ class BackupManager @Inject constructor(
                 pfd.fileDescriptor.sync()
             }
         }
-        
+
         // Forza l'upload di rete se il provider (Google Drive SAF) lo supporta
         runCatching {
             context.contentResolver.notifyChange(uri, null, android.content.ContentResolver.NOTIFY_SYNC_TO_NETWORK)
@@ -158,15 +179,15 @@ class BackupManager @Inject constructor(
                 cursor.moveToFirst()
             }
         }
-        
-        return points.size
+
+        return data.points.size
     }
 
     private fun buildJson(
         points: List<GeoPoint>,
         reminders: List<Reminder>,
         visits: List<VisitLogEntry>,
-        kmlsByPoint: Map<String, List<it.manzolo.geojournal.domain.model.PointKml>> = emptyMap()
+        kmlsByPoint: Map<String, List<PointKml>> = emptyMap()
     ): String {
         val root = JSONObject().apply {
             put("schemaVersion", SCHEMA_VERSION)

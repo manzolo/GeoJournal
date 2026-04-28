@@ -79,74 +79,76 @@ class AutoBackupWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        try {
-            setForeground(getForegroundInfo())
-        } catch (e: Exception) {
-            // setForeground() può fallire su Android 12+ se avviato dal deep background e non expedited
-        }
-
         return try {
-            val result = runCatching {
-                withTimeout(BACKUP_OPERATION_TIMEOUT_MS) {
-                    // 1. Backup locale
-                    val localFile = backupManager.exportToFile()
-                    backupManager.pruneOldBackups()
+            val currentFingerprint = backupManager.computeFingerprint()
+            val prefs = userPrefsRepository.preferences.first()
 
-                    // 2. Backup su cloud: Drive REST API (primario) oppure SAF (fallback)
-                    val prefs = userPrefsRepository.preferences.first()
-                    val driveEmail = prefs.driveAccountEmail
-                    val driveResult: kotlin.Result<Unit> = when {
-                        driveEmail.isNotBlank() -> {
-                            val apiResult = runCatching {
-                                DriveApiClient(applicationContext, driveEmail)
-                                    .uploadOrReplaceBackup(localFile)
-                                Unit
-                            }
-                            // Fallback SAF se Drive API fallisce e SAF è configurato
-                            if (apiResult.isFailure && prefs.driveBackupUri.isNotEmpty()) {
-                                safUpload(prefs.driveBackupUri, localFile)
-                            } else {
-                                apiResult
-                            }
-                        }
-                        prefs.driveBackupUri.isNotEmpty() -> safUpload(prefs.driveBackupUri, localFile)
-                        else -> kotlin.Result.success(Unit)
-                    }
-
-                    val hasCloudTarget = driveEmail.isNotBlank() || prefs.driveBackupUri.isNotEmpty()
-                    if (hasCloudTarget) {
-                        userPrefsRepository.setLastDriveBackup(
-                            timestamp = System.currentTimeMillis(),
-                            success = driveResult.isSuccess
-                        )
-                        if (driveResult.isFailure) {
-                            val ex = driveResult.exceptionOrNull()
-                            val detail = ex?.localizedMessage ?: ex?.message
-                            val userMsg = if (detail != null) {
-                                applicationContext.getString(R.string.backup_notif_error_body, detail)
-                            } else {
-                                applicationContext.getString(R.string.backup_notif_error_body_generic)
-                            }
-                            val errorNotif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-                                .setContentTitle(applicationContext.getString(R.string.backup_notif_error_title))
-                                .setContentText(applicationContext.getString(R.string.backup_notif_error_body_generic))
-                                .setSmallIcon(android.R.drawable.stat_notify_error)
-                                .setStyle(NotificationCompat.BigTextStyle().bigText(userMsg))
-                                .setAutoCancel(true)
-                                .build()
-                            nm.notify(NOTIF_ID_ERROR, errorNotif)
-                        }
-                    }
-
-                    // 3. Salva timestamp ultimo backup
-                    userPrefsRepository.setLastLocalBackup(System.currentTimeMillis())
+            if (currentFingerprint == prefs.lastBackupFingerprint && prefs.lastBackupFingerprint.isNotEmpty()) {
+                userPrefsRepository.setLastBackupChecked(System.currentTimeMillis())
+                Result.success()
+            } else {
+                try {
+                    setForeground(getForegroundInfo())
+                } catch (e: Exception) {
+                    // setForeground può fallire su Android 12+ se avviato dal deep background
                 }
+
+                val result = runCatching {
+                    withTimeout(BACKUP_OPERATION_TIMEOUT_MS) {
+                        val localFile = backupManager.exportToFile()
+                        backupManager.pruneOldBackups()
+
+                        // Cloud: Drive REST API (primario) oppure SAF (fallback)
+                        val driveEmail = prefs.driveAccountEmail
+                        val driveResult: kotlin.Result<Unit> = when {
+                            driveEmail.isNotBlank() -> {
+                                val apiResult = runCatching {
+                                    DriveApiClient(applicationContext, driveEmail)
+                                        .uploadOrReplaceBackup(localFile)
+                                    Unit
+                                }
+                                if (apiResult.isFailure && prefs.driveBackupUri.isNotEmpty()) {
+                                    safUpload(prefs.driveBackupUri, localFile)
+                                } else {
+                                    apiResult
+                                }
+                            }
+                            prefs.driveBackupUri.isNotEmpty() -> safUpload(prefs.driveBackupUri, localFile)
+                            else -> kotlin.Result.success(Unit)
+                        }
+
+                        val hasCloudTarget = driveEmail.isNotBlank() || prefs.driveBackupUri.isNotEmpty()
+                        if (hasCloudTarget) {
+                            userPrefsRepository.setLastDriveBackup(
+                                timestamp = System.currentTimeMillis(),
+                                success = driveResult.isSuccess
+                            )
+                            if (driveResult.isFailure) {
+                                val ex = driveResult.exceptionOrNull()
+                                val detail = ex?.localizedMessage ?: ex?.message
+                                val userMsg = if (detail != null) {
+                                    applicationContext.getString(R.string.backup_notif_error_body, detail)
+                                } else {
+                                    applicationContext.getString(R.string.backup_notif_error_body_generic)
+                                }
+                                val errorNotif = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+                                    .setContentTitle(applicationContext.getString(R.string.backup_notif_error_title))
+                                    .setContentText(applicationContext.getString(R.string.backup_notif_error_body_generic))
+                                    .setSmallIcon(android.R.drawable.stat_notify_error)
+                                    .setStyle(NotificationCompat.BigTextStyle().bigText(userMsg))
+                                    .setAutoCancel(true)
+                                    .build()
+                                nm.notify(NOTIF_ID_ERROR, errorNotif)
+                            }
+                        }
+
+                        userPrefsRepository.setBackupSuccess(System.currentTimeMillis(), currentFingerprint)
+                    }
+                }
+                if (result.isSuccess) Result.success() else Result.failure()
             }
-            if (result.isSuccess) Result.success() else Result.failure()
         } finally {
             nm.cancel(NOTIF_ID_PROGRESS)
-            // Ri-schedula il prossimo alarm giornaliero (chain pattern),
-            // indipendentemente da successo o fallimento.
             runCatching {
                 if (userPrefsRepository.preferences.first().autoBackupEnabled) {
                     autoBackupScheduler.schedule()
