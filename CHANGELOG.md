@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.4] - 2026-04-28
+### Added
+- Smart backup skip: if no data has changed since the last backup (fingerprint v1 covers all 4 tables — GeoPoints, Reminders, VisitLogs, KMLs), the worker skips export and cloud upload and records only a "checked" timestamp.
+- New UI row in BackupStatusSection: "Checked on <date> — no changes" shown when a skip occurred, distinct from Drive error state.
+
+### Changed
+- `BackupManager`: extracted `loadAll()` helper (eliminates 3× duplicated data-loading) and `computeFingerprint()` for change detection.
+- `UserPreferencesRepository`: added `setBackupSuccess()` atomic setter (writes `lastLocalBackup`, `lastBackupFingerprint`, `lastBackupChecked` in one DataStore `edit {}`).
+- `AutoBackupWorker`: `setForeground()` deferred to real-backup path only — no progress notification on skip.
+
+---
+
 ## [1.4.3] - 2026-04-26
 ### Added
 - Emoji picker: categorized tabbed layout (7 categories — Places, Nature, Transport, Food, Sports, Animals, Symbols) replacing the flat scrollable list.
