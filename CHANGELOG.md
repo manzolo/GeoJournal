@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.5] - 2026-05-03
+### Fixed
+- Map: location puck now activates automatically on startup if GPS permission is already granted (no need to tap the MyLocation FAB).
+- Map: markers and KML overlays are properly restored after a map layer change (style reload now nulls KML managers, triggering `LaunchedEffect` re-render for both markers and KML).
+
+---
+
 ## [1.4.4] - 2026-04-28
 ### Added
 - Smart backup skip: if no data has changed since the last backup (fingerprint v1 covers all 4 tables — GeoPoints, Reminders, VisitLogs, KMLs), the worker skips export and cloud upload and records only a "checked" timestamp.
