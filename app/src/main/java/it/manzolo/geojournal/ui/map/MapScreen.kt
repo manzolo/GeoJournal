@@ -331,9 +331,9 @@ fun MapScreen(
     val symbolIdToTarget = remember { mutableStateOf<Map<Long, SymbolTarget>>(emptyMap()) }
     // KML overlay attivi nella sessione (kmlId → KmlAnnotationHandle)
     val kmlOverlaysRef = remember { mutableStateOf<Map<String, KmlAnnotationHandle>>(emptyMap()) }
-    // True dopo che l'utente ha attivato il LocationComponent (tap MyLocation FAB).
+    // True dopo che l'utente ha attivato il LocationComponent (o all'avvio se c'è il permesso).
     // Usato per ri-attivarlo dopo cambio layer (setStyle invalida lo stato).
-    val locationPuckActive = remember { mutableStateOf(false) }
+    val locationPuckActive = remember { mutableStateOf(locationPermission.status.isGranted) }
     // SymbolManager dedicato ai KML (separato da quello marker principali)
     val kmlSymbolManagerRef = remember { mutableStateOf<SymbolManager?>(null) }
     val kmlLineManagerRef = remember { mutableStateOf<org.maplibre.android.plugins.annotation.LineManager?>(null) }
@@ -439,6 +439,10 @@ fun MapScreen(
                 }
                 kmlLineManagerRef.value = org.maplibre.android.plugins.annotation.LineManager(mapView, map, style)
                 kmlFillManagerRef.value = org.maplibre.android.plugins.annotation.FillManager(mapView, map, style)
+
+                if (locationPuckActive.value && locationPermission.status.isGranted) {
+                    activateLocationPuck(context, map, style)
+                }
             }
         }
     }
@@ -456,6 +460,10 @@ fun MapScreen(
         kmlLineManagerRef.value?.onDestroy()
         kmlFillManagerRef.value?.onDestroy()
         symbolManagerRef.value = null
+        kmlSymbolManagerRef.value = null
+        kmlLineManagerRef.value = null
+        kmlFillManagerRef.value = null
+        kmlOverlaysRef.value = emptyMap()
         mapStyleRef.value = null
 
         map.setStyle(MapLibreStyleProvider.builderFor(currentLayer)) { style ->
@@ -477,25 +485,6 @@ fun MapScreen(
             val kmlFm = org.maplibre.android.plugins.annotation.FillManager(mapView, map, style)
             kmlFillManagerRef.value = kmlFm
 
-            // Ridisegna marker col nuovo stile
-            updateClusteredMarkers(
-                map, style, sm, symbolIdToTarget,
-                pointsRef.value, context
-            )
-
-            // Ripristina KML overlay attivi dopo cambio layer (parseKml è suspend → IO)
-            coroutineScope.launch {
-                val rebuiltKml = mutableMapOf<String, KmlAnnotationHandle>()
-                uiState.kmlItems.filter { it.isActive }.forEach { item ->
-                    val geometries = viewModel.parseKml(item.kml.id)
-                    if (geometries.isNotEmpty()) {
-                        rebuiltKml[item.kml.id] =
-                            KmlOverlayManager.buildOverlays(context, style, kmlSm, kmlLm, kmlFm, geometries)
-                    }
-                }
-                kmlOverlaysRef.value = rebuiltKml
-            }
-
             // Ripristina LocationComponent (puck + bearing) se era attivo prima del cambio layer
             if (locationPuckActive.value && locationPermission.status.isGranted) {
                 activateLocationPuck(context, map, style)
@@ -513,12 +502,13 @@ fun MapScreen(
     }
 
     // Aggiorna marker quando cambiano i punti o la query di ricerca
-    LaunchedEffect(uiState.points, uiState.searchQuery) {
+    LaunchedEffect(uiState.points, uiState.searchQuery, symbolManagerRef.value) {
         val displayPoints = if (uiState.searchQuery.isBlank()) uiState.points else uiState.searchResults
         pointsRef.value = displayPoints
         val map = mapLibreMapRef.value ?: return@LaunchedEffect
         val style = mapStyleRef.value ?: return@LaunchedEffect
         val sm = symbolManagerRef.value ?: return@LaunchedEffect
+        android.util.Log.d("MapScreen", "LaunchedEffect triggered. Points count: ${displayPoints.size}, style: $style, sm: $sm")
         updateClusteredMarkers(
             map, style, sm, symbolIdToTarget,
             displayPoints, context
@@ -529,7 +519,7 @@ fun MapScreen(
     }
 
     // KML overlays: aggiunge/rimuove in base allo stato di sessione
-    LaunchedEffect(uiState.kmlItems) {
+    LaunchedEffect(uiState.kmlItems, kmlFillManagerRef.value) {
         val kmlSm = kmlSymbolManagerRef.value ?: return@LaunchedEffect
         val kmlLm = kmlLineManagerRef.value ?: return@LaunchedEffect
         val kmlFm = kmlFillManagerRef.value ?: return@LaunchedEffect
@@ -569,17 +559,23 @@ fun MapScreen(
         }
     }
 
-    // Prima concessione del permesso GPS a runtime: centra sulla posizione utente
+    // Alla concessione del permesso GPS: attiva il puck e centra sulla posizione
     LaunchedEffect(locationPermission.status.isGranted) {
-        if (locationPermission.status.isGranted
-            && viewModel.uiState.value.focusTarget == null
-            && !viewModel.uiState.value.hasAppliedInitialZoom) {
-            getLastKnownLocation(context)?.let { loc ->
-                val map = mapLibreMapRef.value
-                if (map != null) {
-                    map.animateCamera(
-                        CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 15.0)
-                    )
+        if (locationPermission.status.isGranted) {
+            locationPuckActive.value = true
+            val map = mapLibreMapRef.value
+            val style = mapStyleRef.value
+            if (map != null && style != null) {
+                activateLocationPuck(context, map, style)
+            }
+            if (viewModel.uiState.value.focusTarget == null
+                && !viewModel.uiState.value.hasAppliedInitialZoom) {
+                getLastKnownLocation(context)?.let { loc ->
+                    if (map != null) {
+                        map.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 15.0)
+                        )
+                    }
                 }
             }
         }
@@ -1489,6 +1485,7 @@ private fun updateClusteredMarkers(
     points: List<GeoPoint>,
     context: Context
 ) {
+    android.util.Log.d("MapScreen", "updateClusteredMarkers starting. Points: ${points.size}")
     val zoom = map.cameraPosition.zoom
     val clusters = clusterPoints(points, zoom)
     symbolManager.deleteAll()
