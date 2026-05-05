@@ -3,7 +3,7 @@
 **Il tuo diario personale dei luoghi.**
 Salva i posti che ami, arricchiscili con foto e tag, ritrovali sulla mappa — anche senza connessione.
 
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/it_badge_web_generic.png" height="60" alt="Disponibile su Google Play">](https://play.google.com/store/apps/details?id=com.manzolo.geojournal)
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/it_badge_web_generic.png" height="60" alt="Disponibile su Google Play">](https://play.google.com/store/apps/details?id=it.manzolo.geojournal)
 &nbsp;
 [<img src="https://img.shields.io/github/license/manzolo/GeoJournal?style=flat-square" alt="Licenza AGPL-3.0">](LICENSE)
 &nbsp;
