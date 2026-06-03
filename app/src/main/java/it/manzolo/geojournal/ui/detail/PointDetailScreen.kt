@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
@@ -300,6 +301,14 @@ fun PointDetailScreen(
                                     onClick = {
                                         showMenu = false
                                         viewModel.onShareRequested()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.point_duplicate)) },
+                                    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                    onClick = {
+                                        showMenu = false
+                                        navController.navigate(Routes.AddEditPoint.createRoute(pointId = "new", cloneFromId = point.id))
                                     }
                                 )
                                 HorizontalDivider()

@@ -234,6 +234,7 @@
     <string name="point_delete_confirm_button">Delete</string>
     <string name="point_archive">Archive point</string>
     <string name="point_unarchive">Restore point</string>
+    <string name="point_duplicate">Duplicate point</string>
     <string name="point_archive_confirm_title">Archive point</string>
     <string name="point_archive_confirm_message">The point will be hidden from the map and list. You can restore it from the Archive section.</string>
     <string name="point_delete_confirm_message">Are you sure you want to delete this point? This action cannot be undone.</string>

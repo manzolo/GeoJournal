@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
@@ -174,6 +175,14 @@ fun ListScreen(navController: NavController) {
                         onClick = {
                             contextMenuPoint = null
                             navController.navigate(Routes.AddEditPoint.createRoute(point.id))
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.point_duplicate)) },
+                        leadingIcon = { Icon(Icons.Filled.ContentCopy, null) },
+                        onClick = {
+                            contextMenuPoint = null
+                            navController.navigate(Routes.AddEditPoint.createRoute(pointId = "new", cloneFromId = point.id))
                         }
                     )
                     DropdownMenuItem(

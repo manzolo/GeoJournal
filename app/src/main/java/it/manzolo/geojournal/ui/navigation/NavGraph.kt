@@ -82,6 +82,7 @@ fun AppNavGraph(
                 navArgument("title") { type = NavType.StringType; defaultValue = ""; nullable = true },
                 navArgument("lat") { type = NavType.StringType; defaultValue = ""; nullable = true },
                 navArgument("lon") { type = NavType.StringType; defaultValue = ""; nullable = true },
+                navArgument("cloneFromId") { type = NavType.StringType; defaultValue = ""; nullable = true }
             )
         ) {
             AddEditScreen(navController = navController)

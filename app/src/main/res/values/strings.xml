@@ -234,6 +234,7 @@
     <string name="point_delete_confirm_button">Elimina</string>
     <string name="point_archive">Archivia punto</string>
     <string name="point_unarchive">Ripristina punto</string>
+    <string name="point_duplicate">Duplica punto</string>
     <string name="point_archive_confirm_title">Archivia punto</string>
     <string name="point_archive_confirm_message">Il punto sarà nascosto dalla mappa e dalla lista. Potrai ripristinarlo dalla sezione Archivio.</string>
     <string name="point_delete_confirm_message">Sei sicuro di voler eliminare questo punto? L\'operazione non è reversibile.</string>

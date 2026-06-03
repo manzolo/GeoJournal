@@ -86,6 +86,7 @@ class AddEditViewModel @Inject constructor(
     private val prefillTitle: String = savedStateHandle.get<String>("title") ?: ""
     private val prefillLat: Double = savedStateHandle.get<String>("lat")?.toDoubleOrNull() ?: 0.0
     private val prefillLon: Double = savedStateHandle.get<String>("lon")?.toDoubleOrNull() ?: 0.0
+    private val cloneFromId: String? = savedStateHandle.get<String>("cloneFromId")
 
     private val _uiState = MutableStateFlow(AddEditUiState())
     val uiState: StateFlow<AddEditUiState> = _uiState.asStateFlow()
@@ -98,13 +99,19 @@ class AddEditViewModel @Inject constructor(
     private val pendingNewKmls = mutableListOf<PointKml>()
 
     init {
-        if (isEditMode) loadPoint() else _uiState.update {
-            it.copy(
-                isLoading = false,
-                title = prefillTitle,
-                latitude = prefillLat,
-                longitude = prefillLon
-            )
+        if (isEditMode) {
+            loadPoint()
+        } else if (!cloneFromId.isNullOrBlank()) {
+            loadClonePoint(cloneFromId)
+        } else {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    title = prefillTitle,
+                    latitude = prefillLat,
+                    longitude = prefillLon
+                )
+            }
         }
         observeTagSuggestions()
     }
@@ -166,6 +173,34 @@ class AddEditViewModel @Inject constructor(
                 .collect { list ->
                     _uiState.update { state -> state.copy(kmls = list) }
                 }
+        }
+    }
+
+    private fun loadClonePoint(cloneId: String) {
+        viewModelScope.launch {
+            val point = repository.getById(cloneId)
+            if (point != null) {
+                _uiState.update {
+                    it.copy(
+                        title = point.title,
+                        description = point.description,
+                        emoji = point.emoji,
+                        tags = point.tags,
+                        latitude = if (prefillLat != 0.0) prefillLat else point.latitude,
+                        longitude = if (prefillLon != 0.0) prefillLon else point.longitude,
+                        isLoading = false
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        title = prefillTitle,
+                        latitude = prefillLat,
+                        longitude = prefillLon
+                    )
+                }
+            }
         }
     }
 

@@ -11,8 +11,23 @@ sealed class Routes(val route: String) {
         fun createRoute(fromProfile: Boolean = false) = "onboarding?fromProfile=$fromProfile"
     }
 
-    data object AddEditPoint : Routes("add_edit_point/{pointId}?title={title}&lat={lat}&lon={lon}") {
-        fun createRoute(pointId: String? = null) = "add_edit_point/${pointId ?: "new"}"
+    data object AddEditPoint : Routes("add_edit_point/{pointId}?title={title}&lat={lat}&lon={lon}&cloneFromId={cloneFromId}") {
+        fun createRoute(
+            pointId: String? = null,
+            title: String? = null,
+            lat: String? = null,
+            lon: String? = null,
+            cloneFromId: String? = null
+        ): String {
+            val id = pointId ?: "new"
+            val queryParams = mutableListOf<String>()
+            if (title != null) queryParams.add("title=$title")
+            if (lat != null) queryParams.add("lat=$lat")
+            if (lon != null) queryParams.add("lon=$lon")
+            if (cloneFromId != null) queryParams.add("cloneFromId=$cloneFromId")
+            val queryStr = if (queryParams.isNotEmpty()) "?" + queryParams.joinToString("&") else ""
+            return "add_edit_point/$id$queryStr"
+        }
     }
 
     data object PointDetail : Routes("point_detail/{pointId}") {
