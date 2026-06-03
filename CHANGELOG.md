@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.6] - 2026-06-03
+### Added
+- Duplicate point: new "Duplicate point" menu entry in PointDetailScreen (top-right overflow menu) and ListScreen (long-press context menu). Pre-fills title, description, emoji, and tags from the original; coordinates can be customised before saving.
+
+### Changed
+- AGP 9.0.1 → 9.2.1; Gradle wrapper 9.3.1 → 9.4.1; foojay toolchain resolver plugin added.
+
+### Fixed
+- Google Play badge link in README.
+
+---
+
 ## [1.4.5] - 2026-05-03
 ### Fixed
 - Map: location puck now activates automatically on startup if GPS permission is already granted (no need to tap the MyLocation FAB).
