@@ -495,9 +495,6 @@ fun ListScreen(navController: NavController) {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        item {
-                            BuyMeCoffeeBanner(context = context)
-                        }
                         items(state.points, key = { it.id }) { point ->
                             val swipeState = rememberSwipeToDismissBoxState(
                                 positionalThreshold = { it * 0.35f }
@@ -766,45 +763,6 @@ private fun EmptyState(hasFilters: Boolean, isArchiveView: Boolean = false) {
 
 private fun Date.toDisplayDate(): String =
     SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(this)
-
-@Composable
-private fun BuyMeCoffeeBanner(context: Context) {
-    val url = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.buy_me_coffee_url)
-    androidx.compose.material3.Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("☕", style = MaterialTheme.typography.titleLarge)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.support_title),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Text(
-                    text = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.support_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-            androidx.compose.material3.TextButton(
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-            ) {
-                Text(
-                    text = androidx.compose.ui.res.stringResource(it.manzolo.geojournal.R.string.support_button),
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        }
-    }
-}
 
 private fun navigateToMapFocus(navController: NavController, lat: Double, lon: Double, pointId: String) {
     it.manzolo.geojournal.ui.map.MapViewModel.FocusRequest.send(lat, lon, pointId)

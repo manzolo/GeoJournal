@@ -365,12 +365,6 @@
     <string name="point_info_created">Creato: %s</string>
     <string name="point_info_updated">Modificato: %s</string>
 
-    <!-- Support / Buy Me a Coffee -->
-    <string name="support_title">Supporta GeoJournal ☕</string>
-    <string name="support_subtitle">Se ti piace l\'app, offrimi un caffè. Aiuta a tenerla viva e migliorarla!</string>
-    <string name="support_button">Buy me a coffee</string>
-    <string name="buy_me_coffee_url">https://www.buymeacoffee.com/manzolo</string>
-
     <!-- Privacy Policy -->
     <string name="privacy_policy">Privacy Policy</string>
     <string name="privacy_policy_url">https://manzolo.github.io/GeoJournal/privacy.html</string>

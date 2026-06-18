@@ -179,8 +179,6 @@ fun ProfileScreen(
             onSignIn = { navController.navigate(Routes.Login.route) { popUpTo(0) { inclusive = true } } }
         )
 
-        BuyMeCoffeeCard(context)
-
         PreferencesCard(
             isDarkTheme = uiState.isDarkTheme,
             onDarkThemeChange = viewModel::setDarkTheme
@@ -1217,39 +1215,3 @@ private fun SyncToggleRow(
     }
 }
 
-@Composable
-fun BuyMeCoffeeCard(context: Context, modifier: Modifier = Modifier) {
-    val url = stringResource(R.string.buy_me_coffee_url)
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text("☕", style = MaterialTheme.typography.headlineMedium)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.support_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    stringResource(R.string.support_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text(stringResource(R.string.support_button))
-                }
-            }
-        }
-    }
-}
