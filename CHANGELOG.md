@@ -5,6 +5,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.7] - 2026-06-18
+### Removed
+- Removed the "Buy Me a Coffee" support card (from ListScreen and ProfileScreen) and related strings, to comply with Google Play's Payments policy on donations.
+
 ## [1.4.6] - 2026-06-03
 ### Added
 - Duplicate point: new "Duplicate point" menu entry in PointDetailScreen (top-right overflow menu) and ListScreen (long-press context menu). Pre-fills title, description, emoji, and tags from the original; coordinates can be customised before saving.
