@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.8] - 2026-08-30
+### Changed
+- AGP 9.2.1 → 9.3.2; KSP 2.3.2 → 2.3.6; Gradle wrapper 9.4.1 → 9.5.0; enabled `org.gradle.tooling.parallel` for parallel IDE sync.
+- CI: bumped deprecated Node 20 GitHub Actions to their latest majors.
+
 ## [1.4.7] - 2026-06-18
 ### Removed
 - Removed the "Buy Me a Coffee" support card (from ListScreen and ProfileScreen) and related strings, to comply with Google Play's Payments policy on donations.
