@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.10] - 2026-10-16
+### Fixed
+- Map filter chips: unselected chips were transparent and unreadable over the map. They now use the same semi-transparent surface and elevation as the other map controls, with higher-contrast label and icon.
+- Map empty state: the hint is now shown in a semi-transparent pill instead of bare text over the map. It also appears when only a tag filter is active and, in that case, says that no points match the active filters instead of "no favorites yet".
+
+### Changed
+- CI: release workflow runs on `ubuntu-26.04`; `softprops/action-gh-release` v2 → v3 (Node 24 runtime); Google Play upload migrated from the deprecated `track` input to `tracks`.
+
 ## [1.4.9] - 2026-10-16
 ### Added
 - Map: tag filter chips in a row under the search bar (favorites + every tag with its point count). Tapping a tag filters the map to those points and fits the camera on them; tapping again clears the filter.
