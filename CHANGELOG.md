@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
+## [1.4.9] - 2026-10-16
+### Added
+- Map: tag filter chips in a row under the search bar (favorites + every tag with its point count). Tapping a tag filters the map to those points and fits the camera on them; tapping again clears the filter.
+- Map search: tags matching the query are listed as "Group" rows with a "Show" action.
+- Editor (AddEditScreen): assigned tags and up to five quick tag suggestions shown directly in the hero card, next to the title. Suggestions are ranked by words in the title (prefix match, 4+ characters), then by usage frequency.
+
+### Changed
+- Favorites filter on the map moved from the FAB column star to the "Favorites" chip in the new chip row.
+- Combined favorites + tag filtering centralised in `MapViewModel.applyFilters()`; selecting a point from another screen only clears the filter that conflicts with it.
+- Used-tag suggestions ordered by frequency, then alphabetically.
+- AGP 9.3.2 → 9.4.1; Gradle wrapper 9.5.0 → 9.6.0.
+
 ## [1.4.8] - 2026-08-30
 ### Changed
 - AGP 9.2.1 → 9.3.2; KSP 2.3.2 → 2.3.6; Gradle wrapper 9.4.1 → 9.5.0; enabled `org.gradle.tooling.parallel` for parallel IDE sync.
