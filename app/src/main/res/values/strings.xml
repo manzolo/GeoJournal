@@ -248,6 +248,7 @@
     <string name="map_filter_favorites">Preferiti</string>
     <string name="map_filter_all">Tutti</string>
     <string name="map_no_favorites_hint">Nessun preferito ancora.\nTocca ☆ su un punto per aggiungerlo.</string>
+    <string name="map_no_filter_results">Nessun punto corrisponde ai filtri attivi.\nTocca di nuovo un chip per rimuoverlo.</string>
     <string name="list_filter_favorites">Preferiti</string>
 
     <!-- Add/Edit Screen -->

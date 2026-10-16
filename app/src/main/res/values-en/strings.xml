@@ -248,6 +248,7 @@
     <string name="map_filter_favorites">Favorites</string>
     <string name="map_filter_all">All</string>
     <string name="map_no_favorites_hint">No favorites yet.\nTap ☆ on a point to add it.</string>
+    <string name="map_no_filter_results">No points match the active filters.\nTap a chip again to remove it.</string>
     <string name="list_filter_favorites">Favorites</string>
 
     <!-- Add/Edit Screen -->

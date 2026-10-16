@@ -653,6 +653,14 @@ fun MapScreen(
 
             if (!uiState.isSearchOpen && (uiState.availableTags.isNotEmpty() || uiState.favoritesCount > 0)) {
                 Spacer(Modifier.height(8.dp))
+                // Container opaco anche da non selezionati: il default di FilterChip è trasparente
+                // e sulla mappa diventa illeggibile
+                val chipColors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
+                    iconColor = MaterialTheme.colorScheme.onSurface
+                )
+                val chipElevation = FilterChipDefaults.filterChipElevation(elevation = 2.dp)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -674,10 +682,12 @@ fun MapScreen(
                                     imageVector = if (uiState.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.StarBorder,
                                     contentDescription = stringResource(R.string.map_filter_favorites),
                                     modifier = Modifier.size(FilterChipDefaults.IconSize),
-                                    tint = if (uiState.showFavoritesOnly) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (uiState.showFavoritesOnly) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
                                 )
                             },
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = chipColors,
+                            elevation = chipElevation
                         )
                     }
 
@@ -692,7 +702,7 @@ fun MapScreen(
                                     Icons.AutoMirrored.Filled.Label,
                                     contentDescription = null,
                                     modifier = Modifier.size(FilterChipDefaults.IconSize),
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             },
                             trailingIcon = if (isSelected) {
@@ -704,26 +714,38 @@ fun MapScreen(
                                     )
                                 }
                             } else null,
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = chipColors,
+                            elevation = chipElevation
                         )
                     }
                 }
             }
         }
 
-        // Empty state quando filtro preferiti attivo ma lista vuota
-        if (uiState.showFavoritesOnly && uiState.points.isEmpty() && !uiState.isLoading) {
+        // Empty state quando i filtri attivi (preferiti e/o tag) non lasciano nessun punto
+        val hasActiveFilter = uiState.showFavoritesOnly || uiState.selectedTag != null
+        if (hasActiveFilter && uiState.points.isEmpty() && !uiState.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = stringResource(R.string.map_no_favorites_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(32.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f),
+                    shadowElevation = 2.dp
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (uiState.selectedTag != null) R.string.map_no_filter_results
+                            else R.string.map_no_favorites_hint
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
+                    )
+                }
             }
         }
 
