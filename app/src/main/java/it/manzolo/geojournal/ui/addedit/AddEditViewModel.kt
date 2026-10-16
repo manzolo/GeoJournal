@@ -130,8 +130,13 @@ class AddEditViewModel @Inject constructor(
         val state = _uiState.value
         val input = state.tagInput.trim().lowercase()
         val currentTags = state.tags
+        val titleWords = state.title.lowercase().split(Regex("[\\s,.:;!?-]+")).filter { it.length >= 4 }
         val suggestions = if (input.isEmpty()) {
-            _allUsedTags.filter { it !in currentTags }.take(8)
+            val matchingTitle = _allUsedTags.filter { tag ->
+                tag !in currentTags && titleWords.any { word -> tag.startsWith(word) || word.startsWith(tag) }
+            }
+            val remaining = _allUsedTags.filter { it !in currentTags && it !in matchingTitle }
+            (matchingTitle + remaining).take(8)
         } else {
             _allUsedTags.filter { it.contains(input, ignoreCase = true) && it !in currentTags }.take(8)
         }
@@ -256,7 +261,10 @@ class AddEditViewModel @Inject constructor(
         return null
     }
 
-    fun updateTitle(value: String) = _uiState.update { it.copy(title = value, isDirty = true) }
+    fun updateTitle(value: String) {
+        _uiState.update { it.copy(title = value, isDirty = true) }
+        recomputeSuggestions()
+    }
     fun updateDescription(value: String) = _uiState.update { it.copy(description = value, isDirty = true) }
     fun updateTagInput(value: String) {
         _uiState.update { it.copy(tagInput = value) }

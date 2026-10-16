@@ -96,6 +96,11 @@ data class MapUiState(
     val searchQuery: String = "",
     val isSearchOpen: Boolean = false,
     val searchResults: List<GeoPoint> = emptyList(),
+    val searchTagResults: List<Pair<String, Int>> = emptyList(),
+    /** Tag attualmente filtrato sulla mappa (null = nessun filtro tag) */
+    val selectedTag: String? = null,
+    /** Tutti i tag disponibili con relativo conteggio punti */
+    val availableTags: List<Pair<String, Int>> = emptyList(),
     /** True appena arriva la prima posizione reale (GPS o salvata) */
     val hasUserLocation: Boolean = false,
     /** Snackbar per conferma azione (archivia / elimina, @StringRes) */
@@ -126,6 +131,10 @@ class MapViewModel @Inject constructor(
 
     private val _shareFileEvent = MutableSharedFlow<File>(extraBufferCapacity = 1)
     val shareFileEvent: SharedFlow<File> = _shareFileEvent.asSharedFlow()
+
+    /** Evento one-shot: inquadra sulla mappa tutti i punti con il tag indicato */
+    private val _fitTagEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val fitTagEvent: SharedFlow<String> = _fitTagEvent.asSharedFlow()
 
     fun onShareRequested(point: GeoPoint) {
         _uiState.update { it.copy(pendingSharePoint = point) }
@@ -167,6 +176,7 @@ class MapViewModel @Inject constructor(
 
     // Dichiarato prima di init perché observePoints() lo legge in un coroutine lanciato eagerly
     private val _showFavoritesOnly = MutableStateFlow(false)
+    private val _selectedTag = MutableStateFlow<String?>(null)
 
     init {
         restoreMapPosition()
@@ -215,17 +225,30 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    /** Applica i filtri correnti (preferiti + tag) alla lista completa dei punti attivi. */
+    private fun applyFilters(all: List<GeoPoint>): List<GeoPoint> {
+        val favOnly = _showFavoritesOnly.value
+        val tag = _selectedTag.value
+        if (!favOnly && tag == null) return all
+        return all.filter { p -> (!favOnly || p.isFavorite) && (tag == null || tag in p.tags) }
+    }
+
     private fun trySelectPendingPoint() {
         val id = pendingSelectPointId ?: return
         val state = _uiState.value
         val point = state.allActivePoints.find { it.id == id } ?: return
         pendingSelectPointId = null
 
-        if (state.showFavoritesOnly && !point.isFavorite) {
-            _showFavoritesOnly.value = false
+        val favMismatch = state.showFavoritesOnly && !point.isFavorite
+        val tagMismatch = _selectedTag.value != null && _selectedTag.value !in point.tags
+        if (favMismatch || tagMismatch) {
+            // Disattiva solo i filtri in conflitto; quelli compatibili restano applicati
+            if (favMismatch) _showFavoritesOnly.value = false
+            if (tagMismatch) _selectedTag.value = null
             _uiState.update { it.copy(
-                showFavoritesOnly = false,
-                points = it.allActivePoints,
+                showFavoritesOnly = _showFavoritesOnly.value,
+                selectedTag = _selectedTag.value,
+                points = applyFilters(it.allActivePoints),
                 selectedPoint = point,
                 isBottomSheetVisible = true
             ) }
@@ -249,14 +272,20 @@ class MapViewModel @Inject constructor(
     }
 
     private fun observePoints() {
-        // Osservazione punti mappa: struttura identica all'originale, aggiorna anche allActivePoints
+        // Osservazione punti mappa: struttura identica all'originale, aggiorna anche allActivePoints e availableTags
         viewModelScope.launch {
             repository.observeActive()
                 .catch { e -> _uiState.update { it.copy(error = e.message, isLoading = false) } }
                 .collect { all ->
+                    val tagsWithCount = all.flatMap { it.tags }
+                        .filter { it.isNotBlank() && !it.startsWith("_") }
+                        .groupingBy { it }.eachCount().toList()
+                        .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+
                     _uiState.update { it.copy(
                         allActivePoints = all,
-                        points = if (_showFavoritesOnly.value) all.filter { p -> p.isFavorite } else all,
+                        availableTags = tagsWithCount,
+                        points = applyFilters(all),
                         isLoading = false
                     ) }
                     trySelectPendingPoint()
@@ -270,7 +299,7 @@ class MapViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         showFavoritesOnly = true,
-                        points = state.allActivePoints.filter { it.isFavorite }
+                        points = applyFilters(state.allActivePoints)
                     )
                 }
             }
@@ -289,9 +318,33 @@ class MapViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 showFavoritesOnly = newVal,
-                points = if (newVal) state.allActivePoints.filter { it.isFavorite } else state.allActivePoints
+                points = applyFilters(state.allActivePoints)
             )
         }
+    }
+
+    fun selectTag(tag: String?, shouldFit: Boolean = true) {
+        val currentTag = _selectedTag.value
+        val newTag = if (currentTag == tag) null else tag
+        _selectedTag.value = newTag
+
+        // Se attiviamo un filtro tag e preferiti è attivo ma non ci sono preferiti con quel tag,
+        // disattiviamo preferiti per evitare di mostrare una mappa vuota
+        if (newTag != null && _showFavoritesOnly.value) {
+            val hasFavWithTag = _uiState.value.allActivePoints.any { it.isFavorite && newTag in it.tags }
+            if (!hasFavWithTag) {
+                _showFavoritesOnly.value = false
+            }
+        }
+
+        _uiState.update { state ->
+            state.copy(
+                selectedTag = newTag,
+                showFavoritesOnly = _showFavoritesOnly.value,
+                points = applyFilters(state.allActivePoints)
+            )
+        }
+        if (shouldFit && newTag != null) _fitTagEvent.tryEmit(newTag)
     }
 
     fun toggleFavorite(point: GeoPoint) {
@@ -579,7 +632,9 @@ class MapViewModel @Inject constructor(
 
     fun openSearch() = _uiState.update { it.copy(isSearchOpen = true) }
 
-    fun closeSearch() = _uiState.update { it.copy(isSearchOpen = false, searchQuery = "", searchResults = emptyList()) }
+    fun closeSearch() = _uiState.update {
+        it.copy(isSearchOpen = false, searchQuery = "", searchResults = emptyList(), searchTagResults = emptyList())
+    }
 
     fun updateSearchQuery(q: String) {
         val results = if (q.isBlank()) emptyList() else _uiState.value.allActivePoints.filter { point ->
@@ -588,7 +643,10 @@ class MapViewModel @Inject constructor(
             point.tags.any { it.contains(q, ignoreCase = true) } ||
             point.emoji.contains(q, ignoreCase = true)
         }
-        _uiState.update { it.copy(searchQuery = q, searchResults = results) }
+        val matchingTags = if (q.isBlank()) emptyList() else _uiState.value.availableTags.filter {
+            it.first.contains(q, ignoreCase = true)
+        }
+        _uiState.update { it.copy(searchQuery = q, searchResults = results, searchTagResults = matchingTags) }
     }
 
     companion object {

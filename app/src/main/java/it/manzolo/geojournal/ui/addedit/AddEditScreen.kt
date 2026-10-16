@@ -441,49 +441,94 @@ fun AddEditScreen(
 
             // ── Hero card: emoji + titolo ─────────────────────────────────
             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Transparent,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clickable { viewModel.toggleEmojiPicker() }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                                .background(
-                                    androidx.compose.ui.graphics.Brush.linearGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primaryContainer,
-                                            MaterialTheme.colorScheme.tertiaryContainer
-                                        )
-                                    )
-                                ),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.Transparent,
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clickable { viewModel.toggleEmojiPicker() }
                         ) {
-                            Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
+                            Box(
+                                modifier = Modifier.fillMaxSize()
+                                    .background(
+                                        androidx.compose.ui.graphics.Brush.linearGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primaryContainer,
+                                                MaterialTheme.colorScheme.tertiaryContainer
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(uiState.emoji, style = MaterialTheme.typography.displaySmall)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        OutlinedTextField(
+                            value = uiState.title,
+                            onValueChange = { v ->
+                                viewModel.updateTitle(
+                                    if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
+                                )
+                            },
+                            label = { Text(stringResource(R.string.addedit_title_hint)) },
+                            modifier = Modifier.weight(1f).focusRequester(titleFocusRequester),
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Next,
+                                capitalization = KeyboardCapitalization.Sentences
+                            )
+                        )
+                    }
+
+                    val visibleTags = uiState.tags.filter { !it.startsWith("_") }
+                    val quickSuggestions = if (uiState.tagInput.isBlank()) uiState.suggestedTags.take(5) else emptyList()
+                    if (visibleTags.isNotEmpty() || quickSuggestions.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            visibleTags.forEach { tag ->
+                                InputChip(
+                                    selected = true,
+                                    onClick = {},
+                                    label = { Text(tag, style = MaterialTheme.typography.labelMedium) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Label,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        IconButton(
+                                            onClick = { viewModel.removeTag(tag) },
+                                            modifier = Modifier.size(16.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Close,
+                                                contentDescription = stringResource(R.string.action_remove),
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                            quickSuggestions.forEach { tag ->
+                                SuggestionChip(
+                                    onClick = { viewModel.addTagFromSuggestion(tag) },
+                                    label = { Text("+ $tag", style = MaterialTheme.typography.labelMedium) }
+                                )
+                            }
                         }
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    OutlinedTextField(
-                        value = uiState.title,
-                        onValueChange = { v ->
-                            viewModel.updateTitle(
-                                if (v.isNotEmpty()) v[0].uppercaseChar() + v.drop(1) else v
-                            )
-                        },
-                        label = { Text(stringResource(R.string.addedit_title_hint)) },
-                        modifier = Modifier.weight(1f).focusRequester(titleFocusRequester),
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Next,
-                            capitalization = KeyboardCapitalization.Sentences
-                        )
-                    )
                 }
             }
 
@@ -936,26 +981,9 @@ fun AddEditScreen(
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = { viewModel.addTag() })
                             )
-                            if (uiState.tags.isNotEmpty()) {
-                                Spacer(Modifier.height(8.dp))
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    uiState.tags.filter { !it.startsWith("_") }.forEach { tag ->
-                                        InputChip(
-                                            selected = false,
-                                            onClick = {},
-                                            label = { Text(tag) },
-                                            trailingIcon = {
-                                                IconButton(onClick = { viewModel.removeTag(tag) },
-                                                    modifier = Modifier.size(18.dp)) {
-                                                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_remove),
-                                                        modifier = Modifier.size(14.dp))
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                            if (uiState.suggestedTags.isNotEmpty()) {
+                            // I tag assegnati sono mostrati nella hero card; qui solo i suggerimenti
+                            // filtrati mentre l'utente digita
+                            if (uiState.tagInput.isNotBlank() && uiState.suggestedTags.isNotEmpty()) {
                                 Spacer(Modifier.height(8.dp))
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     uiState.suggestedTags.forEach { tag ->

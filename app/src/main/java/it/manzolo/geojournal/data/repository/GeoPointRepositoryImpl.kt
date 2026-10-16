@@ -63,8 +63,9 @@ class GeoPointRepositoryImpl @Inject constructor(
         dao.observeAllTagStrings().map { tagStrings ->
             tagStrings.flatMap { it.split("|") }
                 .filter { it.isNotEmpty() && !it.startsWith("_") }
-                .distinct()
-                .sorted()
+                .groupingBy { it }.eachCount()
+                .entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+                .map { it.key }
         }
 
     override suspend fun getById(id: String): GeoPoint? =

@@ -24,7 +24,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ExpandLess
@@ -581,6 +590,14 @@ fun MapScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.fitTagEvent.collect { tag ->
+            val map = mapLibreMapRef.value ?: return@collect
+            val matching = viewModel.uiState.value.allActivePoints.filter { tag in it.tags }
+            if (matching.isNotEmpty()) fitAllPoints(map, matching)
+        }
+    }
+
     BackHandler(enabled = uiState.isSearchOpen) { viewModel.closeSearch() }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -589,39 +606,110 @@ fun MapScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Search Bar stile Google Maps — pill collassabile in cima
-        MapSearchBar(
-            isOpen = uiState.isSearchOpen,
-            query = uiState.searchQuery,
-            results = uiState.searchResults,
-            userLat = uiState.userLatitude,
-            userLon = uiState.userLongitude,
-            hasUserLocation = uiState.hasUserLocation,
-            onOpen = viewModel::openSearch,
-            onClose = viewModel::closeSearch,
-            onQueryChange = viewModel::updateSearchQuery,
-            onResultClick = { point ->
-                keyboardController?.hide()
-                viewModel.closeSearch()
-                // Se il punto non è preferito e il filtro è attivo, mostra tutti i punti
-                if (uiState.showFavoritesOnly && !point.isFavorite) {
-                    viewModel.toggleFavoritesFilter()
-                }
-                mapLibreMapRef.value?.animateCamera(
-                    CameraUpdateFactory.newLatLngZoom(
-                        LatLng(point.latitude, point.longitude), 17.0
-                    ), 800
-                )
-                coroutineScope.launch {
-                    delay(200)
-                    viewModel.onPointSelected(point)
-                }
-            },
+        // Search Bar e Filter Chips in cima
+        Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth()
-        )
+                .padding(top = 16.dp)
+        ) {
+            MapSearchBar(
+                isOpen = uiState.isSearchOpen,
+                query = uiState.searchQuery,
+                results = uiState.searchResults,
+                tagResults = uiState.searchTagResults,
+                userLat = uiState.userLatitude,
+                userLon = uiState.userLongitude,
+                hasUserLocation = uiState.hasUserLocation,
+                onOpen = viewModel::openSearch,
+                onClose = viewModel::closeSearch,
+                onQueryChange = viewModel::updateSearchQuery,
+                onResultClick = { point ->
+                    keyboardController?.hide()
+                    viewModel.closeSearch()
+                    // Se il punto non è preferito e il filtro è attivo, mostra tutti i punti
+                    if (uiState.showFavoritesOnly && !point.isFavorite) {
+                        viewModel.toggleFavoritesFilter()
+                    }
+                    mapLibreMapRef.value?.animateCamera(
+                        CameraUpdateFactory.newLatLngZoom(
+                            LatLng(point.latitude, point.longitude), 17.0
+                        ), 800
+                    )
+                    coroutineScope.launch {
+                        delay(200)
+                        viewModel.onPointSelected(point)
+                    }
+                },
+                onTagClick = { tag ->
+                    keyboardController?.hide()
+                    viewModel.closeSearch()
+                    viewModel.selectTag(tag, shouldFit = true)
+                },
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+            )
+
+            if (!uiState.isSearchOpen && (uiState.availableTags.isNotEmpty() || uiState.favoritesCount > 0)) {
+                Spacer(Modifier.height(8.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item(key = "fav_filter") {
+                        FilterChip(
+                            selected = uiState.showFavoritesOnly,
+                            onClick = viewModel::toggleFavoritesFilter,
+                            label = {
+                                Text(
+                                    if (uiState.favoritesCount > 0)
+                                        "${stringResource(R.string.list_filter_favorites)} (${uiState.favoritesCount})"
+                                    else stringResource(R.string.list_filter_favorites),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (uiState.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                    contentDescription = stringResource(R.string.map_filter_favorites),
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                    tint = if (uiState.showFavoritesOnly) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
+
+                    items(uiState.availableTags, key = { it.first }) { (tag, count) ->
+                        val isSelected = uiState.selectedTag == tag
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.selectTag(tag, shouldFit = true) },
+                            label = { Text("$tag ($count)", style = MaterialTheme.typography.labelMedium) },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Label,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(FilterChipDefaults.IconSize),
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
+                            trailingIcon = if (isSelected) {
+                                {
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription = stringResource(R.string.action_remove),
+                                        modifier = Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
+                }
+            }
+        }
 
         // Empty state quando filtro preferiti attivo ma lista vuota
         if (uiState.showFavoritesOnly && uiState.points.isEmpty() && !uiState.isLoading) {
@@ -703,17 +791,6 @@ fun MapScreen(
                             MapLayer.SATELLITE -> MaterialTheme.colorScheme.primary
                         }
                         Icon(Icons.Filled.Layers, contentDescription = stringResource(R.string.map_layer_button), tint = tint)
-                    }
-
-                    HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                    // Pulsante Preferiti
-                    IconButton(onClick = viewModel::toggleFavoritesFilter) {
-                        Icon(
-                            imageVector = if (uiState.showFavoritesOnly) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = stringResource(R.string.map_filter_favorites),
-                            tint = if (uiState.showFavoritesOnly) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurface
-                        )
                     }
 
                     HorizontalDivider(modifier = Modifier.width(32.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -1219,6 +1296,7 @@ private fun MapSearchBar(
     isOpen: Boolean,
     query: String,
     results: List<GeoPoint>,
+    tagResults: List<Pair<String, Int>> = emptyList(),
     userLat: Double,
     userLon: Double,
     hasUserLocation: Boolean,
@@ -1226,6 +1304,7 @@ private fun MapSearchBar(
     onClose: () -> Unit,
     onQueryChange: (String) -> Unit,
     onResultClick: (GeoPoint) -> Unit,
+    onTagClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -1296,13 +1375,47 @@ private fun MapSearchBar(
                 }
             }
             AnimatedVisibility(
-                visible = isOpen && results.isNotEmpty(),
+                visible = isOpen && (results.isNotEmpty() || tagResults.isNotEmpty()),
                 enter = fadeIn() + expandVertically(),
                 exit = ExitTransition.None
             ) {
                 Column {
                     HorizontalDivider()
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                        if (tagResults.isNotEmpty()) {
+                            items(tagResults, key = { "tag_${it.first}" }) { (tag, count) ->
+                                ListItem(
+                                    headlineContent = {
+                                        Text(
+                                            stringResource(R.string.map_search_tag_group, tag),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    supportingContent = {
+                                        Text(
+                                            stringResource(R.string.map_tag_points_count, count),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Label,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    },
+                                    trailingContent = {
+                                        AssistChip(
+                                            onClick = { onTagClick(tag) },
+                                            label = { Text(stringResource(R.string.map_show_on_map)) }
+                                        )
+                                    },
+                                    modifier = Modifier.clickable { onTagClick(tag) }
+                                )
+                                HorizontalDivider()
+                            }
+                        }
                         items(results, key = { it.id }) { point ->
                             val distText = if (hasUserLocation) {
                                 formatDistance(distanceBetween(userLat, userLon, point.latitude, point.longitude))

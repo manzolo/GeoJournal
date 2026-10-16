@@ -156,7 +156,7 @@ I 4 flag in ProfileScreen (`syncGeoPoints`, `syncPhotos`, `syncReminders`, `sync
 - **Tracciamento GPS (tracking):** `LocationTrackingService` foreground service (tipo `location`), avviato da `PointDetailScreen`. Ogni 5s o 5m registra coordinate in `TrackingManager` (singleton Hilt). Allo stop genera KML via `KmlWriter` e lo salva via `PointKmlRepository.saveKml()`. Permessi: `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`.
 - **Note personali (`notes`):** campo libero in AddEditScreen, visibile in PointDetailScreen (solo se non vuoto), incluso in backup.zip, **mai** esportato in .geoj o Firestore.
 - **EXIF foto:** `ExifReader` legge `dateTaken` + `cameraModel` da file locali (off-thread via IO dispatcher). Null silenzioso per URL HTTPS. Mostrato come strip semitrasparente nel PhotoViewerDialog.
-- **Preferiti (`isFavorite`):** stella toggle in FAB mappa, PointBottomSheet, PointDetailScreen (TopAppBar), ListScreen (FilterChip + menu contestuale). Smart default: mappa apre in modalità preferiti se `countFavorites() > 0`. Ricerca sempre su tutti i punti attivi. `_showFavoritesOnly` dichiarato prima di `init` (evita NPE con UnconfinedTestDispatcher). Locale-only: in backup.zip ✅, in .geoj ❌, in Firestore ❌.
+- **Preferiti (`isFavorite`):** FilterChip "Preferiti" nella riga chip sotto la search bar della mappa (insieme ai chip tag), PointBottomSheet, PointDetailScreen (TopAppBar), ListScreen (FilterChip + menu contestuale). Smart default: mappa apre in modalità preferiti se `countFavorites() > 0`. Ricerca sempre su tutti i punti attivi. `_showFavoritesOnly` dichiarato prima di `init` (evita NPE con UnconfinedTestDispatcher). Locale-only: in backup.zip ✅, in .geoj ❌, in Firestore ❌.
 
 ---
 

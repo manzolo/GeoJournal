@@ -24,6 +24,9 @@
     <string name="map_kml_toggle_button">Tracciati GPS</string>
     <string name="map_search_placeholder">Cerca un luogo…</string>
     <string name="map_search_clear">Cancella ricerca</string>
+    <string name="map_search_tag_group">Gruppo \"%s\"</string>
+    <string name="map_tag_points_count">%d punti</string>
+    <string name="map_show_on_map">Mostra</string>
     <string name="map_kml_panel_title">Tracciati GPS</string>
     <string name="map_kml_no_layers">Nessun tracciato GPS per i punti visibili</string>
     <string name="map_layer_road">Stradale</string>

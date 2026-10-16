@@ -24,6 +24,9 @@
     <string name="map_kml_toggle_button">GPS Tracks</string>
     <string name="map_search_placeholder">Search a place…</string>
     <string name="map_search_clear">Clear search</string>
+    <string name="map_search_tag_group">Group \"%s\"</string>
+    <string name="map_tag_points_count">%d points</string>
+    <string name="map_show_on_map">Show</string>
     <string name="map_kml_panel_title">GPS Tracks</string>
     <string name="map_kml_no_layers">No GPS tracks for visible points</string>
     <string name="map_layer_road">Road</string>
